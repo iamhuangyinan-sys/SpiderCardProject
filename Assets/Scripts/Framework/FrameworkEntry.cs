@@ -1,5 +1,7 @@
 using UnityEngine;
 using Framework.Res;
+using Framework.Save;
+using Framework.Event;
 
 namespace Framework
 {
@@ -33,7 +35,12 @@ namespace Framework
 
             // ===== 3. 初始化 Manager（业务层，依赖 Store）=====
             ResMgr.Instance.Init();          // 资源管理器（依赖 ResStore）
+            SaveManager.Instance.Init();     // 本地存档管理器
+            EventManager.Instance.Init();    // 全局事件中心
             // XxxManager.Instance.Init();
+
+            // ===== 4. 注册存档路径 =====
+            SaveRegistry.RegisterAll();      // → 见 SaveRegistry.cs
 
             Debug.Log("[Framework] 初始化完成！");
         }
@@ -41,9 +48,9 @@ namespace Framework
         private void OnDestroy()
         {
             // 按依赖的反序销毁
-            // XxxManager.Instance.Dispose();
+            EventManager.Instance.Dispose();
+            SaveManager.Instance.Dispose();
             ResMgr.Instance.Dispose();
-            // XxxStore.Instance.Dispose();
             ResStore.Instance.Dispose();
             MonoManager.Instance.Dispose();
 
