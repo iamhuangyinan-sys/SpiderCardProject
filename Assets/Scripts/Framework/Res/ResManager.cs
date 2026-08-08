@@ -1,4 +1,4 @@
-using System.Collections;
+﻿using System.Collections;
 using UnityEngine;
 using UnityEngine.Events;
 using Framework.Mgr;
@@ -6,8 +6,8 @@ using Framework.Mgr;
 namespace Framework.Res
 {
     // ============================================================
-    //  ResMgr —— Resources 资源管理器（纯逻辑层）
-    //  数据存储在 ResStore 中，ResMgr 只负责 Load / Unload 逻辑
+    //  ResManager —— Resources 资源管理器（纯逻辑层）
+    //  数据存储在 ResStore 中，ResManager 只负责 Load / Unload 逻辑
     // ============================================================
 
     /// <summary>
@@ -16,11 +16,11 @@ namespace Framework.Res
     /// 核心机制：引用计数 + 字典缓存 + 同步/异步互转
     ///
     /// 使用方式：
-    ///   var prefab = ResMgr.Instance.Load<GameObject>("UI/CardPanel");
-    ///   ResMgr.Instance.LoadAsync<Sprite>("Card/SpadeA", onLoaded);
-    ///   ResMgr.Instance.UnloadAsset<GameObject>("UI/CardPanel");
+    ///   var prefab = ResManager.Instance.Load<GameObject>("UI/CardPanel");
+    ///   ResManager.Instance.LoadAsync<Sprite>("Card/SpadeA", onLoaded);
+    ///   ResManager.Instance.UnloadAsset<GameObject>("UI/CardPanel");
     /// </summary>
-    public class ResMgr : ManagerBase<ResMgr>
+    public class ResManager : ManagerBase<ResManager>
     {
         // ==================== 同步加载 ====================
 
@@ -38,7 +38,7 @@ namespace Framework.Res
                 T res = Resources.Load<T>(path);
                 if (res == null)
                 {
-                    Debug.LogError($"[ResMgr] 资源不存在: Resources/{path} 类型={typeof(T).Name}");
+                    Debug.LogError($"[ResManager] 资源不存在: Resources/{path} 类型={typeof(T).Name}");
                     return null;
                 }
 

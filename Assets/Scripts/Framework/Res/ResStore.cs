@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Events;
 using Framework.Store;
@@ -41,7 +41,7 @@ namespace Framework.Res
         {
             --refCount;
             if (refCount < 0)
-                Debug.LogError($"[ResMgr] 资源 {typeof(T).Name} 引用计数 < 0，请检查 Load/Unload 是否配对！");
+                Debug.LogError($"[ResManager] 资源 {typeof(T).Name} 引用计数 < 0，请检查 Load/Unload 是否配对！");
         }
     }
 
@@ -51,7 +51,7 @@ namespace Framework.Res
 
     /// <summary>
     /// 资源缓存数据存储 —— 只有数据的增删查
-    /// 所有加载/卸载逻辑在 ResMgr 中
+    /// 所有加载/卸载逻辑在 ResManager 中
     /// </summary>
     public class ResStore : StoreBase<ResStore>
     {

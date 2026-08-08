@@ -1,7 +1,10 @@
-using UnityEngine;
+﻿using UnityEngine;
+using UnityEngine.SceneManagement;
 using Framework.Res;
 using Framework.Save;
 using Framework.Event;
+using Framework.Pool;
+using Framework.Audio;
 
 namespace Framework
 {
@@ -19,6 +22,7 @@ namespace Framework
         private void Awake()
         {
             DontDestroyOnLoad(gameObject);
+            SceneManager.sceneLoaded += OnSceneLoaded;
             InitFramework();
         }
 
@@ -31,12 +35,16 @@ namespace Framework
 
             // ===== 2. 初始化 Store（数据层，无依赖）=====
             ResStore.Instance.Init();        // 资源缓存数据
+            PoolStore.Instance.Init();       // 对象池数据
             // XxxStore.Instance.Init();
 
             // ===== 3. 初始化 Manager（业务层，依赖 Store）=====
-            ResMgr.Instance.Init();          // 资源管理器（依赖 ResStore）
+            ResManager.Instance.Init();          // 资源管理器（依赖 ResStore）
             SaveManager.Instance.Init();     // 本地存档管理器
             EventManager.Instance.Init();    // 全局事件中心
+            PoolManager.Instance.Init();     // 对象池管理器（依赖 PoolStore + ResManager）
+            BgmManager.Instance.Init();      // 背景音乐管理器（依赖 ResManager）
+            SoundManager.Instance.Init();    // 音效管理器（依赖 ResManager + PoolManager）
             // XxxManager.Instance.Init();
 
             // ===== 4. 注册存档路径 =====
@@ -47,14 +55,28 @@ namespace Framework
 
         private void OnDestroy()
         {
+            SceneManager.sceneLoaded -= OnSceneLoaded;
+
             // 按依赖的反序销毁
+            BgmManager.Instance.Dispose();
+            SoundManager.Instance.Dispose();
+            PoolManager.Instance.Dispose();
             EventManager.Instance.Dispose();
             SaveManager.Instance.Dispose();
-            ResMgr.Instance.Dispose();
+            ResManager.Instance.Dispose();
+            PoolStore.Instance.Dispose();
             ResStore.Instance.Dispose();
             MonoManager.Instance.Dispose();
 
             Debug.Log("[Framework] 已销毁");
+        }
+
+        /// <summary>
+        /// 场景加载完成 → 清除切场景即销毁的池
+        /// </summary>
+        private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
+        {
+            PoolManager.Instance.ClearOnSceneChange();
         }
     }
 }
