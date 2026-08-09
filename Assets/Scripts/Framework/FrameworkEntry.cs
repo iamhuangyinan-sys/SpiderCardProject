@@ -1,10 +1,10 @@
 ﻿using UnityEngine;
-using UnityEngine.SceneManagement;
 using Framework.Res;
 using Framework.Save;
 using Framework.Event;
 using Framework.Pool;
 using Framework.Audio;
+using Framework.UI;
 
 namespace Framework
 {
@@ -22,7 +22,6 @@ namespace Framework
         private void Awake()
         {
             DontDestroyOnLoad(gameObject);
-            SceneManager.sceneLoaded += OnSceneLoaded;
             InitFramework();
         }
 
@@ -45,19 +44,22 @@ namespace Framework
             PoolManager.Instance.Init();     // 对象池管理器（依赖 PoolStore + ResManager）
             BgmManager.Instance.Init();      // 背景音乐管理器（依赖 ResManager）
             SoundManager.Instance.Init();    // 音效管理器（依赖 ResManager + PoolManager）
+            SceneController.Instance.Init(); // 场景控制器（依赖 PoolManager + MonoManager）
+            UIManager.Instance.Init();       // UI 管理器（依赖 ResManager）
             // XxxManager.Instance.Init();
 
-            // ===== 4. 注册存档路径 =====
+            // ===== 4. 注册各类配置 =====
             SaveRegistry.RegisterAll();      // → 见 SaveRegistry.cs
+            UIConfig.RegisterAll();          // → 见 UIConfig.cs
 
             Debug.Log("[Framework] 初始化完成！");
         }
 
         private void OnDestroy()
         {
-            SceneManager.sceneLoaded -= OnSceneLoaded;
-
             // 按依赖的反序销毁
+            SceneController.Instance.Dispose();
+            UIManager.Instance.Dispose();
             BgmManager.Instance.Dispose();
             SoundManager.Instance.Dispose();
             PoolManager.Instance.Dispose();
@@ -69,14 +71,6 @@ namespace Framework
             MonoManager.Instance.Dispose();
 
             Debug.Log("[Framework] 已销毁");
-        }
-
-        /// <summary>
-        /// 场景加载完成 → 清除切场景即销毁的池
-        /// </summary>
-        private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
-        {
-            PoolManager.Instance.ClearOnSceneChange();
         }
     }
 }
