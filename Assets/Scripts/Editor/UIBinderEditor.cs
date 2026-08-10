@@ -35,7 +35,7 @@ public class UIBinderEditor : Editor
         if (binder.uiComps.Count == 0)
         {
             EditorGUILayout.HelpBox(
-                "命名约定：btn_xxx / txt_xxx / img_xxx\n" +
+                "命名约定：btn_xxx / txt_xxx / img_xxx / mod_xxx\n" +
                 "点击 Refresh 自动扫描子物体",
                 MessageType.Info);
         }
@@ -74,30 +74,30 @@ public class UIBinderEditor : Editor
             entries.Add(e);
         }
 
-        // 找到面板脚本
-        var panel = binder.GetComponent<BasePanel>();
-        if (panel == null)
+        // 找到面板/模组脚本
+        var component = binder.GetComponent<BasePanel>() ?? (Component)binder.GetComponent<BaseModule>();
+        if (component == null)
         {
-            Debug.LogError("[UIBinder] 未找到 BasePanel 组件！");
+            Debug.LogError("[UIBinder] 未找到 BasePanel 或 BaseModule 组件！");
             return;
         }
 
-        string panelTypeName = panel.GetType().Name;
-        string panelScriptPath = FindScriptPath(panel.GetType());
-        if (string.IsNullOrEmpty(panelScriptPath))
+        string typeName = component.GetType().Name;
+        string scriptPath = FindScriptPath(component.GetType());
+        if (string.IsNullOrEmpty(scriptPath))
         {
-            Debug.LogError($"[UIBinder] 找不到 {panelTypeName}.cs");
+            Debug.LogError($"[UIBinder] 找不到 {typeName}.cs");
             return;
         }
 
-        string genCode = GenerateCompsCode(panelTypeName, entries);
-        string genPath = panelScriptPath.Replace(".cs", ".gen.cs");
+        string genCode = GenerateCompsCode(typeName, entries);
+        string genPath = scriptPath.Replace(".cs", ".gen.cs");
         File.WriteAllText(genPath, genCode, Encoding.UTF8);
 
         AssetDatabase.Refresh();
-        Debug.Log($"<color=green>[UIBinder] 已生成 {panelTypeName}.gen.cs，共 {entries.Count} 个控件</color>");
+        Debug.Log($"<color=green>[UIBinder] 已生成 {typeName}.gen.cs，共 {entries.Count} 个控件</color>");
         EditorUtility.DisplayDialog("Export Code",
-            $"已生成 {panelTypeName}.gen.cs\n共 {entries.Count} 个控件绑定", "OK");
+            $"已生成 {typeName}.gen.cs\n共 {entries.Count} 个控件绑定", "OK");
     }
 
     private string GenerateCompsCode(string panelTypeName, List<UICompEntry> entries)
@@ -116,10 +116,10 @@ public class UIBinderEditor : Editor
         sb.AppendLine($"public partial class {panelTypeName}");
         sb.AppendLine("{");
         sb.AppendLine("    [SerializeField]");
-        sb.AppendLine("    public CompsData Comps = new CompsData();");
+        sb.AppendLine("    public CompsData comps = new CompsData();");
         sb.AppendLine();
         sb.AppendLine("    [System.Serializable]");
-        sb.AppendLine("    public class CompsData");
+        sb.AppendLine("    public class CompsData : CompsDataBase");
         sb.AppendLine("    {");
 
         foreach (var e in entries)
@@ -129,6 +129,7 @@ public class UIBinderEditor : Editor
                 "btn" => "Button",
                 "txt" => "TMP_Text",
                 "img" => "Image",
+                "mod" => e.typeName ?? "BaseModule",
                 _ => "Component"
             };
             sb.AppendLine($"        public {type} {e.fieldName};");

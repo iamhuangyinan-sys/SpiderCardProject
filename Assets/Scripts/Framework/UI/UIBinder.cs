@@ -13,13 +13,16 @@ namespace Framework.UI
     [Serializable]
     public class UICompEntry
     {
-        /// <summary> 前缀类型：btn / txt / img </summary>
+        /// <summary> 前缀类型：btn / txt / img / mod </summary>
         public string prefix;
 
-        /// <summary> C# 字段名（去除下划线驼峰：btn_Start → btnStart） </summary>
+        /// <summary> C# 字段名（btn_Start → btnStart） </summary>
         public string fieldName;
 
-        /// <summary> 实际控件组件（Button / TMP_Text / Image） </summary>
+        /// <summary> 组件类型名（mod 类型时使用，如 "Mod_Button"） </summary>
+        public string typeName;
+
+        /// <summary> 实际控件组件（Button / TMP_Text / Image / BaseModule） </summary>
         public Component component;
     }
 
@@ -28,16 +31,18 @@ namespace Framework.UI
     ///
     /// 命名约定（以 GameObject 名前缀识别）：
     ///   btn_xxx → Button
+    ///   txt_xxx → TMP_Text
+    ///   img_xxx → Image
+    ///   mod_xxx → BaseModule（模组，含自己的 comps）
     ///   txt_xxx → TMP_Text（TextMeshPro）
     ///   img_xxx → Image
     ///
     /// 使用方式：
     ///   1. 挂载到预制体根节点
     ///   2. Inspector 中点击 "Refresh" 自动扫描
-    ///   3. 点击 "Export Code" 生成 Comps 代码
-    ///   4. 业务代码中用 Comps.btnStart 等访问控件
+    ///   3. 点击 "Export Code" 生成 comps 代码
+    ///   4. 业务代码中用 comps.btnStart 等访问控件
     /// </summary>
-    [RequireComponent(typeof(BasePanel))]
     public class UIBinder : MonoBehaviour
     {
         /// <summary> 绑定的控件列表（Refresh 自动填充） </summary>
@@ -86,36 +91,50 @@ namespace Framework.UI
                     if (comp != null)
                         entry = new UICompEntry { prefix = "img", component = comp };
                 }
+                else if (name.StartsWith("mod_"))
+                {
+                    var comp = child.GetComponent<BaseModule>();
+                    if (comp != null)
+                        entry = new UICompEntry { prefix = "mod", component = comp, typeName = comp.GetType().Name };
+                }
 
                 if (entry != null)
                 {
-                    // btn_Start → btnStart
                     entry.fieldName = PrefixToCamel(name);
                     uiComps.Add(entry);
                 }
 
-                // 递归扫描
-                ScanChildren(child);
+                // 模组不递归扫描（模组自己的 UIBinder 负责）
+                if (entry == null || entry.prefix != "mod")
+                    ScanChildren(child);
             }
         }
 
         /// <summary>
-        /// 将 uiComps 中的控件赋值到面板 Comps 字段中（由 BasePanel 在 Open 时调用）
+        /// 将 uiComps 中的控件赋值到面板 comps 字段中（由 BasePanel 在 Open 时调用）
         /// </summary>
         public void Bind()
         {
             if (_bound) return;
             _bound = true;
 
-            var panelType = _panel.GetType();
-            var compsField = panelType.GetField("Comps", BindingFlags.Public | BindingFlags.Instance);
-            if (compsField == null)
+            var target = GetComponent<BasePanel>() ?? (Component)GetComponent<BaseModule>();
+            if (target == null)
             {
-                Debug.LogWarning($"[UIBinder] {panelType.Name} 没有 Comps 字段，请先点击 Export Code");
+                Debug.LogWarning("[UIBinder] 未找到 BasePanel 或 BaseModule");
                 return;
             }
 
-            var compsObj = compsField.GetValue(_panel);
+            // 从 target 的具体类型获取 comps（.gen.cs 中 new 覆盖了基类的 object comps）
+            var targetType = target.GetType();
+            var compsField = targetType.GetField("comps", BindingFlags.Public | BindingFlags.Instance);
+            if (compsField == null)
+            {
+                Debug.LogWarning($"[UIBinder] {targetType.Name} 没有 comps 字段，请先点击 Export Code");
+                return;
+            }
+
+            var compsObj = compsField.GetValue(target);
             if (compsObj == null) return;
 
             var compsType = compsObj.GetType();
@@ -131,7 +150,7 @@ namespace Framework.UI
                 }
                 else
                 {
-                    Debug.LogWarning($"[UIBinder] Comps 中找不到字段 '{entry.fieldName}'，请重新 Export Code");
+                    Debug.LogWarning($"[UIBinder] comps 中找不到字段 '{entry.fieldName}'，请重新 Export Code");
                 }
             }
         }

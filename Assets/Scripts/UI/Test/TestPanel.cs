@@ -9,10 +9,16 @@ public partial class TestPanel : NormalPanel
     protected override void OnOpen()
     {
         base.OnOpen();
-        Comps.btnTest.onClick.AddListener(OnBtnTestClick);
-        Comps.btnClose.onClick.AddListener(() => CloseSelf());
-        Comps.txtTest.text = "Hello";
-        Comps.imgTest.color = Color.red;
+        //comps.btnTest.onClick.AddListener(OnBtnTestClick);
+        //comps.imgTest.color = Color.red;
+        TestButtonModule testBtnMod = comps.modTest;
+        testBtnMod.comps.btnTest.onClick.AddListener(OnBtnTestClick);
+        testBtnMod.comps.imgTest.color = Color.red;
+        testBtnMod.comps.txtTest.text = "hello";
+
+        comps.btnClose.onClick.AddListener(() => CloseSelf());
+        comps.txtTest.text = "Hello";
+        
     }
 
     protected override void OnShow()
