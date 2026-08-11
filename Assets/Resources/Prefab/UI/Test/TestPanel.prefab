@@ -11,7 +11,7 @@ GameObject:
   - component: {fileID: 5958778965471466849}
   - component: {fileID: -1384820021144630060}
   - component: {fileID: 7010495061500287236}
-  - component: {fileID: 5346578859831274054}
+  - component: {fileID: -7064842796562535143}
   m_Layer: 5
   m_Name: TestPanel
   m_TagString: Untagged
@@ -32,7 +32,7 @@ RectTransform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 3720046768745795521}
-  - {fileID: 2146494167180035955}
+  - {fileID: 6839606702847228602}
   - {fileID: 385499297678824007}
   - {fileID: 3380089644746245669}
   m_Father: {fileID: 0}
@@ -70,7 +70,7 @@ MonoBehaviour:
     modTest: {fileID: 0}
     btnClose: {fileID: 0}
     txtTest: {fileID: 0}
---- !u!114 &5346578859831274054
+--- !u!114 &-7064842796562535143
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -86,7 +86,7 @@ MonoBehaviour:
   - prefix: mod
     fieldName: modTest
     typeName: TestButtonModule
-    component: {fileID: 6756749390065269765}
+    component: {fileID: 2226467997832004044}
   - prefix: btn
     fieldName: btnClose
     typeName: 
@@ -621,7 +621,7 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
---- !u!1001 &4287105783890763545
+--- !u!1001 &8672825551413895888
 PrefabInstance:
   m_ObjectHideFlags: 0
   serializedVersion: 2
@@ -695,7 +695,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 2789763286317537386, guid: 34d83bdac78cbcc4c908f5529b9697a4, type: 3}
       propertyPath: m_AnchoredPosition.y
-      value: -88.667
+      value: -96
       objectReference: {fileID: 0}
     - target: {fileID: 2789763286317537386, guid: 34d83bdac78cbcc4c908f5529b9697a4, type: 3}
       propertyPath: m_LocalEulerAnglesHint.x
@@ -718,15 +718,10 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 34d83bdac78cbcc4c908f5529b9697a4, type: 3}
---- !u!224 &2146494167180035955 stripped
-RectTransform:
-  m_CorrespondingSourceObject: {fileID: 2789763286317537386, guid: 34d83bdac78cbcc4c908f5529b9697a4, type: 3}
-  m_PrefabInstance: {fileID: 4287105783890763545}
-  m_PrefabAsset: {fileID: 0}
---- !u!114 &6756749390065269765 stripped
+--- !u!114 &2226467997832004044 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 7402246780650890012, guid: 34d83bdac78cbcc4c908f5529b9697a4, type: 3}
-  m_PrefabInstance: {fileID: 4287105783890763545}
+  m_PrefabInstance: {fileID: 8672825551413895888}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 0}
   m_Enabled: 1
@@ -734,3 +729,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 715d6c97f7cbd354d801ccd7b3afa681, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TestButtonModule
+--- !u!224 &6839606702847228602 stripped
+RectTransform:
+  m_CorrespondingSourceObject: {fileID: 2789763286317537386, guid: 34d83bdac78cbcc4c908f5529b9697a4, type: 3}
+  m_PrefabInstance: {fileID: 8672825551413895888}
+  m_PrefabAsset: {fileID: 0}

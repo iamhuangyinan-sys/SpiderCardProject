@@ -80,16 +80,16 @@ namespace Framework.UI
         // ==================== 生命周期（子类重写） ====================
 
         /// <summary> 首次打开 </summary>
-        protected virtual void OnOpen() { }
+        protected abstract void OnOpen();
 
         /// <summary> 隐藏后重新显示 </summary>
-        protected virtual void OnShow() { }
+        protected abstract void OnShow();
 
         /// <summary> 隐藏（保留缓存） </summary>
-        protected virtual void OnHide() { }
+        protected abstract void OnHide();
 
         /// <summary> 关闭销毁 </summary>
-        protected virtual void OnClose() { }
+        protected abstract void OnClose();
 
         // ==================== 快捷操作 ====================
 

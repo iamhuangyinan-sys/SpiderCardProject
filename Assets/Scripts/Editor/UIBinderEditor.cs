@@ -95,9 +95,9 @@ public class UIBinderEditor : Editor
         File.WriteAllText(genPath, genCode, Encoding.UTF8);
 
         AssetDatabase.Refresh();
-        Debug.Log($"<color=green>[UIBinder] 已生成 {typeName}.gen.cs，共 {entries.Count} 个控件</color>");
-        EditorUtility.DisplayDialog("Export Code",
-            $"已生成 {typeName}.gen.cs\n共 {entries.Count} 个控件绑定", "OK");
+        var fieldList = string.Join(", ", entries.ConvertAll(e => e.fieldName));
+        EditorUtility.DisplayDialog("Export Success",
+            $"生成 {typeName}.gen.cs\n\n{entries.Count} 个控件：\n{fieldList}", "OK");
     }
 
     private string GenerateCompsCode(string panelTypeName, List<UICompEntry> entries)
@@ -115,8 +115,7 @@ public class UIBinderEditor : Editor
 
         sb.AppendLine($"public partial class {panelTypeName}");
         sb.AppendLine("{");
-        sb.AppendLine("    [SerializeField]");
-        sb.AppendLine("    public CompsData comps = new CompsData();");
+        sb.AppendLine("    [System.NonSerialized] public CompsData comps = new CompsData();");
         sb.AppendLine();
         sb.AppendLine("    [System.Serializable]");
         sb.AppendLine("    public class CompsData : CompsDataBase");
@@ -130,6 +129,8 @@ public class UIBinderEditor : Editor
                 "txt" => "TMP_Text",
                 "img" => "Image",
                 "mod" => e.typeName ?? "BaseModule",
+                "tog" => "Toggle",
+                "sld" => "Slider",
                 _ => "Component"
             };
             sb.AppendLine($"        public {type} {e.fieldName};");

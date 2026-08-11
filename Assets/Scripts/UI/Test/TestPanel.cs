@@ -8,9 +8,6 @@ public partial class TestPanel : NormalPanel
 {
     protected override void OnOpen()
     {
-        base.OnOpen();
-        //comps.btnTest.onClick.AddListener(OnBtnTestClick);
-        //comps.imgTest.color = Color.red;
         TestButtonModule testBtnMod = comps.modTest;
         testBtnMod.comps.btnTest.onClick.AddListener(OnBtnTestClick);
         testBtnMod.comps.imgTest.color = Color.red;
@@ -23,19 +20,16 @@ public partial class TestPanel : NormalPanel
 
     protected override void OnShow()
     {
-        base.OnShow();
         Debug.Log("[TestPanel] OnShow");
     }
 
     protected override void OnHide()
     {
-        base.OnHide();
         Debug.Log("[TestPanel] OnHide");
     }
 
     protected override void OnClose()
     {
-        base.OnClose();
         Debug.Log("[TestPanel] OnClose");
     }
 

@@ -15,7 +15,7 @@ namespace Framework.UI
     public abstract class BaseModule : MonoBehaviour
     {
         /// <summary> 是否已绑定 </summary>
-        private bool _bound;
+        [System.NonSerialized] private bool _bound;
 
         private void Awake()
         {
@@ -24,7 +24,22 @@ namespace Framework.UI
 
             var binder = GetComponent<UIBinder>();
             if (binder != null)
+            {
                 binder.Bind();
+                OnBind();
+            }
         }
+
+        private void OnDestroy()
+        {
+            OnUnBind();
+            _bound = false;
+        }
+
+        /// <summary> 控件绑定完成后（子类必须实现） </summary>
+        protected abstract void OnBind();
+
+        /// <summary> 销毁前（子类必须实现） </summary>
+        protected abstract void OnUnBind();
     }
 }

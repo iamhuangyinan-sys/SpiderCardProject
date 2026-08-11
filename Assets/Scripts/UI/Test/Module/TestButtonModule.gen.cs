@@ -8,8 +8,7 @@ using Framework.UI;
 
 public partial class TestButtonModule
 {
-    [SerializeField]
-    public CompsData comps = new CompsData();
+    [System.NonSerialized] public CompsData comps = new CompsData();
 
     [System.Serializable]
     public class CompsData : CompsDataBase
@@ -17,5 +16,6 @@ public partial class TestButtonModule
         public Button btnTest;
         public Image imgTest;
         public TMP_Text txtTest;
+        public Toggle togTest;
     }
 }

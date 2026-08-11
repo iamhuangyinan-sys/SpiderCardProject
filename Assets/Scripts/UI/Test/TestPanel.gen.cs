@@ -8,8 +8,7 @@ using Framework.UI;
 
 public partial class TestPanel
 {
-    [SerializeField]
-    public CompsData comps = new CompsData();
+    [System.NonSerialized] public CompsData comps = new CompsData();
 
     [System.Serializable]
     public class CompsData : CompsDataBase

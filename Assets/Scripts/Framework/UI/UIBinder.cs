@@ -97,6 +97,18 @@ namespace Framework.UI
                     if (comp != null)
                         entry = new UICompEntry { prefix = "mod", component = comp, typeName = comp.GetType().Name };
                 }
+                else if (name.StartsWith("tog_"))
+                {
+                    var comp = child.GetComponent<Toggle>();
+                    if (comp != null)
+                        entry = new UICompEntry { prefix = "tog", component = comp };
+                }
+                else if (name.StartsWith("sld_"))
+                {
+                    var comp = child.GetComponent<Slider>();
+                    if (comp != null)
+                        entry = new UICompEntry { prefix = "sld", component = comp };
+                }
 
                 if (entry != null)
                 {
