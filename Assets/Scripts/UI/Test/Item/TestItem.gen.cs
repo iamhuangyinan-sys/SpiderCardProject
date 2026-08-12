@@ -6,15 +6,14 @@ using UnityEngine.UI;
 using TMPro;
 using Framework.UI;
 
-public partial class TestPanel
+public partial class TestItem
 {
     [System.NonSerialized] public CompsData comps = new CompsData();
 
     [System.Serializable]
     public class CompsData : CompsDataBase
     {
-        public TestButtonModule modTest;
-        public Button btnClose;
-        public ScrollList listTest;
+        public Image imgFront;
+        public TMP_Text txtBack;
     }
 }

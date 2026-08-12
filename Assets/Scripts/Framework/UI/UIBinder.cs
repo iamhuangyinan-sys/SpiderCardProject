@@ -109,6 +109,12 @@ namespace Framework.UI
                     if (comp != null)
                         entry = new UICompEntry { prefix = "sld", component = comp };
                 }
+                else if (name.StartsWith("list_"))
+                {
+                    var comp = child.GetComponent<ScrollList>();
+                    if (comp != null)
+                        entry = new UICompEntry { prefix = "list", component = comp };
+                }
 
                 if (entry != null)
                 {
@@ -130,10 +136,12 @@ namespace Framework.UI
             if (_bound) return;
             _bound = true;
 
-            var target = GetComponent<BasePanel>() ?? (Component)GetComponent<BaseModule>();
+            var target = GetComponent<BasePanel>()
+                ?? (Component)GetComponent<BaseModule>()
+                ?? GetComponent<BaseListItem>();
             if (target == null)
             {
-                Debug.LogWarning("[UIBinder] 未找到 BasePanel 或 BaseModule");
+                Debug.LogWarning("[UIBinder] 未找到 BasePanel / BaseModule / BaseListItem");
                 return;
             }
 

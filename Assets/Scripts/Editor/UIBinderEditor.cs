@@ -35,7 +35,7 @@ public class UIBinderEditor : Editor
         if (binder.uiComps.Count == 0)
         {
             EditorGUILayout.HelpBox(
-                "命名约定：btn_xxx / txt_xxx / img_xxx / mod_xxx\n" +
+                "命名约定：btn_xxx / txt_xxx / img_xxx / mod_xxx / tog_xxx / sld_xxx / list_xxx\n" +
                 "点击 Refresh 自动扫描子物体",
                 MessageType.Info);
         }
@@ -74,11 +74,13 @@ public class UIBinderEditor : Editor
             entries.Add(e);
         }
 
-        // 找到面板/模组脚本
-        var component = binder.GetComponent<BasePanel>() ?? (Component)binder.GetComponent<BaseModule>();
+        // 找到面板/模组/列表项脚本
+        var component = binder.GetComponent<BasePanel>()
+            ?? (Component)binder.GetComponent<BaseModule>()
+            ?? binder.GetComponent<BaseListItem>();
         if (component == null)
         {
-            Debug.LogError("[UIBinder] 未找到 BasePanel 或 BaseModule 组件！");
+            Debug.LogError("[UIBinder] 未找到 BasePanel / BaseModule / BaseListItem 组件！");
             return;
         }
 
@@ -131,6 +133,7 @@ public class UIBinderEditor : Editor
                 "mod" => e.typeName ?? "BaseModule",
                 "tog" => "Toggle",
                 "sld" => "Slider",
+                "list" => "ScrollList",
                 _ => "Component"
             };
             sb.AppendLine($"        public {type} {e.fieldName};");

@@ -1,5 +1,6 @@
 using Framework.UI;
 using UnityEngine;
+using System.Collections.Generic;
 
 /// <summary>
 /// 测试面板 —— 普通面板
@@ -14,23 +15,47 @@ public partial class TestPanel : NormalPanel
         testBtnMod.comps.txtTest.text = "hello";
 
         comps.btnClose.onClick.AddListener(() => CloseSelf());
-        comps.txtTest.text = "Hello";
-        
+        ScrollList testList = comps.listTest;
+
+        // ===== 准备数据 =====
+        var dataList = new List<string>
+        {
+            "1st Item",
+            "2nd Item",
+            "3rd Item",
+            "4th Item",
+            "5th Item",
+            "6th Item",
+            "7th Item",
+            "8th Item",
+            "9th Item",
+            "10th Item",
+        };
+
+        // ===== 设置渲染回调：每条数据刷新对应 item =====
+        testList.OnItemRender = (index, item) =>
+        {
+            var testItem = item as TestItem;
+            testItem.Refresh(dataList[index]);
+        };
+
+        // ===== 设条数触发刷新 =====
+        testList.ItemCount = dataList.Count;
     }
 
     protected override void OnShow()
     {
-        Debug.Log("[TestPanel] OnShow");
+        
     }
 
     protected override void OnHide()
     {
-        Debug.Log("[TestPanel] OnHide");
+        
     }
 
     protected override void OnClose()
     {
-        Debug.Log("[TestPanel] OnClose");
+        
     }
 
     private void OnBtnTestClick()
