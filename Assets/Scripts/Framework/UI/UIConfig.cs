@@ -38,6 +38,8 @@ namespace Framework.UI
 
             // ===== 测试 =====
             Register<TestPanel>("Test/TestPanel", E_UILayerEnum.Normal);
+            // ===== 主界面 =====
+            Register<BeginPanel>("Main/BeginPanel", E_UILayerEnum.Normal);
         }
 
         /// <summary>

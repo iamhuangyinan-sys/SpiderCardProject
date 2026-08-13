@@ -28,7 +28,7 @@ public class GameEntry : MonoBehaviour
         // ===== 3. 打开开始界面等初始 UI =====
         // UIManager.Instance.ShowAsync<StartPanel>(_ => { });
         // BgmManager.Instance.Play("MainTheme");
-        UIManager.Instance.ShowAsync<TestPanel>(_ => { });
+        UIManager.Instance.ShowAsync<BeginPanel>(_ => { });
 
         Debug.Log("[GameEntry] 游戏业务初始化完成");
     }
