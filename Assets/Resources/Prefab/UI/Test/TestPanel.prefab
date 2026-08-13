@@ -37,7 +37,7 @@ RectTransform:
   m_AnchorMin: {x: 1, y: 0}
   m_AnchorMax: {x: 1, y: 1}
   m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 20, y: 0.000015259}
+  m_SizeDelta: {x: 8.8401, y: 0}
   m_Pivot: {x: 1, y: 1}
 --- !u!222 &675889833035457720
 CanvasRenderer:
@@ -120,7 +120,7 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 1067834298436178537}
   m_HandleRect: {fileID: 2996141952415115512}
   m_Direction: 2
-  m_Value: 0
+  m_Value: 1
   m_Size: 1
   m_NumberOfSteps: 0
   m_OnValueChanged:
@@ -813,7 +813,6 @@ GameObject:
   m_Component:
   - component: {fileID: 6837465305318137469}
   - component: {fileID: 7522561765257830487}
-  - component: {fileID: 8751146579670945879}
   - component: {fileID: 2204569300147527109}
   - component: {fileID: 7079556784876184539}
   m_Layer: 5
@@ -852,36 +851,6 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 7308852805318173107}
   m_CullTransparentMesh: 1
---- !u!114 &8751146579670945879
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7308852805318173107}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
-  m_Material: {fileID: 0}
-  m_Color: {r: 1, g: 1, b: 1, a: 0.392}
-  m_RaycastTarget: 1
-  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
-  m_Maskable: 1
-  m_OnCullStateChanged:
-    m_PersistentCalls:
-      m_Calls: []
-  m_Sprite: {fileID: 10907, guid: 0000000000000000f000000000000000, type: 0}
-  m_Type: 1
-  m_PreserveAspect: 0
-  m_FillCenter: 1
-  m_FillMethod: 4
-  m_FillAmount: 1
-  m_FillClockwise: 1
-  m_FillOrigin: 0
-  m_UseSpriteMesh: 0
-  m_PixelsPerUnitMultiplier: 1
 --- !u!114 &2204569300147527109
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -927,11 +896,11 @@ MonoBehaviour:
   _scrollRect: {fileID: 2204569300147527109}
   _content: {fileID: 7040900212205188748}
   _cellPrefab: {fileID: 3560086654669301445, guid: 7a55be91afd9aaa409bd349b4e2f835a, type: 3}
-  _itemWidth: 400
+  _itemWidth: 270
   _itemHeight: 100
   _columnGap: 10
   _rowGap: 10
-  _columns: 1
+  _columns: 2
 --- !u!1 &8833408165249859699
 GameObject:
   m_ObjectHideFlags: 0
@@ -964,7 +933,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: 0, y: 0}
+  m_AnchoredPosition: {x: 0, y: -0.00012207031}
   m_SizeDelta: {x: 0, y: 463.95}
   m_Pivot: {x: 0.5, y: 1}
 --- !u!1001 &8672825551413895888
