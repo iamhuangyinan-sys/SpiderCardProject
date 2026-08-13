@@ -27,7 +27,7 @@ namespace Framework
 
         private void InitFramework()
         {
-            Debug.Log("[Framework] 开始初始化...");
+            Debug.Log("[Framework] 游戏框架开始初始化...");
 
             // ===== 1. 基础设施（无依赖）=====
             MonoManager.Instance.Init();     // 协程/Update 服务（唯一 Mono）
@@ -52,7 +52,7 @@ namespace Framework
             SaveRegistry.RegisterAll();      // → 见 SaveRegistry.cs
             UIConfig.RegisterAll();          // → 见 UIConfig.cs
 
-            Debug.Log("[Framework] 初始化完成！");
+            Debug.Log("[Framework] 游戏框架初始化完成");
         }
 
         private void OnDestroy()
