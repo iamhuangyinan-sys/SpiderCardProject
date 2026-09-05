@@ -10,12 +10,10 @@
     /// </summary>
     public enum E_EventEnum
     {
-        // ---- 示例，按需增删 ----
-        // OnScoreChanged,         // 参数：int (新分数)
-        // OnCardPlayed,           // 参数：CardData
-        // OnGameStart,            // 无参数
-        // OnGameEnd,              // 参数：bool (是否胜利)
-        // OnRoundChanged,         // 参数：int (当前回合)
-        // OnPlayerNameChanged,    // 参数：string (新名字)
+        // ---- 卡牌 ----
+        OnTableChanged,      // 无参数：整桌刷新（发牌 / 重开）
+        OnColumnChanged,     // 参数：int（列索引，该列局部刷新）
+        OnDrawPileChanged,   // 无参数：发牌堆变化
+        OnCardChanged,       // 参数：CardData（单张牌变化，如翻牌）
     }
 }

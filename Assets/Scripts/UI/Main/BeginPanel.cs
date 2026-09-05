@@ -1,3 +1,4 @@
+using Framework;
 using Framework.UI;
 using UnityEngine;
 
@@ -7,7 +8,8 @@ public partial class BeginPanel : NormalPanel
     {
         comps.btnStart.onClick.AddListener(() =>
         {
-            Debug.Log("[BeginPanel] 点击开始按钮");
+            Debug.Log("[BeginPanel] 点击开始按钮，切换到纸牌游戏场景");
+            SceneController.Instance.LoadScene("CardGameScene", CloseSelf);
         });
         comps.btnQuit.onClick.AddListener(() =>
         {

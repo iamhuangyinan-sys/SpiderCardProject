@@ -19,24 +19,9 @@ public class GameEntry : MonoBehaviour
     {
         Debug.Log("[GameEntry] 游戏业务初始化开始...");
 
-        // ===== 1. 初始化业务 Store（数据层）=====
-        // XxxStore.Instance.Init();
-
-        // ===== 2. 初始化业务 Manager（逻辑层）=====
-        // XxxManager.Instance.Init();
-
-        // ===== 3. 打开开始界面等初始 UI =====
-        // UIManager.Instance.ShowAsync<StartPanel>(_ => { });
-        // BgmManager.Instance.Play("MainTheme");
+        // ===== 1. 打开开始界面 =====
         UIManager.Instance.ShowAsync<BeginPanel>(_ => { });
 
         Debug.Log("[GameEntry] 游戏业务初始化完成");
-    }
-
-    private void OnDestroy()
-    {
-        // 按依赖反序销毁
-        // XxxManager.Instance.Dispose();
-        // XxxStore.Instance.Dispose();
     }
 }
