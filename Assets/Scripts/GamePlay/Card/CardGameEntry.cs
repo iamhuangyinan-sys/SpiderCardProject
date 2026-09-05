@@ -10,6 +10,7 @@ public class CardGameEntry : MonoBehaviour
     private void Start()
     {
         CardGameModule.Instance.Init();
+        CardGameModule.Instance.StartNewGame();
     }
 
     private void OnDestroy()

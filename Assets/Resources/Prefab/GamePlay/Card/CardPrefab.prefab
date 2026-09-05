@@ -12,6 +12,8 @@ GameObject:
   - component: {fileID: 5134225481397839140}
   - component: {fileID: -8768640188731528245}
   - component: {fileID: 3085193398841813202}
+  - component: {fileID: -3776602603309360290}
+  - component: {fileID: 3153551175640618312}
   m_Layer: 0
   m_Name: CardPrefab
   m_TagString: Untagged
@@ -83,7 +85,7 @@ SpriteRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 0
   m_MaskInteraction: 0
-  m_Sprite: {fileID: 21300000, guid: 6146ab92c088dcf4ea6ed5a057809088, type: 3}
+  m_Sprite: {fileID: 21300000, guid: 5baa3f81a0a6ae8439b6b664ff8d82fe, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_FlipX: 0
   m_FlipY: 0
@@ -121,4 +123,36 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0de589ae9d270ac4dbc863de2cb4302b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CardView
-  _backSprite: {fileID: 0}
+--- !u!114 &-3776602603309360290
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2317245638406361426}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fb39b1461cb33e44eabc134e707c3a5c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CardController
+--- !u!65 &3153551175640618312
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2317245638406361426}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Size: {x: 1.4, y: 1.9, z: 0.2}
+  m_Center: {x: 0, y: 0, z: 0}

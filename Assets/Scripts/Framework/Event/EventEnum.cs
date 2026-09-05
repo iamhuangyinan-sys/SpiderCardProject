@@ -12,8 +12,9 @@
     {
         // ---- 卡牌 ----
         OnTableChanged,      // 无参数：整桌刷新（发牌 / 重开）
-        OnColumnChanged,     // 参数：int（列索引，该列局部刷新）
-        OnDrawPileChanged,   // 无参数：发牌堆变化
+        OnColumnChanged,     // 参数：int（列索引，该列整列重建）
+        OnColumnAppend,      // 参数：int（列索引，该列末尾增量追加一张）
+        OnDrawPileChanged,   // 参数：int（发牌堆剩余数量）
         OnCardChanged,       // 参数：CardData（单张牌变化，如翻牌）
     }
 }

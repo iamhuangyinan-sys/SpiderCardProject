@@ -13,6 +13,7 @@ public class CardGameModule : ManagerBase<CardGameModule>
         CardResManager.Instance.Init();
         CardPoolManager.Instance.Init();
         CardViewManager.Instance.Init();
+        CardRuleManager.Instance.Init();
         CardsManager.Instance.Init();
     }
 
@@ -20,9 +21,16 @@ public class CardGameModule : ManagerBase<CardGameModule>
     {
         // 按依赖反序销毁
         CardsManager.Instance.Dispose();
+        CardRuleManager.Instance.Dispose();
         CardViewManager.Instance.Dispose();
         CardPoolManager.Instance.Dispose();
         CardResManager.Instance.Dispose();
         CardsStore.Instance.Dispose();
+    }
+
+    /// <summary>开始一局新游戏（清空旧局并重新发牌）</summary>
+    public void StartNewGame()
+    {
+        CardsManager.Instance.StartNewGame();
     }
 }

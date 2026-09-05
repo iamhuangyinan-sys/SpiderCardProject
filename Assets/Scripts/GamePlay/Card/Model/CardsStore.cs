@@ -31,6 +31,16 @@ public class CardsStore : StoreBase<CardsStore>
         columns.Clear();
     }
 
+    /// <summary>清空发牌堆与各列数据（保留列结构）</summary>
+    public void Clear()
+    {
+        drawPile.Clear();
+        foreach (var column in columns)
+        {
+            column.Clear();
+        }
+    }
+
     /// <summary>通知数据变更（供 View 订阅刷新）</summary>
     public void Refresh() => NotifyDataChanged();
 }
