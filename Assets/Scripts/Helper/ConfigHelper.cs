@@ -55,12 +55,6 @@ public static class ConfigHelper
         return null;
     }
 
-    /// <summary>获取单条配置（按 int 主键，兼容旧表）</summary>
-    public static T Get<T>(int id) where T : class
-    {
-        return Get<T>(id.ToString());
-    }
-
     /// <summary>
     /// 获取全部配置
     /// </summary>

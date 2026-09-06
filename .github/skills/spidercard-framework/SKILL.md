@@ -221,7 +221,12 @@ comps.listShop.ScrollTo(10);
 ### Excel → JSON + C# 类
 
 - Excel 放项目根 `Config/Excel/`，`.xlsx` 格式。
-- 第1行字段名（含 `Id` 主键），第2行注释，第3行起数据（第3行推断类型）。
+- 格式约定（行）：
+  - 第1行：字段名（空字段名的列为注释列，跳过）
+  - 第2行：类型（`int` / `string` / `float` / `bool`）
+  - 第3行：注释
+  - 第4行起：数据
+- 主键字段名固定为 `Id`，类型用 `string`（支持带前导零的 id）。
 - Unity 菜单 `Tools/Export All Configs` 生成：
   - `Assets/Resources/Config/Xxx.json`
   - `Assets/Scripts/Config/Xxx.cs`（数据类，自动生成，勿手动改）
@@ -229,8 +234,12 @@ comps.listShop.ScrollTo(10);
 ### 运行时读取（ConfigHelper）
 
 ```csharp
-var card = ConfigHelper.Get<CardConfig>(1);       // 按 Id 查
-var all = ConfigHelper.GetAll<CardConfig>();      // 全部
+ConfigHelper.LoadAll(); // 可选：启动时调用一次
+
+var card = ConfigHelper.Get<CardConfig>("0100001"); // 按 string 主键查
+var all = ConfigHelper.GetAll<CardConfig>(); // 拿全部
+
+// 首次 Get/GetAll 会按类型名自动懒加载 Resources/Config/{TypeName}.json
 ```
 
 ---
