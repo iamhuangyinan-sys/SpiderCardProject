@@ -1,7 +1,0 @@
-﻿{
-  "items": [
-    {"Id": 1, "Name": "hyn", "Level": 10, "Attack": 15.5},
-    {"Id": 2, "Name": "zzh", "Level": 20, "Attack": 61.3},
-    {"Id": 3, "Name": "wyh", "Level": 30, "Attack": 98.6}
-  ]
-}

@@ -38,21 +38,22 @@ public class CardsManager : ManagerBase<CardsManager>
         Deal();                     // 5. 发牌
     }
 
-    /// <summary>生成一副标准牌：4 花色 × A-K = 52 张，默认牌背朝上</summary>
+    /// <summary>按配表生成一副普通牌（id 以 01 开头），默认牌背朝上</summary>
     private List<CardData> CreateDeck()
     {
-        var deck = new List<CardData>(52);
-        foreach (E_CardSuitEnum suit in Enum.GetValues(typeof(E_CardSuitEnum)))
+        var deck = new List<CardData>();
+        foreach (var cfg in ConfigHelper.GetAll<CardConfig>())
         {
-            for (int rank = 1; rank <= 13; rank++)
+            // 只取普通牌（01 开头），特殊牌（02 开头）后续再处理
+            if (!cfg.Id.StartsWith("01")) continue;
+
+            deck.Add(new CardData
             {
-                deck.Add(new CardData
-                {
-                    suit = suit,
-                    rank = rank,
-                    isFaceUp = false,
-                });
-            }
+                id = cfg.Id,
+                suit = (E_CardSuitEnum)cfg.Suit,
+                rank = cfg.Rank,
+                isFaceUp = false,
+            });
         }
         return deck;
     }

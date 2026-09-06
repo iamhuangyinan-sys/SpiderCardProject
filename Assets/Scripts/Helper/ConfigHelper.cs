@@ -5,9 +5,9 @@ using UnityEngine;
 /// 配表读取助手 —— 纯静态，运行时加载 Resources/Config/*.json
 ///
 /// 使用方式：
-///   ConfigHelper.LoadAll();                         // 游戏启动时调用一次
-///   var card = ConfigHelper.Get<CardConfig>(1);     // 按 Id 查
-///   var allCards = ConfigHelper.GetAll<CardConfig>(); // 拿全部
+///   ConfigHelper.LoadAll();                             // 游戏启动时调用一次
+///   var card = ConfigHelper.Get<CardConfig>("0100001");  // 按 Id（string）查
+///   var allCards = ConfigHelper.GetAll<CardConfig>();    // 拿全部
 /// </summary>
 public static class ConfigHelper
 {
@@ -39,15 +39,13 @@ public static class ConfigHelper
         Debug.Log($"[ConfigHelper] 配表加载完成，共 {assets.Length} 个文件");
     }
 
-    /// <summary>
-    /// 获取单条配置（泛型版本，自动从字典查）
-    /// </summary>
-    public static T Get<T>(int id) where T : class
+    /// <summary>获取单条配置（按 string 主键，支持带前导零的 id）</summary>
+    public static T Get<T>(string id) where T : class
     {
         var type = typeof(T);
         EnsureLoaded(type);
 
-        if (_dataDict.TryGetValue(type, out var dictObj) && dictObj is Dictionary<int, T> dict)
+        if (_dataDict.TryGetValue(type, out var dictObj) && dictObj is Dictionary<string, T> dict)
         {
             dict.TryGetValue(id, out var result);
             return result;
@@ -55,6 +53,12 @@ public static class ConfigHelper
 
         Debug.LogError($"[ConfigHelper] 配表 {type.Name} 未加载，请先调用 LoadAll()");
         return null;
+    }
+
+    /// <summary>获取单条配置（按 int 主键，兼容旧表）</summary>
+    public static T Get<T>(int id) where T : class
+    {
+        return Get<T>(id.ToString());
     }
 
     /// <summary>
@@ -65,7 +69,7 @@ public static class ConfigHelper
         var type = typeof(T);
         EnsureLoaded(type);
 
-        if (_dataDict.TryGetValue(type, out var dictObj) && dictObj is Dictionary<int, T> dict)
+        if (_dataDict.TryGetValue(type, out var dictObj) && dictObj is Dictionary<string, T> dict)
             return new List<T>(dict.Values);
 
         return new List<T>();
@@ -89,7 +93,7 @@ public static class ConfigHelper
         var wrapper = JsonUtility.FromJson<ConfigWrapper<T>>(asset.text);
         if (wrapper == null || wrapper.items == null) return;
 
-        var dict = new Dictionary<int, T>();
+        var dict = new Dictionary<string, T>();
         foreach (var item in wrapper.items)
         {
             var prop = type.GetField("Id");
@@ -98,7 +102,7 @@ public static class ConfigHelper
                 Debug.LogError($"[ConfigHelper] {type.Name} 缺少 Id 字段！");
                 break;
             }
-            int id = (int)prop.GetValue(item);
+            string id = prop.GetValue(item)?.ToString() ?? "";
             dict[id] = item;
         }
 
@@ -136,7 +140,7 @@ public static class ConfigHelper
         var items = itemsField.GetValue(wrapper) as System.Collections.IList;
         if (items == null) return;
 
-        var dictType = typeof(Dictionary<,>).MakeGenericType(typeof(int), type);
+        var dictType = typeof(Dictionary<,>).MakeGenericType(typeof(string), type);
         var dict = System.Activator.CreateInstance(dictType) as System.Collections.IDictionary;
 
         var idField = type.GetField("Id");
@@ -148,7 +152,7 @@ public static class ConfigHelper
 
         foreach (var item in items)
         {
-            int id = (int)idField.GetValue(item);
+            string id = idField.GetValue(item)?.ToString() ?? "";
             dict[id] = item;
         }
 

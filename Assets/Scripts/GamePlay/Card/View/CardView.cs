@@ -89,28 +89,17 @@ public class CardView : MonoBehaviour
 
         if (faceUp)
         {
-            if (_rankText != null)
+            var cfg = CardResManager.Instance.GetCardConfig(data.id);
+            if (cfg != null)
             {
-                _rankText.text = RankToString(data.rank);
-                _rankText.color = IsRedSuit(data.suit) ? Color.red : Color.black;
+                if (_rankText != null)
+                {
+                    _rankText.text = cfg.Name;
+                    _rankText.color = IsRedSuit(data.suit) ? Color.red : Color.black;
+                }
+                if (_suitRenderer != null) _suitRenderer.sprite = CardResManager.Instance.GetIconSprite(cfg.Icon);
+                if (_cardRenderer != null) _cardRenderer.sprite = CardResManager.Instance.GetPatternSprite(cfg.Pattern);
             }
-
-            var suitSprite = CardResManager.Instance.GetSuitSprite(data.suit);
-            if (_suitRenderer != null) _suitRenderer.sprite = suitSprite;
-            if (_cardRenderer != null) _cardRenderer.sprite = suitSprite; // 中央图案暂用花色符号
-        }
-    }
-
-    /// <summary>点数转字符串：1→A，11→J，12→Q，13→K，其余为数字</summary>
-    private static string RankToString(int rank)
-    {
-        switch (rank)
-        {
-            case 1: return "A";
-            case 11: return "J";
-            case 12: return "Q";
-            case 13: return "K";
-            default: return rank.ToString();
         }
     }
 

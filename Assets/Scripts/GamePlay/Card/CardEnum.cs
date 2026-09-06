@@ -9,12 +9,12 @@ public enum E_CardSuitEnum
     /// <summary>红心</summary>
     Hearts = 0,
 
+    /// <summary>梅花</summary>
+    Clubs = 1,
+
     /// <summary>黑桃</summary>
-    Spades = 1,
+    Spades = 2,
 
     /// <summary>方块</summary>
-    Diamonds = 2,
-
-    /// <summary>梅花</summary>
-    Clubs = 3,
+    Diamonds = 3,
 }
