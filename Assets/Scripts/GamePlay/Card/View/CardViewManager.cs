@@ -35,6 +35,24 @@ public class CardViewManager : ManagerBase<CardViewManager>
     /// <summary>发牌堆剩余数量文本</summary>
     private TMP_Text _drawPileCountText;
 
+    /// <summary>弃牌堆数量文本</summary>
+    private TMP_Text _discardPileCountText;
+
+    /// <summary>牌包命中半径</summary>
+    private const float PocketHitRadius = 1f;
+
+    /// <summary>牌包牌的渲染排序</summary>
+    private const int PocketSortingOrder = 500;
+
+    /// <summary>牌包空槽物体（PocketEmpty 的子物体）</summary>
+    private readonly List<GameObject> _pocketSlots = new();
+
+    /// <summary>牌包空槽世界坐标</summary>
+    private readonly List<Vector3> _pocketPositions = new();
+
+    /// <summary>每个牌包的牌 View（null = 空）</summary>
+    private readonly List<CardView> _pocketViews = new();
+
     protected override void OnInit()
     {
         EventManager.Instance.AddListener(E_EventEnum.OnTableChanged, OnTableChanged);
@@ -42,9 +60,13 @@ public class CardViewManager : ManagerBase<CardViewManager>
         EventManager.Instance.AddListener<int>(E_EventEnum.OnColumnAppend, OnColumnAppend);
         EventManager.Instance.AddListener<CardData>(E_EventEnum.OnCardChanged, OnCardChanged);
         EventManager.Instance.AddListener<int>(E_EventEnum.OnDrawPileChanged, OnDrawPileChanged);
+        EventManager.Instance.AddListener<int>(E_EventEnum.OnDiscardPileChanged, OnDiscardPileChanged);
+        EventManager.Instance.AddListener<int>(E_EventEnum.OnPocketChanged, OnPocketChanged);
 
         FindEmptySlots();
         FindDrawPileCountText();
+        FindDiscardPileCountText();
+        FindPocketSlots();
     }
 
     protected override void OnDispose()
@@ -54,6 +76,8 @@ public class CardViewManager : ManagerBase<CardViewManager>
         EventManager.Instance.RemoveListener<int>(E_EventEnum.OnColumnAppend, OnColumnAppend);
         EventManager.Instance.RemoveListener<CardData>(E_EventEnum.OnCardChanged, OnCardChanged);
         EventManager.Instance.RemoveListener<int>(E_EventEnum.OnDrawPileChanged, OnDrawPileChanged);
+        EventManager.Instance.RemoveListener<int>(E_EventEnum.OnDiscardPileChanged, OnDiscardPileChanged);
+        EventManager.Instance.RemoveListener<int>(E_EventEnum.OnPocketChanged, OnPocketChanged);
 
         ClearAllViews();
         _emptySlots.Clear();
@@ -98,6 +122,21 @@ public class CardViewManager : ManagerBase<CardViewManager>
         }
     }
 
+    /// <summary>弃牌堆数量变化：更新数量文本</summary>
+    private void OnDiscardPileChanged(int count)
+    {
+        if (_discardPileCountText != null)
+        {
+            _discardPileCountText.text = count.ToString();
+        }
+    }
+
+    /// <summary>牌包变化：刷新该牌包的牌显示</summary>
+    private void OnPocketChanged(int pocketIndex)
+    {
+        RefreshPocket(pocketIndex);
+    }
+
     // ============ 内部 ============
 
     /// <summary>根据当前数据全量创建 View</summary>
@@ -115,6 +154,7 @@ public class CardViewManager : ManagerBase<CardViewManager>
                 if (view == null) continue;
 
                 view.Bind(cardData);
+                view.columnIndex = col;
                 view.SetPosition(GetCardPosition(col, column, row));
                 view.SetSortingOrder(GetSortingOrder(col, row));
                 _viewDict[cardData] = view;
@@ -122,9 +162,10 @@ public class CardViewManager : ManagerBase<CardViewManager>
         }
 
         RefreshEmptySlots();
+        RefreshPocketSlots();
     }
 
-    /// <summary>回收某列的 View 并重建该列</summary>
+    /// <summary>回收某列的所有 View 并重建该列</summary>
     private void RebuildColumn(int columnIndex)
     {
         var store = CardsStore.Instance;
@@ -132,14 +173,19 @@ public class CardViewManager : ManagerBase<CardViewManager>
 
         var column = store.columns[columnIndex];
 
-        // 回收该列现有 View
-        foreach (var cardData in column)
+        // 回收该列所有 View（按列归属找，包括已从数据移除的牌）
+        var toRemove = new List<CardData>();
+        foreach (var kv in _viewDict)
         {
-            if (_viewDict.TryGetValue(cardData, out var view))
+            if (kv.Value != null && kv.Value.columnIndex == columnIndex)
             {
-                CardPoolManager.Instance.Recycle(view);
-                _viewDict.Remove(cardData);
+                CardPoolManager.Instance.Recycle(kv.Value);
+                toRemove.Add(kv.Key);
             }
+        }
+        foreach (var key in toRemove)
+        {
+            _viewDict.Remove(key);
         }
 
         // 重建该列
@@ -150,6 +196,7 @@ public class CardViewManager : ManagerBase<CardViewManager>
             if (view == null) continue;
 
             view.Bind(cardData);
+            view.columnIndex = columnIndex;
             view.SetPosition(GetCardPosition(columnIndex, column, row));
             view.SetSortingOrder(GetSortingOrder(columnIndex, row));
             _viewDict[cardData] = view;
@@ -175,6 +222,7 @@ public class CardViewManager : ManagerBase<CardViewManager>
         if (view == null) return;
 
         view.Bind(cardData);
+        view.columnIndex = columnIndex;
         view.SetPosition(GetCardPosition(columnIndex, column, row));
         view.SetSortingOrder(GetSortingOrder(columnIndex, row));
         _viewDict[cardData] = view;
@@ -188,6 +236,16 @@ public class CardViewManager : ManagerBase<CardViewManager>
             CardPoolManager.Instance.Recycle(view);
         }
         _viewDict.Clear();
+
+        // 回收牌包 View
+        for (int i = 0; i < _pocketViews.Count; i++)
+        {
+            if (_pocketViews[i] != null)
+            {
+                CardPoolManager.Instance.Recycle(_pocketViews[i]);
+                _pocketViews[i] = null;
+            }
+        }
     }
 
     /// <summary>按数据查找对应的 View（不存在返回 null）</summary>
@@ -239,11 +297,130 @@ public class CardViewManager : ManagerBase<CardViewManager>
         }
     }
 
+    /// <summary>在场景中查找弃牌堆数量文本</summary>
+    private void FindDiscardPileCountText()
+    {
+        var go = GameObject.Find("DiscardPileCountText");
+        if (go != null)
+        {
+            _discardPileCountText = go.GetComponent<TMP_Text>();
+        }
+
+        if (_discardPileCountText == null)
+        {
+            Debug.LogWarning("[CardViewManager] 场景中未找到 DiscardPileCountText");
+        }
+    }
+
+    /// <summary>在场景中查找 PocketEmpty 及其空槽子物体</summary>
+    private void FindPocketSlots()
+    {
+        _pocketSlots.Clear();
+        _pocketPositions.Clear();
+
+        var pocketEmpty = GameObject.Find("PocketEmpty");
+        if (pocketEmpty == null)
+        {
+            Debug.LogWarning("[CardViewManager] 场景中未找到 PocketEmpty");
+            return;
+        }
+
+        foreach (Transform child in pocketEmpty.transform)
+        {
+            _pocketSlots.Add(child.gameObject);
+            _pocketPositions.Add(child.position);
+        }
+
+        // 初始化牌包 View 引用（数量 = 牌包数）
+        _pocketViews.Clear();
+        for (int i = 0; i < CardsStore.Instance.pockets.Count; i++)
+        {
+            _pocketViews.Add(null);
+        }
+    }
+
+    /// <summary>按牌包数量显示前 N 个空槽，并同步牌包 View 列表数量</summary>
+    private void RefreshPocketSlots()
+    {
+        int count = CardsStore.Instance.pockets.Count;
+        for (int i = 0; i < _pocketSlots.Count; i++)
+        {
+            _pocketSlots[i].SetActive(i < count);
+        }
+
+        // 同步牌包 View 列表数量
+        while (_pocketViews.Count < count)
+        {
+            _pocketViews.Add(null);
+        }
+        while (_pocketViews.Count > count)
+        {
+            var last = _pocketViews[_pocketViews.Count - 1];
+            if (last != null) CardPoolManager.Instance.Recycle(last);
+            _pocketViews.RemoveAt(_pocketViews.Count - 1);
+        }
+    }
+
+    /// <summary>根据世界坐标判定最近的牌包索引（命中半径内），否则 -1</summary>
+    public int GetPocketIndexAt(Vector3 worldPos)
+    {
+        int count = CardsStore.Instance.pockets.Count;
+        int nearest = -1;
+        float minDist = PocketHitRadius;
+        for (int i = 0; i < count && i < _pocketPositions.Count; i++)
+        {
+            float d = Vector2.Distance(worldPos, _pocketPositions[i]);
+            if (d < minDist)
+            {
+                minDist = d;
+                nearest = i;
+            }
+        }
+        return nearest;
+    }
+
+    /// <summary>刷新某个牌包的牌显示（有牌建 View 盖住空槽，无牌清空）</summary>
+    private void RefreshPocket(int pocketIndex)
+    {
+        var store = CardsStore.Instance;
+        if (pocketIndex < 0 || pocketIndex >= store.pockets.Count) return;
+        if (pocketIndex >= _pocketViews.Count) return;
+
+        // 回收旧 View
+        if (_pocketViews[pocketIndex] != null)
+        {
+            CardPoolManager.Instance.Recycle(_pocketViews[pocketIndex]);
+            _pocketViews[pocketIndex] = null;
+        }
+
+        // 有牌则新建 View
+        var card = store.pockets[pocketIndex];
+        if (card != null)
+        {
+            var view = CardPoolManager.Instance.GetCard();
+            if (view != null)
+            {
+                view.Bind(card);
+                view.columnIndex = -1;
+                view.SetPosition(GetPocketPosition(pocketIndex));
+                view.SetSortingOrder(PocketSortingOrder);
+                _pocketViews[pocketIndex] = view;
+            }
+        }
+    }
+
+    /// <summary>获取牌包的世界坐标</summary>
+    private Vector3 GetPocketPosition(int pocketIndex)
+    {
+        if (pocketIndex < 0 || pocketIndex >= _pocketPositions.Count) return Vector3.zero;
+        return _pocketPositions[pocketIndex];
+    }
+
     /// <summary>根据世界坐标判定落点列索引（越界返回 -1）</summary>
     public int GetColumnIndexAt(Vector3 worldPos)
     {
         int col = Mathf.RoundToInt((worldPos.x - _startPos.x) / ColumnSpacing);
-        if (col < 0 || col >= CardsStore.ColumnCount) return -1;
+        if (col < 0 || col >= CardsStore.Instance.columnCount) return -1;
         return col;
     }
 

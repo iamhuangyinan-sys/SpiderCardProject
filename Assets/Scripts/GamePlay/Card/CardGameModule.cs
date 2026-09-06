@@ -28,9 +28,9 @@ public class CardGameModule : ManagerBase<CardGameModule>
         CardsStore.Instance.Dispose();
     }
 
-    /// <summary>开始一局新游戏（清空旧局并重新发牌）</summary>
-    public void StartNewGame()
+    /// <summary>开始一局新游戏（指定列数与牌包数）</summary>
+    public void StartNewGame(int columnCount, int pocketCount)
     {
-        CardsManager.Instance.StartNewGame();
+        CardsManager.Instance.StartNewGame(columnCount, pocketCount);
     }
 }

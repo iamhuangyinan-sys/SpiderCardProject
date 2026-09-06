@@ -31,6 +31,12 @@ public class CardController : MonoBehaviour
     /// <summary>按下点与锚点牌中心的偏移</summary>
     private Vector3 _dragOffset;
 
+    /// <summary>是否从牌包拖出</summary>
+    private bool _dragFromPocket;
+
+    /// <summary>拖拽的牌所在牌包索引（从牌包拖出时有效）</summary>
+    private int _dragPocketIndex;
+
     private void Awake()
     {
         _view = GetComponent<CardView>();
@@ -91,10 +97,24 @@ public class CardController : MonoBehaviour
         return top == _view;
     }
 
-    /// <summary>开始拖拽：由 CardRuleManager 判定合法牌串，记录起始位置</summary>
+    /// <summary>开始拖拽：牌包牌拖单张，列牌由 CardRuleManager 判定合法牌串</summary>
     private void StartDrag()
     {
-        _draggedCards = CardRuleManager.Instance.GetDraggableCards(_view.data);
+        _dragFromPocket = false;
+        _dragPocketIndex = -1;
+
+        int pocketIndex = CardRuleManager.Instance.FindPocketIndex(_view.data);
+        if (pocketIndex >= 0)
+        {
+            _draggedCards = new List<CardData> { _view.data };
+            _dragFromPocket = true;
+            _dragPocketIndex = pocketIndex;
+        }
+        else
+        {
+            _draggedCards = CardRuleManager.Instance.GetDraggableCards(_view.data);
+        }
+
         if (_draggedCards == null || _draggedCards.Count == 0)
         {
             _dragging = false;
@@ -105,7 +125,7 @@ public class CardController : MonoBehaviour
         _dragStartSortingOrders = new int[_draggedCards.Count];
         for (int i = 0; i < _draggedCards.Count; i++)
         {
-            var view = CardViewManager.Instance.GetView(_draggedCards[i]);
+            var view = GetDragView(i);
             if (view == null) continue;
 
             _dragStartPositions[i] = view.transform.position;
@@ -131,7 +151,7 @@ public class CardController : MonoBehaviour
 
         for (int i = 0; i < _draggedCards.Count; i++)
         {
-            var view = CardViewManager.Instance.GetView(_draggedCards[i]);
+            var view = GetDragView(i);
             if (view == null) continue;
 
             Vector3 rel = _dragStartPositions[i] - _dragStartPositions[0];
@@ -139,17 +159,38 @@ public class CardController : MonoBehaviour
         }
     }
 
-    /// <summary>结束拖拽：判定落点，能移动则移动，否则回弹</summary>
+    /// <summary>结束拖拽：判定落点（牌包/列），能移动则移动，否则回弹</summary>
     private void EndDrag()
     {
         Vector3 mouseWorld = ScreenToWorldPlane(Mouse.current.position.ReadValue());
         int targetColumn = CardViewManager.Instance.GetColumnIndexAt(mouseWorld);
+        int targetPocket = CardViewManager.Instance.GetPocketIndexAt(mouseWorld);
 
         bool moved = false;
-        if (targetColumn >= 0 && CardRuleManager.Instance.CanMove(_draggedCards, targetColumn))
+
+        if (_dragFromPocket)
         {
-            CardsManager.Instance.MoveCards(_draggedCards, targetColumn);
-            moved = true;
+            // 从牌包拖出：只能落到列
+            if (targetColumn >= 0 && CardRuleManager.Instance.CanMoveFromPocket(_dragPocketIndex, targetColumn))
+            {
+                CardsManager.Instance.MoveFromPocket(_dragPocketIndex, targetColumn);
+                moved = true;
+            }
+        }
+        else
+        {
+            // 从列拖出：优先牌包（仅单张），否则列
+            if (targetPocket >= 0 && _draggedCards.Count == 1 &&
+                CardRuleManager.Instance.CanMoveToPocket(_draggedCards[0], targetPocket))
+            {
+                CardsManager.Instance.MoveToPocket(_draggedCards[0], targetPocket);
+                moved = true;
+            }
+            else if (targetColumn >= 0 && CardRuleManager.Instance.CanMove(_draggedCards, targetColumn))
+            {
+                CardsManager.Instance.MoveCards(_draggedCards, targetColumn);
+                moved = true;
+            }
         }
 
         if (!moved)
@@ -157,7 +198,7 @@ public class CardController : MonoBehaviour
             // 回弹：恢复原始排序与位置
             for (int i = 0; i < _draggedCards.Count; i++)
             {
-                var view = CardViewManager.Instance.GetView(_draggedCards[i]);
+                var view = GetDragView(i);
                 if (view == null) continue;
                 view.SetSortingOrder(_dragStartSortingOrders[i]);
                 view.SetPosition(_dragStartPositions[i]);
@@ -168,6 +209,15 @@ public class CardController : MonoBehaviour
         _draggedCards = null;
         _dragStartPositions = null;
         _dragStartSortingOrders = null;
+        _dragFromPocket = false;
+        _dragPocketIndex = -1;
+    }
+
+    /// <summary>获取被拖第 i 张牌的 View（牌包牌用自身，列牌从管理器查）</summary>
+    private CardView GetDragView(int i)
+    {
+        if (_dragFromPocket && i == 0) return _view;
+        return CardViewManager.Instance.GetView(_draggedCards[i]);
     }
 
     /// <summary>屏幕坐标 → 卡牌所在平面（z=0）的世界坐标</summary>

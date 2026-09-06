@@ -54,7 +54,7 @@ public class CardRuleManager : ManagerBase<CardRuleManager>
     /// <summary>
     /// 判断能否把一串牌移动到目标列：
     /// - 空列：可直接移动
-    /// - 非空：锚点牌（拖串最上面那张）与目标堆顶同花色、点数小 1
+    /// - 非空：锚点牌（拖串最上面那张）点数比目标堆顶小 1
     /// - 不能移回原列
     /// </summary>
     public bool CanMove(List<CardData> draggedCards, int targetColumnIndex)
@@ -67,13 +67,14 @@ public class CardRuleManager : ManagerBase<CardRuleManager>
         var anchor = draggedCards[0];
 
         int fromColumn = FindColumnIndex(anchor);
-        if (fromColumn < 0 || fromColumn == targetColumnIndex) return false;
+        // 在列里且移回原列 → 拒绝；不在列里（如牌包）则跳过
+        if (fromColumn >= 0 && fromColumn == targetColumnIndex) return false;
 
         var targetColumn = columns[targetColumnIndex];
         if (targetColumn.Count == 0) return true;
 
         var top = targetColumn[targetColumn.Count - 1];
-        return anchor.suit == top.suit && anchor.rank == top.rank - 1;
+        return anchor.rank == top.rank - 1;
     }
 
     /// <summary>查找某张牌所在的列索引（找不到返回 -1）</summary>
@@ -96,5 +97,54 @@ public class CardRuleManager : ManagerBase<CardRuleManager>
             if (column.Count == 0) return false;
         }
         return true;
+    }
+
+    /// <summary>
+    /// 检查某列从最下方往上是否形成 A-K 同花顺（13 张、同花色、点数 K→A），
+    /// 是则返回该顺子（K 到 A 共 13 张），否则返回 null
+    /// </summary>
+    public List<CardData> GetCompletedSequence(List<CardData> column)
+    {
+        if (column == null || column.Count < 13) return null;
+
+        int start = column.Count - 13;
+        var suit = column[start].suit;
+        for (int i = 0; i < 13; i++)
+        {
+            var card = column[start + i];
+            if (card.suit != suit || card.rank != 13 - i) return null;
+        }
+
+        return column.GetRange(start, 13);
+    }
+
+    /// <summary>判断能否把某张牌移到指定牌包（单张即可，且该牌包为空）</summary>
+    public bool CanMoveToPocket(CardData card, int pocketIndex)
+    {
+        if (card == null) return false;
+        var pockets = CardsStore.Instance.pockets;
+        if (pocketIndex < 0 || pocketIndex >= pockets.Count) return false;
+        return pockets[pocketIndex] == null;
+    }
+
+    /// <summary>判断能否从牌包把牌移到目标列（复用单张牌移到列的规则）</summary>
+    public bool CanMoveFromPocket(int pocketIndex, int targetColumnIndex)
+    {
+        var store = CardsStore.Instance;
+        if (pocketIndex < 0 || pocketIndex >= store.pockets.Count) return false;
+        var card = store.pockets[pocketIndex];
+        if (card == null) return false;
+        return CanMove(new List<CardData> { card }, targetColumnIndex);
+    }
+
+    /// <summary>查找某张牌所在的牌包索引（找不到返回 -1）</summary>
+    public int FindPocketIndex(CardData card)
+    {
+        var pockets = CardsStore.Instance.pockets;
+        for (int i = 0; i < pockets.Count; i++)
+        {
+            if (pockets[i] == card) return i;
+        }
+        return -1;
     }
 }

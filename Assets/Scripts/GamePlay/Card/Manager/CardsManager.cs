@@ -13,10 +13,14 @@ public class CardsManager : ManagerBase<CardsManager>
     /// <summary>测试模式：跳过洗牌直接发牌（仅编辑器下生效）</summary>
     public bool isTestMode = true;
 
-    /// <summary>开始一局新游戏：清空数据 → 组牌 → 洗牌 → 发牌</summary>
-    public void StartNewGame()
+    /// <summary>开始一局新游戏：设置列数/牌包数 → 清空数据 → 组牌 → 洗牌 → 发牌</summary>
+    public void StartNewGame(int columnCount, int pocketCount)
     {
         var store = CardsStore.Instance;
+
+        // 设置本局列数与牌包数，再清空（重建结构）
+        store.columnCount = columnCount;
+        store.pocketCount = pocketCount;
         store.Clear();              // 1. 清空旧数据
 
         var deck = CreateDeck();    // 2. 组牌
@@ -34,17 +38,17 @@ public class CardsManager : ManagerBase<CardsManager>
         Deal();                     // 5. 发牌
     }
 
-    /// <summary>生成一副牌：全红桃 A-K，4 组 = 52 张（测试用），默认牌背朝上</summary>
+    /// <summary>生成一副标准牌：4 花色 × A-K = 52 张，默认牌背朝上</summary>
     private List<CardData> CreateDeck()
     {
         var deck = new List<CardData>(52);
-        for (int group = 0; group < 4; group++)
+        foreach (E_CardSuitEnum suit in Enum.GetValues(typeof(E_CardSuitEnum)))
         {
             for (int rank = 1; rank <= 13; rank++)
             {
                 deck.Add(new CardData
                 {
-                    suit = E_CardSuitEnum.Hearts,
+                    suit = suit,
                     rank = rank,
                     isFaceUp = false,
                 });
@@ -84,11 +88,11 @@ public class CardsManager : ManagerBase<CardsManager>
             column.Clear();
         }
 
-        const int dealCount = CardsStore.ColumnCount * 3;
+        int dealCount = store.columnCount * 3;
         for (int i = 0; i < dealCount; i++)
         {
             var card = store.drawPile.Pop();
-            store.columns[i % CardsStore.ColumnCount].Add(card);
+            store.columns[i % store.columnCount].Add(card);
         }
 
         foreach (var column in store.columns)
@@ -102,9 +106,10 @@ public class CardsManager : ManagerBase<CardsManager>
         // 派发事件，渲染层据此创建/刷新 CardView
         EventManager.Instance.Dispatch(E_EventEnum.OnTableChanged);
         EventManager.Instance.Dispatch<int>(E_EventEnum.OnDrawPileChanged, store.drawPile.Count);
+        EventManager.Instance.Dispatch<int>(E_EventEnum.OnDiscardPileChanged, store.discardPile.Count);
     }
 
-    /// <summary>从发牌堆给每列顶部发一张牌（翻开），发完为止</summary>
+    /// <summary>从发牌堆给每列顶部发一张牌（翻开），发完为止；发牌后检查顺子并洗回弃牌堆</summary>
     public void DealFromDrawPile()
     {
         if (!CardRuleManager.Instance.CanDeal()) return;
@@ -123,8 +128,18 @@ public class CardsManager : ManagerBase<CardsManager>
             EventManager.Instance.Dispatch<int>(E_EventEnum.OnColumnAppend, col);
         }
 
-        // 发牌堆数量变化
+        // 发牌后检查各列是否形成完成的顺子
+        for (int col = 0; col < store.columns.Count; col++)
+        {
+            CheckAndDiscard(col);
+        }
+
+        // 发牌堆空了就把弃牌堆洗回
+        TryShuffleBack();
+
+        // 发牌堆 / 弃牌堆数量变化
         EventManager.Instance.Dispatch<int>(E_EventEnum.OnDrawPileChanged, store.drawPile.Count);
+        EventManager.Instance.Dispatch<int>(E_EventEnum.OnDiscardPileChanged, store.discardPile.Count);
     }
 
     /// <summary>
@@ -177,6 +192,100 @@ public class CardsManager : ManagerBase<CardsManager>
 
         // 通知刷新两列
         EventManager.Instance.Dispatch<int>(E_EventEnum.OnColumnChanged, fromColumnIndex);
+        EventManager.Instance.Dispatch<int>(E_EventEnum.OnColumnChanged, targetColumnIndex);
+
+        // 移动后检查两列是否形成完成的顺子
+        CheckAndDiscard(fromColumnIndex);
+        CheckAndDiscard(targetColumnIndex);
+
+        EventManager.Instance.Dispatch<int>(E_EventEnum.OnDiscardPileChanged, store.discardPile.Count);
+    }
+
+    /// <summary>检查某列是否从底部形成 A-K 同花顺，是则移入弃牌堆并重建该列</summary>
+    private bool CheckAndDiscard(int columnIndex)
+    {
+        var store = CardsStore.Instance;
+        if (columnIndex < 0 || columnIndex >= store.columns.Count) return false;
+
+        var column = store.columns[columnIndex];
+        var seq = CardRuleManager.Instance.GetCompletedSequence(column);
+        if (seq == null) return false;
+
+        foreach (var card in seq)
+        {
+            column.Remove(card);
+        }
+        store.discardPile.AddRange(seq);
+
+        // 移除后，新顶牌若为反面则翻开
+        if (column.Count > 0)
+        {
+            var newTop = column[column.Count - 1];
+            if (!newTop.isFaceUp)
+            {
+                newTop.isFaceUp = true;
+            }
+        }
+
+        // 重建该列
+        EventManager.Instance.Dispatch<int>(E_EventEnum.OnColumnChanged, columnIndex);
+        return true;
+    }
+
+    /// <summary>发牌堆空了且弃牌堆有牌，则把弃牌堆洗回发牌堆</summary>
+    private void TryShuffleBack()
+    {
+        var store = CardsStore.Instance;
+        if (store.drawPile.Count != 0 || store.discardPile.Count == 0) return;
+
+        Shuffle(store.discardPile);
+        foreach (var card in store.discardPile)
+        {
+            store.drawPile.Push(card);
+        }
+        store.discardPile.Clear();
+    }
+
+    /// <summary>把一张牌移到指定牌包（暂存）</summary>
+    public void MoveToPocket(CardData card, int pocketIndex)
+    {
+        var store = CardsStore.Instance;
+        if (!CardRuleManager.Instance.CanMoveToPocket(card, pocketIndex)) return;
+
+        // 从原列移除
+        int fromColumn = CardRuleManager.Instance.FindColumnIndex(card);
+        if (fromColumn >= 0)
+        {
+            store.columns[fromColumn].Remove(card);
+
+            var fromCol = store.columns[fromColumn];
+            if (fromCol.Count > 0)
+            {
+                var newTop = fromCol[fromCol.Count - 1];
+                if (!newTop.isFaceUp) newTop.isFaceUp = true;
+            }
+        }
+
+        card.isFaceUp = true;
+        store.pockets[pocketIndex] = card;
+
+        if (fromColumn >= 0)
+            EventManager.Instance.Dispatch<int>(E_EventEnum.OnColumnChanged, fromColumn);
+        EventManager.Instance.Dispatch<int>(E_EventEnum.OnPocketChanged, pocketIndex);
+    }
+
+    /// <summary>从牌包把牌移到目标列</summary>
+    public void MoveFromPocket(int pocketIndex, int targetColumnIndex)
+    {
+        var store = CardsStore.Instance;
+        if (!CardRuleManager.Instance.CanMoveFromPocket(pocketIndex, targetColumnIndex)) return;
+
+        var card = store.pockets[pocketIndex];
+        store.pockets[pocketIndex] = null;
+        card.isFaceUp = true;
+        store.columns[targetColumnIndex].Add(card);
+
+        EventManager.Instance.Dispatch<int>(E_EventEnum.OnPocketChanged, pocketIndex);
         EventManager.Instance.Dispatch<int>(E_EventEnum.OnColumnChanged, targetColumnIndex);
     }
 }
