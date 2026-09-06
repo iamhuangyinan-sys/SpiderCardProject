@@ -4,9 +4,8 @@
 public class CardConfig
 {
     public string Id;
-    public string Name;
-    public string Icon;
-    public string Pattern;
+    public string Image;
     public int Suit;
     public int Rank;
+    public bool SingleGrab;
 }

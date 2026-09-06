@@ -19,7 +19,7 @@ public class CardViewManager : ManagerBase<CardViewManager>
     private const float ColumnSpacing = 1.7f;
 
     /// <summary>正面牌（翻开）的向下间隔</summary>
-    private const float FaceUpSpacing = 0.7f;
+    private const float FaceUpSpacing = 0.65f;
 
     /// <summary>反面牌（牌背）的向下间隔</summary>
     private const float FaceDownSpacing = 0.3f;

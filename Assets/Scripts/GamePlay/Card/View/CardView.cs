@@ -1,9 +1,8 @@
-using TMPro;
 using UnityEngine;
 
 /// <summary>
 /// 单张卡牌的表现层（挂载在卡牌预制体上）
-/// 根物体 SpriteRenderer 显示牌底/牌背；子物体：Rank（点数 TMP）、Suit（花色）、Card（中央图案）
+/// 根物体 SpriteRenderer 显示整张牌：正面 = 配表 Image，反面 = cardBack
 /// 只负责"把数据画出来"，不修改数据；数据绑定是单向的（View → Data）
 /// </summary>
 public class CardView : MonoBehaviour
@@ -14,19 +13,11 @@ public class CardView : MonoBehaviour
     /// <summary>所在列索引（-1 = 未分配）</summary>
     public int columnIndex { get; set; } = -1;
 
-    private TMP_Text _rankText;
-    private SpriteRenderer _suitRenderer;
-    private SpriteRenderer _cardRenderer;
-
-    /// <summary>根物体 SpriteRenderer（牌底 / 牌背）</summary>
     private SpriteRenderer _rootRenderer;
 
     private void Awake()
     {
         _rootRenderer = GetComponent<SpriteRenderer>();
-        _rankText = GetChildComponent<TMP_Text>("Rank");
-        _suitRenderer = GetChildComponent<SpriteRenderer>("Suit");
-        _cardRenderer = GetChildComponent<SpriteRenderer>("Card");
     }
 
     /// <summary>绑定数据并刷新表现</summary>
@@ -49,70 +40,27 @@ public class CardView : MonoBehaviour
         transform.position = pos;
     }
 
-    /// <summary>设置渲染排序：牌底最低、图案居中、点数文本最高</summary>
+    /// <summary>设置渲染排序</summary>
     public void SetSortingOrder(int order)
     {
         if (_rootRenderer != null) _rootRenderer.sortingOrder = order;
-        if (_suitRenderer != null) _suitRenderer.sortingOrder = order + 1;
-        if (_cardRenderer != null) _cardRenderer.sortingOrder = order + 1;
-
-        if (_rankText != null)
-        {
-            // TextMeshPro（世界空间）的排序在 MeshRenderer 上
-            var rankRenderer = _rankText.GetComponent<MeshRenderer>();
-            if (rankRenderer != null)
-            {
-                rankRenderer.sortingOrder = order + 2;
-            }
-        }
     }
 
-    /// <summary>根据数据刷新表现：翻面、点数、花色符号、中央图案</summary>
+    /// <summary>根据数据刷新表现：正面整图 / 反面牌背</summary>
     public void Refresh()
     {
-        if (data == null) return;
+        if (_rootRenderer == null || data == null) return;
 
-        bool faceUp = data.isFaceUp;
-
-        // 根物体 sprite：正面空牌底 / 反面牌背
-        if (_rootRenderer != null)
-        {
-            _rootRenderer.sprite = faceUp
-                ? CardResManager.Instance.GetEmptySprite()
-                : CardResManager.Instance.GetBackSprite();
-        }
-
-        // 正面：点数、花色、图案
-        if (_rankText != null) _rankText.gameObject.SetActive(faceUp);
-        if (_suitRenderer != null) _suitRenderer.gameObject.SetActive(faceUp);
-        if (_cardRenderer != null) _cardRenderer.gameObject.SetActive(faceUp);
-
-        if (faceUp)
+        if (data.isFaceUp)
         {
             var cfg = CardResManager.Instance.GetCardConfig(data.id);
-            if (cfg != null)
-            {
-                if (_rankText != null)
-                {
-                    _rankText.text = cfg.Name;
-                    _rankText.color = IsRedSuit(data.suit) ? Color.red : Color.black;
-                }
-                if (_suitRenderer != null) _suitRenderer.sprite = CardResManager.Instance.GetIconSprite(cfg.Icon);
-                if (_cardRenderer != null) _cardRenderer.sprite = CardResManager.Instance.GetPatternSprite(cfg.Pattern);
-            }
+            _rootRenderer.sprite = cfg != null
+                ? CardResManager.Instance.GetCardImage(cfg.Image)
+                : null;
         }
-    }
-
-    /// <summary>红桃/方块为红色，黑桃/梅花为黑色</summary>
-    private static bool IsRedSuit(E_CardSuitEnum suit)
-    {
-        return suit == E_CardSuitEnum.Hearts || suit == E_CardSuitEnum.Diamonds;
-    }
-
-    /// <summary>获取子物体上的组件</summary>
-    private T GetChildComponent<T>(string name) where T : Component
-    {
-        var child = transform.Find(name);
-        return child != null ? child.GetComponent<T>() : null;
+        else
+        {
+            _rootRenderer.sprite = CardResManager.Instance.GetBackSprite();
+        }
     }
 }

@@ -38,24 +38,29 @@ public class CardsManager : ManagerBase<CardsManager>
         Deal();                     // 5. 发牌
     }
 
-    /// <summary>按配表生成一副普通牌（id 以 01 开头），默认牌背朝上</summary>
+    /// <summary>按配表生成一副牌，默认牌背朝上</summary>
     private List<CardData> CreateDeck()
     {
         var deck = new List<CardData>();
         foreach (var cfg in ConfigHelper.GetAll<CardConfig>())
         {
-            // 只取普通牌（01 开头），特殊牌（02 开头）后续再处理
-            if (!cfg.Id.StartsWith("01")) continue;
-
-            deck.Add(new CardData
-            {
-                id = cfg.Id,
-                suit = (E_CardSuitEnum)cfg.Suit,
-                rank = cfg.Rank,
-                isFaceUp = false,
-            });
+            deck.Add(CreateCard(cfg));
         }
+        
         return deck;
+    }
+
+    /// <summary>由配表数据创建一张牌</summary>
+    private CardData CreateCard(CardConfig cfg)
+    {
+        return new CardData
+        {
+            id = cfg.Id,
+            suit = (E_CardSuitEnum)cfg.Suit,
+            rank = cfg.Rank,
+            isFaceUp = false,
+            isSingleGrab = cfg.SingleGrab,
+        };
     }
 
     /// <summary>Fisher-Yates 洗牌（O(n)，等概率生成任意排列）</summary>

@@ -12,6 +12,27 @@ public class CardRuleManager : ManagerBase<CardRuleManager>
         return anchor != null && anchor.isFaceUp;
     }
 
+    /// <summary>是否是蜘蛛牌（万能连接牌，点数 -1）</summary>
+    public static bool IsSpider(CardData card)
+    {
+        return card != null && card.rank == -1;
+    }
+
+    /// <summary>是否是黑色牌（无花色无点数，点数 -2，不能连接、只能单独拖、只能放空列）</summary>
+    public static bool IsBlack(CardData card)
+    {
+        return card != null && card.rank == -2;
+    }
+
+    /// <summary>两张相邻牌能否连接：同花色，且任一是蜘蛛牌，或点数逐张减 1；黑色牌不能连接</summary>
+    private static bool CanConnect(CardData prev, CardData cur)
+    {
+        if (IsBlack(prev) || IsBlack(cur)) return false;
+        if (prev.suit != cur.suit) return false;
+        if (IsSpider(prev) || IsSpider(cur)) return true;
+        return cur.rank == prev.rank - 1;
+    }
+
     /// <summary>
     /// 获取能被整体拖动的牌串：
     /// 锚点牌及其同列下方所有牌，必须整串「翻开、同花色、逐张减 1」才可拖，
@@ -23,6 +44,24 @@ public class CardRuleManager : ManagerBase<CardRuleManager>
         if (!CanDrag(anchor)) return result;
 
         var columns = CardsStore.Instance.columns;
+
+        // 单抓牌：只能单独拖拽单张，且必须位于列顶（不能被其他牌压住）
+        if (anchor.isSingleGrab)
+        {
+            foreach (var column in columns)
+            {
+                int idx = column.IndexOf(anchor);
+                if (idx < 0) continue;
+                // 只有列顶的单抓牌才可拖起，被压住则不可拖
+                if (idx == column.Count - 1)
+                {
+                    result.Add(anchor);
+                }
+                break;
+            }
+            return result;
+        }
+
         foreach (var column in columns)
         {
             int idx = column.IndexOf(anchor);
@@ -34,12 +73,12 @@ public class CardRuleManager : ManagerBase<CardRuleManager>
                 result.Add(column[i]);
             }
 
-            // 整串必须「翻开、同花色、逐张减 1」，任何一张不满足则整体不可拖
+            // 整串必须「翻开、可连接（同花色，蜘蛛牌或逐张减 1）」，任何一张不满足则整体不可拖
             for (int i = 1; i < result.Count; i++)
             {
                 var prev = result[i - 1];
                 var cur = result[i];
-                if (!(cur.isFaceUp && cur.suit == prev.suit && cur.rank == prev.rank - 1))
+                if (!(cur.isFaceUp && CanConnect(prev, cur)))
                 {
                     result.Clear();
                     return result;
@@ -54,7 +93,7 @@ public class CardRuleManager : ManagerBase<CardRuleManager>
     /// <summary>
     /// 判断能否把一串牌移动到目标列：
     /// - 空列：可直接移动
-    /// - 非空：锚点牌（拖串最上面那张）点数比目标堆顶小 1
+    /// - 非空：普通牌点数比目标堆顶小 1；蜘蛛牌同花色即可连接
     /// - 不能移回原列
     /// </summary>
     public bool CanMove(List<CardData> draggedCards, int targetColumnIndex)
@@ -73,7 +112,17 @@ public class CardRuleManager : ManagerBase<CardRuleManager>
         var targetColumn = columns[targetColumnIndex];
         if (targetColumn.Count == 0) return true;
 
+        // 黑色牌只能放到空列
+        if (IsBlack(anchor)) return false;
+
         var top = targetColumn[targetColumn.Count - 1];
+
+        // 蜘蛛牌参与：同花色即可连接
+        if (IsSpider(anchor) || IsSpider(top))
+        {
+            return anchor.suit == top.suit;
+        }
+
         return anchor.rank == top.rank - 1;
     }
 

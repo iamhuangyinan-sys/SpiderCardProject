@@ -14,4 +14,7 @@ public class CardData
 
     /// <summary>是否正面朝上（false = 牌背朝上）</summary>
     public bool isFaceUp;
+
+    /// <summary>单抓：只能单独拖起单张（不能被其他牌压住）</summary>
+    public bool isSingleGrab;
 }
