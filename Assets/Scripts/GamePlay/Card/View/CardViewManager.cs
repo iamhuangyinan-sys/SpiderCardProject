@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using DG.Tweening;
 using Framework.Event;
 using Framework.Mgr;
 using TMPro;
@@ -18,8 +19,8 @@ public class CardViewManager : ManagerBase<CardViewManager>
     /// <summary>列间隔（向右 +X）</summary>
     private const float ColumnSpacing = 1.7f;
 
-    /// <summary>正面牌（翻开）的向下间隔</summary>
-    private const float FaceUpSpacing = 0.65f;
+    /// <summary>正面牌（翻开）的向下间隔（投影拉伸计算用）</summary>
+    public const float FaceUpSpacing = 0.65f;
 
     /// <summary>反面牌（牌背）的向下间隔</summary>
     private const float FaceDownSpacing = 0.3f;
@@ -53,12 +54,26 @@ public class CardViewManager : ManagerBase<CardViewManager>
     /// <summary>每个牌包的牌 View（null = 空）</summary>
     private readonly List<CardView> _pocketViews = new();
 
+    /// <summary>是否正在播放动画（动画期间锁定输入）</summary>
+    public bool IsAnimating { get; private set; }
+
+    /// <summary>发牌堆 Transform（发牌动画起点）</summary>
+    private Transform _drawPileTrans;
+
+    /// <summary>弃牌堆 Transform（回收动画终点）</summary>
+    private Transform _discardPileTrans;
+
+    /// <summary>进行中的飞行动画数量（发牌/回收，减到 0 解锁输入）</summary>
+    private int _animatingCount;
+
     protected override void OnInit()
     {
         EventManager.Instance.AddListener(E_EventEnum.OnTableChanged, OnTableChanged);
         EventManager.Instance.AddListener<int>(E_EventEnum.OnColumnChanged, OnColumnChanged);
         EventManager.Instance.AddListener<int>(E_EventEnum.OnColumnAppend, OnColumnAppend);
         EventManager.Instance.AddListener<CardData>(E_EventEnum.OnCardChanged, OnCardChanged);
+        EventManager.Instance.AddListener<CardData>(E_EventEnum.OnCardToDiscard, OnCardToDiscard);
+        EventManager.Instance.AddListener(E_EventEnum.OnShuffleBack, OnShuffleBack);
         EventManager.Instance.AddListener<int>(E_EventEnum.OnDrawPileChanged, OnDrawPileChanged);
         EventManager.Instance.AddListener<int>(E_EventEnum.OnDiscardPileChanged, OnDiscardPileChanged);
         EventManager.Instance.AddListener<int>(E_EventEnum.OnPocketChanged, OnPocketChanged);
@@ -67,6 +82,8 @@ public class CardViewManager : ManagerBase<CardViewManager>
         FindDrawPileCountText();
         FindDiscardPileCountText();
         FindPocketSlots();
+        FindDrawPile();
+        FindDiscardPile();
     }
 
     protected override void OnDispose()
@@ -75,12 +92,17 @@ public class CardViewManager : ManagerBase<CardViewManager>
         EventManager.Instance.RemoveListener<int>(E_EventEnum.OnColumnChanged, OnColumnChanged);
         EventManager.Instance.RemoveListener<int>(E_EventEnum.OnColumnAppend, OnColumnAppend);
         EventManager.Instance.RemoveListener<CardData>(E_EventEnum.OnCardChanged, OnCardChanged);
+        EventManager.Instance.RemoveListener<CardData>(E_EventEnum.OnCardToDiscard, OnCardToDiscard);
+        EventManager.Instance.RemoveListener(E_EventEnum.OnShuffleBack, OnShuffleBack);
         EventManager.Instance.RemoveListener<int>(E_EventEnum.OnDrawPileChanged, OnDrawPileChanged);
         EventManager.Instance.RemoveListener<int>(E_EventEnum.OnDiscardPileChanged, OnDiscardPileChanged);
         EventManager.Instance.RemoveListener<int>(E_EventEnum.OnPocketChanged, OnPocketChanged);
 
         ClearAllViews();
         _emptySlots.Clear();
+
+        _animatingCount = 0;
+        IsAnimating = false;
     }
 
     // ============ 事件回调 ============
@@ -104,13 +126,69 @@ public class CardViewManager : ManagerBase<CardViewManager>
         AppendCardToColumn(columnIndex);
     }
 
-    /// <summary>单张牌变化（翻牌等）：刷新该牌表现</summary>
+    /// <summary>单张牌变化（翻牌）：播放翻牌动画</summary>
     private void OnCardChanged(CardData cardData)
     {
-        if (_viewDict.TryGetValue(cardData, out var view))
+        if (!_viewDict.TryGetValue(cardData, out var view)) return;
+
+        // 计算该牌的正常排序（翻牌结束后应恢复的层级，避免读到飞行中的临时抬升值）
+        int finalOrder = GetNormalSortingOrder(cardData, view);
+        CardAnimationHelper.FlipUp(view, finalOrder);
+    }
+
+    /// <summary>计算一张牌在列中的正常渲染排序（不在列则保持当前）</summary>
+    private int GetNormalSortingOrder(CardData cardData, CardView view)
+    {
+        if (view.columnIndex < 0) return view.CurrentSortingOrder;
+
+        var column = CardsStore.Instance.columns[view.columnIndex];
+        int row = column.IndexOf(cardData);
+        return row >= 0 ? GetSortingOrder(view.columnIndex, row) : view.CurrentSortingOrder;
+    }
+
+    /// <summary>单张牌回收：从当前位置飞到弃牌堆，落地后回收 View</summary>
+    private void OnCardToDiscard(CardData cardData)
+    {
+        if (!_viewDict.TryGetValue(cardData, out var view)) return;
+        _viewDict.Remove(cardData);
+
+        var tween = CardAnimationHelper.FlyTo(view, view.transform.position, GetDiscardPilePosition());
+
+        _animatingCount++;
+        IsAnimating = true;
+        tween.OnComplete(() =>
         {
-            view.Refresh();
-        }
+            _animatingCount--;
+            if (_animatingCount <= 0)
+            {
+                _animatingCount = 0;
+                IsAnimating = false;
+            }
+            CardPoolManager.Instance.Recycle(view);
+        });
+    }
+
+    /// <summary>弃牌堆洗回：临时一张牌背从弃牌堆飞到发牌堆，落地回收</summary>
+    private void OnShuffleBack()
+    {
+        var view = CardPoolManager.Instance.GetCard();
+        if (view == null) return;
+
+        view.ShowBack();
+        var tween = CardAnimationHelper.FlyTo(view, GetDiscardPilePosition(), GetDrawPilePosition());
+
+        _animatingCount++;
+        IsAnimating = true;
+        tween.OnComplete(() =>
+        {
+            _animatingCount--;
+            if (_animatingCount <= 0)
+            {
+                _animatingCount = 0;
+                IsAnimating = false;
+            }
+            CardPoolManager.Instance.Recycle(view);
+        });
     }
 
     /// <summary>发牌堆数量变化：更新剩余数量文本</summary>
@@ -139,7 +217,7 @@ public class CardViewManager : ManagerBase<CardViewManager>
 
     // ============ 内部 ============
 
-    /// <summary>根据当前数据全量创建 View</summary>
+    /// <summary>根据当前数据全量创建 View（直接摆位，不做动画）</summary>
     private void RebuildAll()
     {
         var store = CardsStore.Instance;
@@ -163,6 +241,46 @@ public class CardViewManager : ManagerBase<CardViewManager>
 
         RefreshEmptySlots();
         RefreshPocketSlots();
+    }
+
+    /// <summary>在场景中查找发牌堆（挂 DrawPileController 的物体）</summary>
+    private void FindDrawPile()
+    {
+        var controller = Object.FindAnyObjectByType<DrawPileController>();
+        if (controller != null)
+        {
+            _drawPileTrans = controller.transform;
+        }
+        else
+        {
+            Debug.LogWarning("[CardViewManager] 场景中未找到 DrawPileController，发牌动画将使用默认起点");
+        }
+    }
+
+    /// <summary>发牌堆世界坐标（未找到则用初始生成点）</summary>
+    private Vector3 GetDrawPilePosition()
+    {
+        return _drawPileTrans != null ? _drawPileTrans.position : _startPos;
+    }
+
+    /// <summary>在场景中查找弃牌堆（回收动画终点）</summary>
+    private void FindDiscardPile()
+    {
+        var go = GameObject.Find("DiscardPile");
+        if (go != null)
+        {
+            _discardPileTrans = go.transform;
+        }
+        else
+        {
+            Debug.LogWarning("[CardViewManager] 场景中未找到 DiscardPile，回收动画将使用默认位置");
+        }
+    }
+
+    /// <summary>弃牌堆世界坐标（未找到则用初始生成点）</summary>
+    private Vector3 GetDiscardPilePosition()
+    {
+        return _discardPileTrans != null ? _discardPileTrans.position : _startPos;
     }
 
     /// <summary>回收某列的所有 View 并重建该列</summary>
@@ -223,8 +341,26 @@ public class CardViewManager : ManagerBase<CardViewManager>
 
         view.Bind(cardData);
         view.columnIndex = columnIndex;
-        view.SetPosition(GetCardPosition(columnIndex, column, row));
-        view.SetSortingOrder(GetSortingOrder(columnIndex, row));
+
+        // 发牌动画：从发牌堆飞到该列顶部，飞行期间锁定输入，落地恢复层级并解锁
+        int finalOrder = GetSortingOrder(columnIndex, row);
+        Vector3 target = GetCardPosition(columnIndex, column, row);
+        view.SetSortingOrder(finalOrder);
+        var tween = CardAnimationHelper.FlyTo(view, GetDrawPilePosition(), target);
+
+        _animatingCount++;
+        IsAnimating = true;
+        tween.OnComplete(() =>
+        {
+            view.SetSortingOrder(finalOrder);
+            _animatingCount--;
+            if (_animatingCount <= 0)
+            {
+                _animatingCount = 0;
+                IsAnimating = false;
+            }
+        });
+
         _viewDict[cardData] = view;
     }
 

@@ -32,6 +32,7 @@ public class CardPoolManager : ManagerBase<CardPoolManager>
     public void Recycle(CardView view)
     {
         if (view == null) return;
+        AnimationHelper.Kill(view.transform);
         view.Unbind();
         PoolManager.Instance.Despawn(view.gameObject);
     }

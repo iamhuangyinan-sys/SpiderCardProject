@@ -1,14 +1,17 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
+using Framework;
 using Framework.Event;
 using Framework.Mgr;
+using UnityEngine;
 
 /// <summary>
 /// 卡牌业务逻辑层 —— 负责组牌、洗牌、发牌等场景所有纸牌逻辑
 /// </summary>
 public class CardsManager : ManagerBase<CardsManager>
 {
-    private readonly Random _random = new Random();
+    private readonly System.Random _random = new System.Random();
 
     /// <summary>测试模式：跳过洗牌直接发牌（仅编辑器下生效）</summary>
     public bool isTestMode = true;
@@ -84,42 +87,58 @@ public class CardsManager : ManagerBase<CardsManager>
         }
     }
 
-    /// <summary>发牌：10 列每列 3 张（轮流发），每列末张翻开</summary>
+    /// <summary>发牌：每列轮流一张，逐张发出（发牌堆数量逐张减少）</summary>
     private void Deal()
+    {
+        MonoManager.Instance.StartCoroutine(DealRoutine());
+    }
+
+    private IEnumerator DealRoutine()
     {
         var store = CardsStore.Instance;
 
+        // 清空各列，派发整桌刷新（空桌）
         foreach (var column in store.columns)
         {
             column.Clear();
         }
+        EventManager.Instance.Dispatch(E_EventEnum.OnTableChanged);
 
-        int dealCount = store.columnCount * 3;
+        // 逐张发牌：每列轮流一张，某列发满 3 张时及时翻该列顶牌
+        int perColumn = 3;
+        int dealCount = store.columnCount * perColumn;
         for (int i = 0; i < dealCount; i++)
         {
-            var card = store.drawPile.Pop();
-            store.columns[i % store.columnCount].Add(card);
-        }
+            if (store.drawPile.Count == 0) break;
 
-        foreach (var column in store.columns)
-        {
-            if (column.Count > 0)
+            var card = store.drawPile.Pop();
+            int col = i % store.columnCount;
+            store.columns[col].Add(card);
+
+            EventManager.Instance.Dispatch<int>(E_EventEnum.OnColumnAppend, col);
+            EventManager.Instance.Dispatch<int>(E_EventEnum.OnDrawPileChanged, store.drawPile.Count);
+
+            yield return new WaitForSeconds(CardAnimationHelper.FlyInterval);
+
+            // 该列已发满：及时翻该列顶牌（翻牌动画与后续发牌重叠，不额外等待）
+            if (store.columns[col].Count >= perColumn)
             {
-                column[column.Count - 1].isFaceUp = true;
+                FlipCardUp(store.columns[col][store.columns[col].Count - 1]);
             }
         }
 
-        // 派发事件，渲染层据此创建/刷新 CardView
-        EventManager.Instance.Dispatch(E_EventEnum.OnTableChanged);
-        EventManager.Instance.Dispatch<int>(E_EventEnum.OnDrawPileChanged, store.drawPile.Count);
         EventManager.Instance.Dispatch<int>(E_EventEnum.OnDiscardPileChanged, store.discardPile.Count);
     }
 
-    /// <summary>从发牌堆给每列顶部发一张牌（翻开），发完为止；发牌后检查顺子并洗回弃牌堆</summary>
+    /// <summary>从发牌堆给每列顶部逐张发一张牌（翻开），发牌堆数量逐张减少</summary>
     public void DealFromDrawPile()
     {
         if (!CardRuleManager.Instance.CanDeal()) return;
+        MonoManager.Instance.StartCoroutine(DealFromDrawPileRoutine());
+    }
 
+    private IEnumerator DealFromDrawPileRoutine()
+    {
         var store = CardsStore.Instance;
 
         for (int col = 0; col < store.columns.Count; col++)
@@ -130,22 +149,77 @@ public class CardsManager : ManagerBase<CardsManager>
             card.isFaceUp = true;
             store.columns[col].Add(card);
 
-            // 该列末尾增量追加一张
             EventManager.Instance.Dispatch<int>(E_EventEnum.OnColumnAppend, col);
+            EventManager.Instance.Dispatch<int>(E_EventEnum.OnDrawPileChanged, store.drawPile.Count);
+
+            yield return new WaitForSeconds(CardAnimationHelper.FlyInterval);
         }
 
-        // 发牌后检查各列是否形成完成的顺子
+        // 等最后一张落地，再检查顺子（顺子回收由 RecycleToDiscard 异步完成）
+        yield return new WaitForSeconds(CardAnimationHelper.FlyDuration);
+        bool anyRecycled = false;
         for (int col = 0; col < store.columns.Count; col++)
         {
-            CheckAndDiscard(col);
+            if (CheckAndDiscard(col)) anyRecycled = true;
         }
 
-        // 发牌堆空了就把弃牌堆洗回
-        TryShuffleBack();
+        // 没有触发回收时，检查洗回（洗回动画与数量派发由洗回协程内部完成）
+        if (!anyRecycled)
+        {
+            TryShuffleBack();
+        }
+    }
 
-        // 发牌堆 / 弃牌堆数量变化
-        EventManager.Instance.Dispatch<int>(E_EventEnum.OnDrawPileChanged, store.drawPile.Count);
-        EventManager.Instance.Dispatch<int>(E_EventEnum.OnDiscardPileChanged, store.discardPile.Count);
+    /// <summary>翻牌：置为正面并派发单张刷新（供表现层播放翻牌动画）</summary>
+    private void FlipCardUp(CardData card)
+    {
+        if (card == null || card.isFaceUp) return;
+        card.isFaceUp = true;
+        EventManager.Instance.Dispatch<CardData>(E_EventEnum.OnCardChanged, card);
+    }
+
+    /// <summary>回收某列顶部 count 张牌到弃牌堆（统一回收入口，逐张飞行动画）</summary>
+    private void RecycleToDiscard(int columnIndex, int count)
+    {
+        MonoManager.Instance.StartCoroutine(RecycleToDiscardRoutine(columnIndex, count));
+    }
+
+    private IEnumerator RecycleToDiscardRoutine(int columnIndex, int count)
+    {
+        var store = CardsStore.Instance;
+        if (columnIndex < 0 || columnIndex >= store.columns.Count) yield break;
+
+        var column = store.columns[columnIndex];
+
+        // 逐张从列顶（A）往下回收
+        for (int i = 0; i < count; i++)
+        {
+            if (column.Count == 0) break;
+
+            var card = column[column.Count - 1];
+            column.RemoveAt(column.Count - 1);
+            store.discardPile.Add(card);
+
+            EventManager.Instance.Dispatch<CardData>(E_EventEnum.OnCardToDiscard, card);
+            EventManager.Instance.Dispatch<int>(E_EventEnum.OnDiscardPileChanged, store.discardPile.Count);
+
+            yield return new WaitForSeconds(CardAnimationHelper.FlyInterval);
+        }
+
+        // 等最后一张飞到弃牌堆
+        yield return new WaitForSeconds(CardAnimationHelper.FlyDuration);
+
+        // 整列重建（剩余牌重新摆位）
+        EventManager.Instance.Dispatch<int>(E_EventEnum.OnColumnChanged, columnIndex);
+
+        // 新顶牌若为反面，翻牌
+        if (column.Count > 0)
+        {
+            FlipCardUp(column[column.Count - 1]);
+        }
+
+        // 发牌堆空了则把弃牌堆洗回（洗回动画与数量派发由洗回协程内部完成）
+        TryShuffleBack();
     }
 
     /// <summary>
@@ -180,34 +254,25 @@ public class CardsManager : ManagerBase<CardsManager>
             fromColumn.Remove(card);
         }
 
-        // 原列新顶牌若为反面，翻开
-        if (fromColumn.Count > 0)
-        {
-            var newTop = fromColumn[fromColumn.Count - 1];
-            if (!newTop.isFaceUp)
-            {
-                newTop.isFaceUp = true;
-            }
-        }
-
         // 加入目标列
         foreach (var card in draggedCards)
         {
             targetColumn.Add(card);
         }
 
-        // 通知刷新两列
+        // 先整列重建（原列新顶牌此时仍是背面）
         EventManager.Instance.Dispatch<int>(E_EventEnum.OnColumnChanged, fromColumnIndex);
         EventManager.Instance.Dispatch<int>(E_EventEnum.OnColumnChanged, targetColumnIndex);
 
-        // 移动后检查两列是否形成完成的顺子
-        CheckAndDiscard(fromColumnIndex);
+        // 检查顺子：触发回收则翻牌由回收协程收尾；否则原列翻新顶牌
+        if (!CheckAndDiscard(fromColumnIndex) && fromColumn.Count > 0)
+        {
+            FlipCardUp(fromColumn[fromColumn.Count - 1]);
+        }
         CheckAndDiscard(targetColumnIndex);
-
-        EventManager.Instance.Dispatch<int>(E_EventEnum.OnDiscardPileChanged, store.discardPile.Count);
     }
 
-    /// <summary>检查某列是否从底部形成 A-K 同花顺，是则移入弃牌堆并重建该列</summary>
+    /// <summary>检查某列是否形成 A-K 同花顺，是则触发逐张回收动画</summary>
     private bool CheckAndDiscard(int columnIndex)
     {
         var store = CardsStore.Instance;
@@ -217,39 +282,40 @@ public class CardsManager : ManagerBase<CardsManager>
         var seq = CardRuleManager.Instance.GetCompletedSequence(column);
         if (seq == null) return false;
 
-        foreach (var card in seq)
-        {
-            column.Remove(card);
-        }
-        store.discardPile.AddRange(seq);
-
-        // 移除后，新顶牌若为反面则翻开
-        if (column.Count > 0)
-        {
-            var newTop = column[column.Count - 1];
-            if (!newTop.isFaceUp)
-            {
-                newTop.isFaceUp = true;
-            }
-        }
-
-        // 重建该列
-        EventManager.Instance.Dispatch<int>(E_EventEnum.OnColumnChanged, columnIndex);
+        // 触发逐张回收（异步）：统一回收入口，动画/翻牌/洗回都由它收尾
+        RecycleToDiscard(columnIndex, seq.Count);
         return true;
     }
 
-    /// <summary>发牌堆空了且弃牌堆有牌，则把弃牌堆洗回发牌堆</summary>
+    /// <summary>发牌堆空了且弃牌堆有牌，播放洗回动画后把弃牌堆洗回发牌堆</summary>
     private void TryShuffleBack()
     {
         var store = CardsStore.Instance;
         if (store.drawPile.Count != 0 || store.discardPile.Count == 0) return;
+        MonoManager.Instance.StartCoroutine(ShuffleBackRoutine());
+    }
 
+    private IEnumerator ShuffleBackRoutine()
+    {
+        var store = CardsStore.Instance;
+
+        // 洗回动画：一张牌背从弃牌堆飞到发牌堆
+        EventManager.Instance.Dispatch(E_EventEnum.OnShuffleBack);
+
+        // 等动画播完再更新数据
+        yield return new WaitForSeconds(CardAnimationHelper.FlyDuration);
+
+        // 洗牌 + 全部压回发牌堆
         Shuffle(store.discardPile);
         foreach (var card in store.discardPile)
         {
             store.drawPile.Push(card);
         }
         store.discardPile.Clear();
+
+        // 数量更新
+        EventManager.Instance.Dispatch<int>(E_EventEnum.OnDrawPileChanged, store.drawPile.Count);
+        EventManager.Instance.Dispatch<int>(E_EventEnum.OnDiscardPileChanged, store.discardPile.Count);
     }
 
     /// <summary>把一张牌移到指定牌包（暂存）</summary>
@@ -263,20 +329,23 @@ public class CardsManager : ManagerBase<CardsManager>
         if (fromColumn >= 0)
         {
             store.columns[fromColumn].Remove(card);
-
-            var fromCol = store.columns[fromColumn];
-            if (fromCol.Count > 0)
-            {
-                var newTop = fromCol[fromCol.Count - 1];
-                if (!newTop.isFaceUp) newTop.isFaceUp = true;
-            }
         }
 
         card.isFaceUp = true;
         store.pockets[pocketIndex] = card;
 
         if (fromColumn >= 0)
+        {
+            // 先整列重建（原列新顶牌此时仍是背面）
             EventManager.Instance.Dispatch<int>(E_EventEnum.OnColumnChanged, fromColumn);
+
+            // 原列新顶牌若为反面，播放翻牌动画
+            var fromCol = store.columns[fromColumn];
+            if (fromCol.Count > 0)
+            {
+                FlipCardUp(fromCol[fromCol.Count - 1]);
+            }
+        }
         EventManager.Instance.Dispatch<int>(E_EventEnum.OnPocketChanged, pocketIndex);
     }
 

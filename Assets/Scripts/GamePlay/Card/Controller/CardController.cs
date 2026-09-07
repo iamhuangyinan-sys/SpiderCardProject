@@ -46,6 +46,7 @@ public class CardController : MonoBehaviour
     private void Update()
     {
         if (Mouse.current == null || _view == null || _camera == null) return;
+        if (CardViewManager.Instance.IsAnimating) return;
 
         bool pressed = Mouse.current.leftButton.wasPressedThisFrame;
         bool released = Mouse.current.leftButton.wasReleasedThisFrame;
@@ -140,6 +141,15 @@ public class CardController : MonoBehaviour
         Vector3 mouseWorld = ScreenToWorldPlane(Mouse.current.position.ReadValue());
         _dragOffset = transform.position - mouseWorld;
 
+        // 拖起时：锚点牌显示发光+投影（投影按张数拉伸），其余牌只显示发光
+        for (int i = 0; i < _draggedCards.Count; i++)
+        {
+            var view = GetDragView(i);
+            if (view == null) continue;
+            if (i == 0) view.ShowGlowShadow(_draggedCards.Count);
+            else view.ShowGlow();
+        }
+
         _dragging = true;
     }
 
@@ -162,6 +172,13 @@ public class CardController : MonoBehaviour
     /// <summary>结束拖拽：判定落点（牌包/列），能移动则移动，否则回弹</summary>
     private void EndDrag()
     {
+        // 放下时隐藏发光与投影（无论移动成功还是回弹）
+        for (int i = 0; i < _draggedCards.Count; i++)
+        {
+            var view = GetDragView(i);
+            if (view != null) view.HideGlowShadow();
+        }
+
         Vector3 mouseWorld = ScreenToWorldPlane(Mouse.current.position.ReadValue());
         int targetColumn = CardViewManager.Instance.GetColumnIndexAt(mouseWorld);
         int targetPocket = CardViewManager.Instance.GetPocketIndexAt(mouseWorld);

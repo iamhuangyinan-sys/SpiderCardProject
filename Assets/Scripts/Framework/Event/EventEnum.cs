@@ -18,5 +18,7 @@
         OnDiscardPileChanged, // 参数：int（弃牌堆数量）
         OnPocketChanged,     // 参数：int（牌包索引）
         OnCardChanged,       // 参数：CardData（单张牌变化，如翻牌）
+        OnCardToDiscard,     // 参数：CardData（单张牌回收，播放飞到弃牌堆动画）
+        OnShuffleBack,       // 无参数：弃牌堆洗回发牌堆动画
     }
 }
