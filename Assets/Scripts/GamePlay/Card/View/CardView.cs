@@ -1,4 +1,3 @@
-using DG.Tweening;
 using UnityEngine;
 
 /// <summary>
@@ -19,12 +18,15 @@ public class CardView : MonoBehaviour
     private SpriteRenderer _shadowRenderer;
     private GameObject _glowGo;
     private GameObject _shadowGo;
+    private Vector3 _shadowInitLocalPos;
 
-    /// <summary>发光目标透明度</summary>
-    private const float GlowAlpha = 0.9f;
-
-    /// <summary>投影目标透明度</summary>
-    private const float ShadowAlpha = 0.8f;
+    // ===== 供 CardAnimationHelper 访问的引用 =====
+    public SpriteRenderer RootRenderer => _rootRenderer;
+    public SpriteRenderer GlowRenderer => _glowRenderer;
+    public SpriteRenderer ShadowRenderer => _shadowRenderer;
+    public GameObject GlowGo => _glowGo;
+    public GameObject ShadowGo => _shadowGo;
+    public Vector3 ShadowInitLocalPos => _shadowInitLocalPos;
 
     private void Awake()
     {
@@ -42,6 +44,7 @@ public class CardView : MonoBehaviour
         {
             _shadowGo = shadow.gameObject;
             _shadowRenderer = shadow.GetComponent<SpriteRenderer>();
+            _shadowInitLocalPos = shadow.localPosition;   // 记录初始位置（pivot 在顶部时为 (0, 0.95, 0)）
         }
 
         // 默认隐藏发光与投影（alpha 归零，便于淡入）
@@ -65,15 +68,8 @@ public class CardView : MonoBehaviour
         data = cardData;
         transform.rotation = Quaternion.identity;   // 重置旋转，避免上次翻转被打断留下的斜角
 
-        // 池复用残留：确保发光投影隐藏、投影缩放复位
-        if (_glowRenderer != null) _glowRenderer.DOKill();
-        if (_shadowRenderer != null) _shadowRenderer.DOKill();
-        if (_glowGo != null) _glowGo.SetActive(false);
-        if (_shadowGo != null)
-        {
-            _shadowGo.transform.localScale = Vector3.one;
-            _shadowGo.SetActive(false);
-        }
+        // 清理残留动画 + 恢复发光投影状态（动画统一由 CardAnimationHelper 管理）
+        CardAnimationHelper.Reset(this);
 
         Refresh();
     }
@@ -126,54 +122,6 @@ public class CardView : MonoBehaviour
         if (_rootRenderer != null)
         {
             _rootRenderer.sprite = CardResManager.Instance.GetBackSprite();
-        }
-    }
-
-    /// <summary>拖起时显示发光（淡入）</summary>
-    public void ShowGlow()
-    {
-        if (_glowRenderer == null) return;
-        _glowGo.SetActive(true);
-        _glowRenderer.DOFade(GlowAlpha, 0.15f);
-    }
-
-    /// <summary>拖起时显示投影（淡入）</summary>
-    public void ShowShadow()
-    {
-        if (_shadowRenderer == null) return;
-        _shadowGo.SetActive(true);
-        _shadowRenderer.DOFade(ShadowAlpha, 0.15f);
-    }
-
-    /// <summary>拖起时同时显示发光与投影（淡入），投影按牌串实际高度拉伸</summary>
-    public void ShowGlowShadow(int cardCount)
-    {
-        ShowGlow();
-        ShowShadow();
-
-        // 投影拉伸：覆盖整串牌的高度（牌高 + (N-1) × 正面露出间距）
-        float cardHeight = _rootRenderer != null ? _rootRenderer.bounds.size.y : 1f;
-        float stretch = 1f + (cardCount - 1) * CardViewManager.FaceUpSpacing / cardHeight;
-        if (_shadowGo != null)
-        {
-            _shadowGo.transform.localScale = new Vector3(1f, stretch, 1f);
-        }
-    }
-
-    /// <summary>放下时隐藏发光与投影（淡出），淡出完成后恢复投影缩放</summary>
-    public void HideGlowShadow()
-    {
-        if (_glowRenderer != null)
-        {
-            _glowRenderer.DOFade(0f, 0.1f).OnComplete(() => _glowGo.SetActive(false));
-        }
-        if (_shadowRenderer != null)
-        {
-            _shadowRenderer.DOFade(0f, 0.1f).OnComplete(() =>
-            {
-                _shadowGo.SetActive(false);
-                _shadowGo.transform.localScale = Vector3.one;  // 淡出完成后恢复原始大小
-            });
         }
     }
 }

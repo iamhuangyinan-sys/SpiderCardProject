@@ -104,6 +104,8 @@ public class CardController : MonoBehaviour
         _dragFromPocket = false;
         _dragPocketIndex = -1;
 
+        CardData blockedCard = null;
+
         int pocketIndex = CardRuleManager.Instance.FindPocketIndex(_view.data);
         if (pocketIndex >= 0)
         {
@@ -113,11 +115,17 @@ public class CardController : MonoBehaviour
         }
         else
         {
-            _draggedCards = CardRuleManager.Instance.GetDraggableCards(_view.data);
+            _draggedCards = CardRuleManager.Instance.GetDraggableCards(_view.data, out blockedCard);
         }
 
         if (_draggedCards == null || _draggedCards.Count == 0)
         {
+            // 拖不起来：阻塞点牌短暂变灰提示
+            if (blockedCard != null)
+            {
+                var blockedView = CardViewManager.Instance.GetView(blockedCard);
+                if (blockedView != null) CardAnimationHelper.FlashBlocked(blockedView);
+            }
             _dragging = false;
             return;
         }
@@ -141,13 +149,13 @@ public class CardController : MonoBehaviour
         Vector3 mouseWorld = ScreenToWorldPlane(Mouse.current.position.ReadValue());
         _dragOffset = transform.position - mouseWorld;
 
-        // 拖起时：锚点牌显示发光+投影（投影按张数拉伸），其余牌只显示发光
+        // 拖起编排：锚点牌发光+投影+影子偏移，其余牌只发光
         for (int i = 0; i < _draggedCards.Count; i++)
         {
             var view = GetDragView(i);
             if (view == null) continue;
-            if (i == 0) view.ShowGlowShadow(_draggedCards.Count);
-            else view.ShowGlow();
+            if (i == 0) CardAnimationHelper.LiftAnchor(view, _draggedCards.Count);
+            else CardAnimationHelper.LiftCard(view);
         }
 
         _dragging = true;
@@ -157,7 +165,7 @@ public class CardController : MonoBehaviour
     private void UpdateDrag()
     {
         Vector3 mouseWorld = ScreenToWorldPlane(Mouse.current.position.ReadValue());
-        Vector3 anchorTarget = mouseWorld + _dragOffset;
+        Vector3 anchorTarget = mouseWorld + _dragOffset + CardAnimationHelper.LiftOffset;
 
         for (int i = 0; i < _draggedCards.Count; i++)
         {
@@ -172,11 +180,11 @@ public class CardController : MonoBehaviour
     /// <summary>结束拖拽：判定落点（牌包/列），能移动则移动，否则回弹</summary>
     private void EndDrag()
     {
-        // 放下时隐藏发光与投影（无论移动成功还是回弹）
+        // 放下编排：隐藏发光投影 + 影子恢复（无论移动成功还是回弹）
         for (int i = 0; i < _draggedCards.Count; i++)
         {
             var view = GetDragView(i);
-            if (view != null) view.HideGlowShadow();
+            if (view != null) CardAnimationHelper.DropCard(view);
         }
 
         Vector3 mouseWorld = ScreenToWorldPlane(Mouse.current.position.ReadValue());
@@ -212,7 +220,7 @@ public class CardController : MonoBehaviour
 
         if (!moved)
         {
-            // 回弹：恢复原始排序与位置
+            // 回弹：恢复原始排序与位置（影子由 DropCard 恢复）
             for (int i = 0; i < _draggedCards.Count; i++)
             {
                 var view = GetDragView(i);

@@ -36,10 +36,11 @@ public class CardRuleManager : ManagerBase<CardRuleManager>
     /// <summary>
     /// 获取能被整体拖动的牌串：
     /// 锚点牌及其同列下方所有牌，必须整串「翻开、同花色、逐张减 1」才可拖，
-    /// 任何一张不满足则整体不可拖（返回空）
+    /// 任何一张不满足则整体不可拖（返回空），并通过 blockedCard 返回导致不可拖的那张牌。
     /// </summary>
-    public List<CardData> GetDraggableCards(CardData anchor)
+    public List<CardData> GetDraggableCards(CardData anchor, out CardData blockedCard)
     {
+        blockedCard = null;
         var result = new List<CardData>();
         if (!CanDrag(anchor)) return result;
 
@@ -56,6 +57,10 @@ public class CardRuleManager : ManagerBase<CardRuleManager>
                 if (idx == column.Count - 1)
                 {
                     result.Add(anchor);
+                }
+                else
+                {
+                    blockedCard = column[idx + 1];  // 压住它的那张牌
                 }
                 break;
             }
@@ -80,6 +85,7 @@ public class CardRuleManager : ManagerBase<CardRuleManager>
                 var cur = result[i];
                 if (!(cur.isFaceUp && CanConnect(prev, cur)))
                 {
+                    blockedCard = cur;   // 阻塞点：这张牌导致整串不可拖
                     result.Clear();
                     return result;
                 }

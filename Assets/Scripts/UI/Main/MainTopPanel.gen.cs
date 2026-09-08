@@ -6,15 +6,15 @@ using UnityEngine.UI;
 using TMPro;
 using Framework.UI;
 
-public partial class BeginPanel
+public partial class MainTopPanel
 {
     [System.NonSerialized] public CompsData comps = new CompsData();
 
     [System.Serializable]
     public class CompsData : CompsDataBase
     {
-        public Button btnStart;
-        public Button btnSetting;
-        public Button btnQuit;
+        public TMP_Text txtLevelProgress;
+        public Button btnCardBuild;
+        public Button btnMenu;
     }
 }

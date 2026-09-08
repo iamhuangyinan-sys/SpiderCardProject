@@ -1,3 +1,4 @@
+using Framework.UI;
 using UnityEngine;
 
 /// <summary>
@@ -10,6 +11,7 @@ public class CardGameEntry : MonoBehaviour
     private void Start()
     {
         CardGameModule.Instance.Init();
+        UIManager.Instance.ShowAsync<MainTopPanel>(_ => { });
         CardGameModule.Instance.StartNewGame(11, 3);
     }
 

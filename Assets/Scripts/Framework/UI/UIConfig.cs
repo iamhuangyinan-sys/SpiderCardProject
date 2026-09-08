@@ -40,6 +40,7 @@ namespace Framework.UI
             Register<TestPanel>("Test/TestPanel", E_UILayerEnum.Normal);
             // ===== 主界面 =====
             Register<BeginPanel>("Main/BeginPanel", E_UILayerEnum.Normal);
+            Register<MainTopPanel>("Main/MainTopPanel", E_UILayerEnum.Normal);
         }
 
         /// <summary>
