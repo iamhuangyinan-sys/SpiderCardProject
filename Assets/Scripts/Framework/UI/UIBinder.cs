@@ -13,7 +13,7 @@ namespace Framework.UI
     [Serializable]
     public class UICompEntry
     {
-        /// <summary> 前缀类型：btn / txt / img / mod </summary>
+        /// <summary> 前缀类型：btn / txt / img / mod / tog / sld / list / ipt </summary>
         public string prefix;
 
         /// <summary> C# 字段名（btn_Start → btnStart） </summary>
@@ -22,7 +22,7 @@ namespace Framework.UI
         /// <summary> 组件类型名（mod 类型时使用，如 "Mod_Button"） </summary>
         public string typeName;
 
-        /// <summary> 实际控件组件（Button / TMP_Text / Image / BaseModule） </summary>
+        /// <summary> 实际控件组件（Button / TMP_Text / Image / BaseModule / Toggle / Slider / ScrollList / TMP_InputField） </summary>
         public Component component;
     }
 
@@ -30,12 +30,14 @@ namespace Framework.UI
     /// UI 控件绑定器 —— 挂载到面板根节点上
     ///
     /// 命名约定（以 GameObject 名前缀识别）：
-    ///   btn_xxx → Button
-    ///   txt_xxx → TMP_Text
-    ///   img_xxx → Image
-    ///   mod_xxx → BaseModule（模组，含自己的 comps）
-    ///   txt_xxx → TMP_Text（TextMeshPro）
-    ///   img_xxx → Image
+    ///   btn_xxx  → Button
+    ///   txt_xxx  → TMP_Text
+    ///   img_xxx  → Image
+    ///   mod_xxx  → BaseModule（模组，含自己的 comps）
+    ///   tog_xxx  → Toggle
+    ///   sld_xxx  → Slider
+    ///   list_xxx → ScrollList
+    ///   ipt_xxx  → TMP_InputField
     ///
     /// 使用方式：
     ///   1. 挂载到预制体根节点
@@ -114,6 +116,12 @@ namespace Framework.UI
                     var comp = child.GetComponent<ScrollList>();
                     if (comp != null)
                         entry = new UICompEntry { prefix = "list", component = comp };
+                }
+                else if (name.StartsWith("ipt_"))
+                {
+                    var comp = child.GetComponent<TMP_InputField>();
+                    if (comp != null)
+                        entry = new UICompEntry { prefix = "ipt", component = comp };
                 }
 
                 if (entry != null)

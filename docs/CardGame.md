@@ -262,11 +262,51 @@ classDiagram
 | OnDiscardPileChanged | int 数量 | 弃牌堆数量 |
 | OnPocketChanged | int 牌包索引 | 牌包变化 |
 | OnCardChanged | CardData | 单张牌变化（如翻牌） |
+| OnCardToDiscard | CardData | 单张牌回收到弃牌堆 |
+| OnShuffleBack | 无 | 弃牌堆洗回发牌堆动画 |
+| OnStraightCountChanged | 无 | 接龙次数变化（进度刷新） |
+| OnLevelStart | 无 | 一局开始（选关后） |
+| OnLevelComplete | 无 | 关卡完成（达成接龙次数，解锁下一关） |
+| OnDiscardToDrawPile | 无 | 结算收牌：弃牌堆收回发牌堆动画（一张牌背代表整堆） |
+| OnCardToDrawPile | CardData | 结算收牌：单张牌本体飞回发牌堆（场上列 / 牌包的牌） |
+| OnCardsCollected | 无 | 结算收牌完成（关卡结束） |
+
+## 关卡完成结算流程
+
+1. `straightCount` 达到 `needStraightNum` → `CheckWin()` 触发：
+   - `LevelManager.CompleteLevel()` 记录进度、解锁 `NextLevelId`，派发 `OnLevelComplete`
+   - `CardsManager.StartCollectAll()` 开始收牌（`IsSettling = true`，期间锁输入）
+2. 收牌顺序（`CollectAllRoutine`）：
+   1. 弃牌堆 → 发牌堆：洗牌后整堆压回；表现层用**一张牌背**代表整堆飞回（与洗回动画一致）
+   2. 场上各列 → 发牌堆：**逐列、逐张**把牌本体收回（`OnCardToDrawPile`），顺序与「顺子收进弃牌堆」相同——从列底 `column[Count-1]` 往上取，每张间隔 `FlyInterval`
+   3. 各牌包 → 发牌堆：同样逐张飞牌本体
+   4. 最后统一等一次 `FlyDuration` 让尾批落地，再派发 `OnCardsCollected`
+3. 全部收完 → `IsSettling = false`、`IsPlaying = false`，派发 `OnCardsCollected`
+
+> 收牌全流程**只在最末尾等待一次** `FlyDuration`：列与列、牌包与牌包之间不插入额外等待，上一批最后一张起飞后立即发起下一批第一张，保证动画连贯（发牌 `DealRoutine` 同理，全程只有 `FlyInterval` 间隔）。
+4. `CardGameEntry` 收到 `OnCardsCollected` → 弹出 `LevelPanel`（**不关闭** `MainTopPanel`）
+
+- 收牌期间 `CardsManager.IsSettling` 为 true，`CardController` / `DrawPileController` 据此锁输入。
+- 测试接口：`CardsManager.Instance.DebugCompleteLevel()`（门面 `CardGameModule.Instance.DebugCompleteLevel()`），直接达成接龙次数并走完整收牌流程。
 
 ## 资源目录
 
 - 牌背、整张牌图统一放 `Assets/Resources/GamePlay/Card/`（`cardBack` + 各牌整图）
 - 卡牌预制体：`Resources/Prefab/GamePlay/Card/CardPrefab`
 - 配表 JSON：`Assets/Resources/Config/`
+
+## 关卡类型图标
+
+`LevelTypeConfig.xlsx`（`Config/Excel/`）→ `Assets/Scripts/Config/LevelTypeConfig.cs` + `Assets/Resources/Config/LevelTypeConfig.json`
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| Id | string | 关卡类型 id，对应 `E_LevelTypeEnum`（0=普通 1=商店 2=BOSS） |
+| IconImage | string | 图标文件名（相对 `Resources/GamePlay/Level/Icon/`，不含扩展名） |
+
+- 图标统一放 `Assets/Resources/GamePlay/Level/Icon/`，导入类型需为 **Sprite**。
+- `LevelResManager`（`GamePlay/Level/`）只维护「类型 id → 资源路径」映射并预热，图标缓存/引用计数复用 `ResManager`。
+  - `GetIcon(int / E_LevelTypeEnum)`：同步返回 `Sprite`（`ResManager.Load` 命中缓存；若预热尚未完成，ResManager 内部会自动转同步）。
+- UI 使用：`LevelBtnModule` 在 `Bind` 时 `_imgIcon.sprite = LevelResManager.Instance.GetIcon(cfg.LevelType)`。
 
 

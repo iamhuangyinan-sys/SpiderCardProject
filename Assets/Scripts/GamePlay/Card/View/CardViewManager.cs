@@ -74,6 +74,8 @@ public class CardViewManager : ManagerBase<CardViewManager>
         EventManager.Instance.AddListener<CardData>(E_EventEnum.OnCardChanged, OnCardChanged);
         EventManager.Instance.AddListener<CardData>(E_EventEnum.OnCardToDiscard, OnCardToDiscard);
         EventManager.Instance.AddListener(E_EventEnum.OnShuffleBack, OnShuffleBack);
+        EventManager.Instance.AddListener(E_EventEnum.OnDiscardToDrawPile, OnDiscardToDrawPile);
+        EventManager.Instance.AddListener<CardData>(E_EventEnum.OnCardToDrawPile, OnCardToDrawPile);
         EventManager.Instance.AddListener<int>(E_EventEnum.OnDrawPileChanged, OnDrawPileChanged);
         EventManager.Instance.AddListener<int>(E_EventEnum.OnDiscardPileChanged, OnDiscardPileChanged);
         EventManager.Instance.AddListener<int>(E_EventEnum.OnPocketChanged, OnPocketChanged);
@@ -94,6 +96,8 @@ public class CardViewManager : ManagerBase<CardViewManager>
         EventManager.Instance.RemoveListener<CardData>(E_EventEnum.OnCardChanged, OnCardChanged);
         EventManager.Instance.RemoveListener<CardData>(E_EventEnum.OnCardToDiscard, OnCardToDiscard);
         EventManager.Instance.RemoveListener(E_EventEnum.OnShuffleBack, OnShuffleBack);
+        EventManager.Instance.RemoveListener(E_EventEnum.OnDiscardToDrawPile, OnDiscardToDrawPile);
+        EventManager.Instance.RemoveListener<CardData>(E_EventEnum.OnCardToDrawPile, OnCardToDrawPile);
         EventManager.Instance.RemoveListener<int>(E_EventEnum.OnDrawPileChanged, OnDrawPileChanged);
         EventManager.Instance.RemoveListener<int>(E_EventEnum.OnDiscardPileChanged, OnDiscardPileChanged);
         EventManager.Instance.RemoveListener<int>(E_EventEnum.OnPocketChanged, OnPocketChanged);
@@ -152,7 +156,55 @@ public class CardViewManager : ManagerBase<CardViewManager>
         if (!_viewDict.TryGetValue(cardData, out var view)) return;
         _viewDict.Remove(cardData);
 
-        var tween = CardAnimationHelper.FlyTo(view, view.transform.position, GetDiscardPilePosition());
+        FlyViewAndRecycle(view, view.transform.position, GetDiscardPilePosition());
+    }
+
+    /// <summary>弃牌堆洗回：临时一张牌背从弃牌堆飞到发牌堆，落地回收</summary>
+    private void OnShuffleBack()
+    {
+        PlayCardBackToDrawPile(GetDiscardPilePosition());
+    }
+
+    /// <summary>结算收牌：弃牌堆整堆收回发牌堆（用一张牌背代表，与洗回动画一致）</summary>
+    private void OnDiscardToDrawPile()
+    {
+        PlayCardBackToDrawPile(GetDiscardPilePosition());
+    }
+
+    /// <summary>结算收牌：单张牌本体收回发牌堆（场上列 / 牌包的牌）</summary>
+    private void OnCardToDrawPile(CardData cardData)
+    {
+        var view = TakeViewOf(cardData);
+        if (view == null) return;
+
+        FlyViewAndRecycle(view, view.transform.position, GetDrawPilePosition());
+    }
+
+    /// <summary>取出某张牌的 View 并解除持有（场上列优先，其次牌包），不存在返回 null</summary>
+    private CardView TakeViewOf(CardData cardData)
+    {
+        if (_viewDict.TryGetValue(cardData, out var view))
+        {
+            _viewDict.Remove(cardData);
+            return view;
+        }
+
+        for (int i = 0; i < _pocketViews.Count; i++)
+        {
+            var pocketView = _pocketViews[i];
+            if (pocketView == null || pocketView.data != cardData) continue;
+
+            _pocketViews[i] = null;
+            return pocketView;
+        }
+
+        return null;
+    }
+
+    /// <summary>一张牌从 from 飞到 to，落地后回收 View（弃牌堆 / 发牌堆共用），飞行期间锁输入</summary>
+    private void FlyViewAndRecycle(CardView view, Vector3 from, Vector3 to)
+    {
+        var tween = CardAnimationHelper.FlyTo(view, from, to);
 
         _animatingCount++;
         IsAnimating = true;
@@ -168,27 +220,14 @@ public class CardViewManager : ManagerBase<CardViewManager>
         });
     }
 
-    /// <summary>弃牌堆洗回：临时一张牌背从弃牌堆飞到发牌堆，落地回收</summary>
-    private void OnShuffleBack()
+    /// <summary>播放「一张牌背从 fromPos 飞到发牌堆」动画（洗回 / 弃牌堆收牌共用）</summary>
+    private void PlayCardBackToDrawPile(Vector3 fromPos)
     {
         var view = CardPoolManager.Instance.GetCard();
         if (view == null) return;
 
         view.ShowBack();
-        var tween = CardAnimationHelper.FlyTo(view, GetDiscardPilePosition(), GetDrawPilePosition());
-
-        _animatingCount++;
-        IsAnimating = true;
-        tween.OnComplete(() =>
-        {
-            _animatingCount--;
-            if (_animatingCount <= 0)
-            {
-                _animatingCount = 0;
-                IsAnimating = false;
-            }
-            CardPoolManager.Instance.Recycle(view);
-        });
+        FlyViewAndRecycle(view, fromPos, GetDrawPilePosition());
     }
 
     /// <summary>发牌堆数量变化：更新剩余数量文本</summary>

@@ -35,6 +35,7 @@ namespace Framework
             // ===== 2. 初始化 Store（数据层，无依赖）=====
             ResStore.Instance.Init();        // 资源缓存数据
             PoolStore.Instance.Init();       // 对象池数据
+            LevelStore.Instance.Init();      // 关卡数据
             // XxxStore.Instance.Init();
 
             // ===== 3. 初始化 Manager（业务层，依赖 Store）=====
@@ -46,6 +47,9 @@ namespace Framework
             SoundManager.Instance.Init();    // 音效管理器（依赖 ResManager + PoolManager）
             SceneController.Instance.Init(); // 场景控制器（依赖 PoolManager + MonoManager）
             UIManager.Instance.Init();       // UI 管理器（依赖 ResManager）
+            LevelManager.Instance.Init();    // 关卡逻辑（依赖 LevelStore + ConfigHelper）
+            LevelResManager.Instance.Init(); // 关卡资源（依赖 ResManager + ConfigHelper）
+            ConsoleCommandManager.Instance.Init(); // 控制台命令（依赖各业务 Manager）
             // XxxManager.Instance.Init();
 
             // ===== 4. 注册各类配置 =====
@@ -58,6 +62,10 @@ namespace Framework
         private void OnDestroy()
         {
             // 按依赖的反序销毁
+            ConsoleCommandManager.Instance.Dispose();
+            LevelResManager.Instance.Dispose();
+            LevelManager.Instance.Dispose();
+            LevelStore.Instance.Dispose();
             SceneController.Instance.Dispose();
             UIManager.Instance.Dispose();
             BgmManager.Instance.Dispose();

@@ -46,7 +46,7 @@ public class CardController : MonoBehaviour
     private void Update()
     {
         if (Mouse.current == null || _view == null || _camera == null) return;
-        if (CardViewManager.Instance.IsAnimating) return;
+        if (CardViewManager.Instance.IsAnimating || CardsManager.Instance.IsSettling) return;
 
         bool pressed = Mouse.current.leftButton.wasPressedThisFrame;
         bool released = Mouse.current.leftButton.wasReleasedThisFrame;

@@ -24,6 +24,12 @@ public class CardsStore : StoreBase<CardsStore>
     /// <summary>牌包（暂存区），每个位置存一张牌或 null</summary>
     public List<CardData> pockets = new List<CardData>();
 
+    /// <summary>当前接龙次数（本局 A-K 顺子收集次数）</summary>
+    public int straightCount;
+
+    /// <summary>通关所需接龙次数（0 表示无通关要求）</summary>
+    public int needStraightNum;
+
     protected override void OnInit()
     {
         drawPile.Clear();

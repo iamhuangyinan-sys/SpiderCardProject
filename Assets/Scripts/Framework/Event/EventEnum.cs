@@ -20,5 +20,11 @@
         OnCardChanged,       // 参数：CardData（单张牌变化，如翻牌）
         OnCardToDiscard,     // 参数：CardData（单张牌回收，播放飞到弃牌堆动画）
         OnShuffleBack,       // 无参数：弃牌堆洗回发牌堆动画
+        OnStraightCountChanged,  // 无参数：接龙次数变化（进度刷新）
+        OnLevelStart,            // 无参数：一局游戏开始（选关后）
+        OnLevelComplete,         // 无参数：通关
+        OnDiscardToDrawPile,     // 无参数：结算收牌 —— 弃牌堆收回发牌堆动画（一张牌背代表整堆）
+        OnCardToDrawPile,        // 参数：CardData（单张牌收回发牌堆动画，场上/牌包的牌本体飞行）
+        OnCardsCollected,        // 无参数：结算收牌完成（关卡结束）
     }
 }

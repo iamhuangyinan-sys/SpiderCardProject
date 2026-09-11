@@ -16,10 +16,25 @@ public class CardsManager : ManagerBase<CardsManager>
     /// <summary>测试模式：跳过洗牌直接发牌（仅编辑器下生效）</summary>
     public bool isTestMode = true;
 
+    /// <summary>是否正在结算收牌（收牌期间锁输入、不再触发新的回收/洗回）</summary>
+    public bool IsSettling { get; private set; }
+
+    /// <summary>是否正在一局对局中（发牌开始 → 收牌结算结束）</summary>
+    public bool IsPlaying { get; private set; }
+
+    /// <summary>进行中的回收协程（结算开始时会被中止）</summary>
+    private Coroutine _recycleRoutine;
+
     /// <summary>开始一局新游戏：设置列数/牌包数 → 清空数据 → 组牌 → 洗牌 → 发牌</summary>
     public void StartNewGame(int columnCount, int pocketCount)
     {
         var store = CardsStore.Instance;
+
+        // 读取当前关卡所需接龙次数，清零当前次数
+        store.needStraightNum = LevelManager.Instance.GetSelectedNeedStraightNum();
+        store.straightCount = 0;
+        IsSettling = false;
+        IsPlaying = true;
 
         // 设置本局列数与牌包数，再清空（重建结构）
         store.columnCount = columnCount;
@@ -39,6 +54,9 @@ public class CardsManager : ManagerBase<CardsManager>
 
         StoreToDrawPile(deck);      // 4. 压入发牌堆
         Deal();                     // 5. 发牌
+
+        // 通知进度刷新（x / y）
+        EventManager.Instance.Dispatch(E_EventEnum.OnStraightCountChanged);
     }
 
     /// <summary>按配表生成一副牌，默认牌背朝上</summary>
@@ -143,6 +161,7 @@ public class CardsManager : ManagerBase<CardsManager>
 
         for (int col = 0; col < store.columns.Count; col++)
         {
+            if (IsSettling) yield break;
             if (store.drawPile.Count == 0) break;
 
             var card = store.drawPile.Pop();
@@ -157,14 +176,16 @@ public class CardsManager : ManagerBase<CardsManager>
 
         // 等最后一张落地，再检查顺子（顺子回收由 RecycleToDiscard 异步完成）
         yield return new WaitForSeconds(CardAnimationHelper.FlyDuration);
+
         bool anyRecycled = false;
         for (int col = 0; col < store.columns.Count; col++)
         {
+            if (IsSettling) break;
             if (CheckAndDiscard(col)) anyRecycled = true;
         }
 
         // 没有触发回收时，检查洗回（洗回动画与数量派发由洗回协程内部完成）
-        if (!anyRecycled)
+        if (!anyRecycled && !IsSettling)
         {
             TryShuffleBack();
         }
@@ -181,7 +202,11 @@ public class CardsManager : ManagerBase<CardsManager>
     /// <summary>回收某列顶部 count 张牌到弃牌堆（统一回收入口，逐张飞行动画）</summary>
     private void RecycleToDiscard(int columnIndex, int count)
     {
-        MonoManager.Instance.StartCoroutine(RecycleToDiscardRoutine(columnIndex, count));
+        if (IsSettling) return;
+
+        // 同一时刻只允许一个回收协程（连点/连锁触发时以最后一次为准）
+        if (_recycleRoutine != null) MonoManager.Instance.StopCoroutine(_recycleRoutine);
+        _recycleRoutine = MonoManager.Instance.StartCoroutine(RecycleToDiscardRoutine(columnIndex, count));
     }
 
     private IEnumerator RecycleToDiscardRoutine(int columnIndex, int count)
@@ -229,6 +254,7 @@ public class CardsManager : ManagerBase<CardsManager>
     public void MoveCards(List<CardData> draggedCards, int targetColumnIndex)
     {
         var store = CardsStore.Instance;
+        if (IsSettling) return;
         if (draggedCards == null || draggedCards.Count == 0) return;
         if (targetColumnIndex < 0 || targetColumnIndex >= store.columns.Count) return;
 
@@ -272,25 +298,144 @@ public class CardsManager : ManagerBase<CardsManager>
         CheckAndDiscard(targetColumnIndex);
     }
 
-    /// <summary>检查某列是否形成 A-K 同花顺，是则触发逐张回收动画</summary>
+    /// <summary>检查某列是否形成 A-K 同花顺，是则接龙次数 +1 并触发逐张回收动画</summary>
     private bool CheckAndDiscard(int columnIndex)
     {
         var store = CardsStore.Instance;
+        if (IsSettling) return false;
         if (columnIndex < 0 || columnIndex >= store.columns.Count) return false;
 
         var column = store.columns[columnIndex];
         var seq = CardRuleManager.Instance.GetCompletedSequence(column);
         if (seq == null) return false;
 
+        // 接龙次数 +1，刷新进度，检查通关
+        store.straightCount++;
+        EventManager.Instance.Dispatch(E_EventEnum.OnStraightCountChanged);
+
+        // 达标 → 关卡完成，改走收牌结算（这 13 张顺子连同场上其他牌一起收回发牌堆）
+        if (CheckWin()) return true;
+
         // 触发逐张回收（异步）：统一回收入口，动画/翻牌/洗回都由它收尾
         RecycleToDiscard(columnIndex, seq.Count);
         return true;
+    }
+
+    /// <summary>接龙次数达到要求则关卡完成并开始收牌结算（返回是否已进入结算）</summary>
+    private bool CheckWin()
+    {
+        var store = CardsStore.Instance;
+        if (IsSettling) return true;
+        if (store.needStraightNum <= 0) return false;
+        if (store.straightCount < store.needStraightNum) return false;
+
+        // 关卡完成：记录进度 + 解锁下一关
+        LevelManager.Instance.CompleteLevel(LevelStore.Instance.selectedLevelId);
+
+        // 收牌结算：全部牌收回发牌堆，收完派发 OnCardsCollected
+        StartCollectAll();
+        return true;
+    }
+
+    /// <summary>【测试】直接达成接龙次数 → 关卡完成 + 收牌结算（供后续测试使用）</summary>
+    public void DebugCompleteLevel()
+    {
+        if (IsSettling) return;
+
+        var store = CardsStore.Instance;
+        if (store.needStraightNum <= 0) store.needStraightNum = 1;
+
+        store.straightCount = store.needStraightNum;
+        EventManager.Instance.Dispatch(E_EventEnum.OnStraightCountChanged);
+
+        CheckWin();
+    }
+
+    // ==================== 结算收牌 ====================
+
+    /// <summary>开始收牌结算：弃牌堆 → 场上各列 → 各牌包，全部收回发牌堆</summary>
+    private void StartCollectAll()
+    {
+        if (IsSettling) return;
+        IsSettling = true;
+        MonoManager.Instance.StartCoroutine(CollectAllRoutine());
+    }
+
+    private IEnumerator CollectAllRoutine()
+    {
+        var store = CardsStore.Instance;
+
+        // 中止进行中的回收协程，避免它与结算抢同一批牌
+        if (_recycleRoutine != null)
+        {
+            MonoManager.Instance.StopCoroutine(_recycleRoutine);
+            _recycleRoutine = null;
+        }
+
+        // 1. 弃牌堆 → 发牌堆（与洗回动画一致）
+        if (store.discardPile.Count > 0)
+        {
+            EventManager.Instance.Dispatch(E_EventEnum.OnDiscardToDrawPile);
+            yield return new WaitForSeconds(CardAnimationHelper.FlyDuration);
+
+            Shuffle(store.discardPile);
+            foreach (var card in store.discardPile)
+            {
+                store.drawPile.Push(card);
+            }
+            store.discardPile.Clear();
+
+            EventManager.Instance.Dispatch<int>(E_EventEnum.OnDrawPileChanged, store.drawPile.Count);
+            EventManager.Instance.Dispatch<int>(E_EventEnum.OnDiscardPileChanged, store.discardPile.Count);
+        }
+
+        // 2. 场上各列 → 发牌堆（逐列、逐张：从列底往上飞本体，与顺子收进弃牌堆同一编排）
+        // 列与列之间不等待，上一列最后一张起飞后紧接着发起下一列第一张，动画更连贯
+        for (int col = 0; col < store.columns.Count; col++)
+        {
+            var column = store.columns[col];
+
+            while (column.Count > 0)
+            {
+                var card = column[column.Count - 1];
+                column.RemoveAt(column.Count - 1);
+                store.drawPile.Push(card);
+
+                EventManager.Instance.Dispatch<CardData>(E_EventEnum.OnCardToDrawPile, card);
+                EventManager.Instance.Dispatch<int>(E_EventEnum.OnDrawPileChanged, store.drawPile.Count);
+
+                yield return new WaitForSeconds(CardAnimationHelper.FlyInterval);
+            }
+        }
+
+        // 3. 各牌包 → 发牌堆（逐包飞本体，同样不等前一张落地）
+        for (int i = 0; i < store.pockets.Count; i++)
+        {
+            var card = store.pockets[i];
+            if (card == null) continue;
+
+            store.pockets[i] = null;
+            store.drawPile.Push(card);
+
+            EventManager.Instance.Dispatch<CardData>(E_EventEnum.OnCardToDrawPile, card);
+            EventManager.Instance.Dispatch<int>(E_EventEnum.OnDrawPileChanged, store.drawPile.Count);
+
+            yield return new WaitForSeconds(CardAnimationHelper.FlyInterval);
+        }
+
+        // 4. 等最后一批牌落地，再解锁并通知结束（由 UI 层弹选关）
+        yield return new WaitForSeconds(CardAnimationHelper.FlyDuration);
+
+        IsSettling = false;
+        IsPlaying = false;
+        EventManager.Instance.Dispatch(E_EventEnum.OnCardsCollected);
     }
 
     /// <summary>发牌堆空了且弃牌堆有牌，播放洗回动画后把弃牌堆洗回发牌堆</summary>
     private void TryShuffleBack()
     {
         var store = CardsStore.Instance;
+        if (IsSettling) return;
         if (store.drawPile.Count != 0 || store.discardPile.Count == 0) return;
         MonoManager.Instance.StartCoroutine(ShuffleBackRoutine());
     }

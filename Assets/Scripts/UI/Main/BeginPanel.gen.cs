@@ -14,6 +14,7 @@ public partial class BeginPanel
     public class CompsData : CompsDataBase
     {
         public Button btnStart;
+        public Button btnContinue;
         public Button btnSetting;
         public Button btnQuit;
     }

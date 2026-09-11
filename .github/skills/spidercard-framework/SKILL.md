@@ -181,6 +181,7 @@ UIManager.Instance.Close(panel);  // 关闭（销毁）
 | `tog_` | `Toggle` | `tog_Mute` → `togMute` |
 | `sld_` | `Slider` | `sld_Volume` → `sldVolume` |
 | `list_` | `ScrollList` | `list_Shop` → `listShop` |
+| `ipt_` | `TMP_InputField` | `ipt_Name` → `iptName` |
 
 - 导出后生成 `XxxPanel.gen.cs`，内含 `comps` 字段和 `CompsData` 类（继承 `CompsDataBase`）。
 - 控件名不能重复，改了子物体名要重新 Refresh + Export Code。

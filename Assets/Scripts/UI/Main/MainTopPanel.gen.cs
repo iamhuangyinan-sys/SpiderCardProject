@@ -16,5 +16,7 @@ public partial class MainTopPanel
         public TMP_Text txtLevelProgress;
         public Button btnCardBuild;
         public Button btnMenu;
+        public TMP_Text txtLevelInfo;
+        public TMP_Text txtCoinInfo;
     }
 }

@@ -1,0 +1,15 @@
+﻿{
+  "items": [
+    {"Id": "01010101", "LevelType": 0, "FinishReward": 150, "ColumnNum": 13, "PocketNum": 4, "NextLevelId": "01020101", "NeedStraightNum": 2},
+    {"Id": "01020101", "LevelType": 1, "FinishReward": 0, "NextLevelId": "01030101;01030201"},
+    {"Id": "01030101", "LevelType": 0, "FinishReward": 150, "ColumnNum": 12, "PocketNum": 3, "NextLevelId": "01040101", "NeedStraightNum": 3},
+    {"Id": "01030201", "LevelType": 0, "FinishReward": 100, "ColumnNum": 13, "PocketNum": 3, "NextLevelId": "01040201", "NeedStraightNum": 3},
+    {"Id": "01040101", "LevelType": 1, "FinishReward": 0, "NextLevelId": "01050101;01050201"},
+    {"Id": "01040201", "LevelType": 1, "FinishReward": 0, "NextLevelId": "01050301"},
+    {"Id": "01050101", "LevelType": 0, "FinishReward": 100, "ColumnNum": 12, "PocketNum": 2, "NextLevelId": "01060101", "NeedStraightNum": 3},
+    {"Id": "01050201", "LevelType": 0, "FinishReward": 100, "ColumnNum": 11, "PocketNum": 3, "NextLevelId": "01060101", "NeedStraightNum": 3},
+    {"Id": "01050301", "LevelType": 0, "FinishReward": 150, "ColumnNum": 11, "PocketNum": 2, "NextLevelId": "01060101", "NeedStraightNum": 3},
+    {"Id": "01060101", "LevelType": 1, "FinishReward": 0, "NextLevelId": "01070101"},
+    {"Id": "01070101", "LevelType": 2, "FinishReward": 250, "ColumnNum": 11, "PocketNum": 2, "NeedStraightNum": 4}
+  ]
+}

@@ -22,6 +22,11 @@ public class GameEntry : MonoBehaviour
         // ===== 1. 打开开始界面 =====
         UIManager.Instance.ShowAsync<BeginPanel>(_ => { });
 
+#if UNITY_EDITOR
+        // ===== 2. 编辑器模式：常驻控制台入口 =====
+        UIManager.Instance.Show<ConsoleEntryPanel>();
+#endif
+
         Debug.Log("[GameEntry] 游戏业务初始化完成");
     }
 }
