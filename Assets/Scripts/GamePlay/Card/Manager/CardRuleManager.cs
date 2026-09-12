@@ -12,10 +12,28 @@ public class CardRuleManager : ManagerBase<CardRuleManager>
         return anchor != null && anchor.isFaceUp;
     }
 
-    /// <summary>是否是蜘蛛牌（万能连接牌，点数 -1）</summary>
-    public static bool IsSpider(CardData card)
+    /// <summary>点数万能（配表 Rank = -1，蜘蛛牌）：可以当作任意点数</summary>
+    public static bool IsRankWild(CardData card)
     {
         return card != null && card.rank == -1;
+    }
+
+    /// <summary>花色万能（配表 Suit = -1）：可以当作任意花色</summary>
+    public static bool IsSuitWild(CardData card)
+    {
+        return card != null && card.suit == E_CardSuitEnum.Wild;
+    }
+
+    /// <summary>是否全万能（花色 + 点数都万能，配表两个都填 -1）</summary>
+    public static bool IsFullWild(CardData card)
+    {
+        return IsRankWild(card) && IsSuitWild(card);
+    }
+
+    /// <summary>这张牌是否带「任意落点」属性：拖起后可以叠到任意牌上（配表只给默认值）</summary>
+    public static bool IsAnyTarget(CardData card)
+    {
+        return card != null && card.isAnyTarget;
     }
 
     /// <summary>是否是黑色牌（无花色无点数，点数 -2，不能连接、只能单独拖、只能放空列）</summary>
@@ -24,13 +42,18 @@ public class CardRuleManager : ManagerBase<CardRuleManager>
         return card != null && card.rank == -2;
     }
 
-    /// <summary>两张相邻牌能否连接：同花色，且任一是蜘蛛牌，或点数逐张减 1；黑色牌不能连接</summary>
+    /// <summary>
+    /// 两张相邻牌能否连接（能凑成可整体拖动的同花顺）：
+    /// 万能花色不比花色，万能点数不比点数，两者都万能则与任意牌都能连；黑色牌不能连接
+    /// </summary>
     private static bool CanConnect(CardData prev, CardData cur)
     {
         if (IsBlack(prev) || IsBlack(cur)) return false;
-        if (prev.suit != cur.suit) return false;
-        if (IsSpider(prev) || IsSpider(cur)) return true;
-        return cur.rank == prev.rank - 1;
+
+        bool suitOk = IsSuitWild(prev) || IsSuitWild(cur) || prev.suit == cur.suit;
+        bool rankOk = IsRankWild(prev) || IsRankWild(cur) || cur.rank == prev.rank - 1;
+
+        return suitOk && rankOk;
     }
 
     /// <summary>
@@ -118,17 +141,21 @@ public class CardRuleManager : ManagerBase<CardRuleManager>
         var targetColumn = columns[targetColumnIndex];
         if (targetColumn.Count == 0) return true;
 
+        // 任意落点牌：可以叠到任意牌上（含黑色牌；自身是黑色牌也照常生效）
+        if (IsAnyTarget(anchor)) return true;
+
         // 黑色牌只能放到空列
         if (IsBlack(anchor)) return false;
 
         var top = targetColumn[targetColumn.Count - 1];
 
-        // 蜘蛛牌参与：同花色即可连接
-        if (IsSpider(anchor) || IsSpider(top))
+        // 蜘蛛牌参与（点数万能）：不比点数，只看花色；花色万能则花色也不比
+        if (IsRankWild(anchor) || IsRankWild(top))
         {
-            return anchor.suit == top.suit;
+            return IsSuitWild(anchor) || IsSuitWild(top) || anchor.suit == top.suit;
         }
 
+        // 普通牌：只看点数（同花色不是落列的必要条件，同花顺才是）
         return anchor.rank == top.rank - 1;
     }
 
@@ -155,19 +182,36 @@ public class CardRuleManager : ManagerBase<CardRuleManager>
     }
 
     /// <summary>
-    /// 检查某列从最下方往上是否形成 A-K 同花顺（13 张、同花色、点数 K→A），
-    /// 是则返回该顺子（K 到 A 共 13 张），否则返回 null
+    /// 检查某列末尾 13 张是否形成 A-K 同花顺（13 张、同花色、点数 K→A），
+    /// 是则返回该顺子（K 到 A 共 13 张），否则返回 null。
+    /// 万能牌可以顶替它所在位置的牌：万能花色顶替花色，万能点数顶替点数
     /// </summary>
     public List<CardData> GetCompletedSequence(List<CardData> column)
     {
         if (column == null || column.Count < 13) return null;
 
         int start = column.Count - 13;
-        var suit = column[start].suit;
-        for (int i = 0; i < 13; i++)
+        int end = start + 13;
+
+        // 花色基准：取第一张非万能花色的牌（整段都是万能花色时，花色不做要求）
+        E_CardSuitEnum suit = E_CardSuitEnum.Wild;
+        for (int i = start; i < end; i++)
         {
-            var card = column[start + i];
-            if (card.suit != suit || card.rank != 13 - i) return null;
+            if (IsSuitWild(column[i])) continue;
+
+            suit = column[i].suit;
+            break;
+        }
+
+        for (int i = start; i < end; i++)
+        {
+            var card = column[i];
+
+            // 花色：万能花色可当基准花色，其余必须与基准一致
+            if (!IsSuitWild(card) && card.suit != suit) return null;
+
+            // 点数：从 K 逐张减到 A；万能点数可当任意点数
+            if (!IsRankWild(card) && card.rank != 13 - (i - start)) return null;
         }
 
         return column.GetRange(start, 13);

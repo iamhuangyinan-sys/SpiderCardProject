@@ -6,8 +6,8 @@ using Framework.Store;
 /// </summary>
 public class LevelStore : StoreBase<LevelStore>
 {
-    /// <summary>最近完成的关卡 id（空 = 未通关）</summary>
-    public string currentLevelId;
+    /// <summary>最后完成的关卡 id（空 = 还没通关过任何关卡）—— 用于重建解锁状态与当前层</summary>
+    public string lastLevelId;
 
     /// <summary>当前层数（只解锁当前层的关卡，不走回头路）</summary>
     public int currentLayer;
@@ -15,7 +15,7 @@ public class LevelStore : StoreBase<LevelStore>
     /// <summary>待发放的通关奖励（接龙达标时挂起，结算动画结束后发放）</summary>
     public int pendingReward;
 
-    /// <summary>当前选中要玩的关卡 id</summary>
+    /// <summary>进行中的关卡 id（空 = 停在选关界面）</summary>
     public string selectedLevelId;
 
     /// <summary>已解锁的关卡 id 集合</summary>
@@ -39,7 +39,7 @@ public class LevelStore : StoreBase<LevelStore>
 
     private void Clear()
     {
-        currentLevelId = null;
+        lastLevelId = null;
         selectedLevelId = null;
         currentLayer = 0;
         pendingReward = 0;

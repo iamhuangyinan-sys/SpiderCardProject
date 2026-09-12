@@ -41,6 +41,7 @@ public static class CardAnimationHelper
     /// </summary>
     public static Tween FlyTo(CardView view, Vector3 from, Vector3 to)
     {
+        CardSoundHelper.PlayPlace();
         view.SetSortingOrder(view.CurrentSortingOrder + FlySortingOffset);
         return AnimationHelper.FlyTo(view.transform, from, to, FlyDuration);
     }
@@ -53,6 +54,7 @@ public static class CardAnimationHelper
     {
         if (view == null) return;
 
+        CardSoundHelper.PlayFlip();
         view.SetSortingOrder(finalOrder + FlipSortingOffset);
 
         var seq = DOTween.Sequence();

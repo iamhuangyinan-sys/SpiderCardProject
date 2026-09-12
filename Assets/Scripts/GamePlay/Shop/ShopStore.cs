@@ -6,6 +6,9 @@ using Framework.Store;
 /// </summary>
 public class ShopStore : StoreBase<ShopStore>
 {
+    /// <summary>当前商店关 id（空 = 不在商店中）</summary>
+    public string shopLevelId;
+
     /// <summary>当前商店的商品（前 2 件特殊牌，后 4 件普通牌）</summary>
     public readonly List<ShopGoods> goods = new();
 
@@ -19,9 +22,10 @@ public class ShopStore : StoreBase<ShopStore>
         Clear();
     }
 
-    /// <summary>清空商品列表</summary>
+    /// <summary>清空商品与商店关标记</summary>
     public void Clear()
     {
+        shopLevelId = null;
         goods.Clear();
     }
 

@@ -14,6 +14,7 @@
         OnTableChanged,      // 无参数：整桌刷新（发牌 / 重开）
         OnColumnChanged,     // 参数：int（列索引，该列整列重建）
         OnColumnAppend,      // 参数：int（列索引，该列末尾增量追加一张）
+        OnColumnPrepend,     // 参数：int（列索引，该列堆底增量插入一张，沉底发牌用）
         OnDrawPileChanged,   // 参数：int（发牌堆剩余数量）
         OnDiscardPileChanged, // 参数：int（弃牌堆数量）
         OnPocketChanged,     // 参数：int（牌包索引）

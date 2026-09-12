@@ -26,9 +26,7 @@
     /// </summary>
     public enum E_SaveCustomEnum
     {
-        // ---- 示例 key，按需增删 ----
-        // PlayerData,
-        // GameSettings,
-        // CardCollection,
+        /// <summary>一大局游戏进度（金币 / 牌组 / 关卡进度 / 商店状态）</summary>
+        RunData,
     }
 }

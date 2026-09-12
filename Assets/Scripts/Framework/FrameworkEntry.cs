@@ -19,8 +19,25 @@ namespace Framework
     /// </summary>
     public class FrameworkEntry : MonoBehaviour
     {
+        /// <summary>框架是否已初始化（防止多个场景重复挂载导致重复初始化）</summary>
+        private static bool _initialized;
+
+        /// <summary>本实例是否为主实例（重复实例不参与销毁清理）</summary>
+        private bool _isPrimary;
+
         private void Awake()
         {
+            // 多个场景都挂了 FrameworkEntry 时，只保留最先初始化的那个
+            if (_initialized)
+            {
+                Debug.LogWarning("[Framework] 已存在 FrameworkEntry（它已 DontDestroyOnLoad），销毁重复实例；场景里只需保留一个");
+                Destroy(gameObject);
+                return;
+            }
+
+            _initialized = true;
+            _isPrimary = true;
+
             DontDestroyOnLoad(gameObject);
             InitFramework();
         }
@@ -58,6 +75,10 @@ namespace Framework
 
         private void OnDestroy()
         {
+            if (!_isPrimary) return;   // 被销毁的重复实例不做清理
+
+            _initialized = false;
+
             // 按依赖的反序销毁
             ConsoleCommandManager.Instance.Dispose();
             SceneController.Instance.Dispose();

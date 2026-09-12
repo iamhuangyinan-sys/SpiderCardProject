@@ -1,4 +1,6 @@
 using Framework.Mgr;
+using Framework.Save;
+using Framework.UI;
 
 /// <summary>
 /// 纸牌游戏门面 —— 集中管理纸牌游戏各子系统的初始化与销毁
@@ -51,6 +53,17 @@ public class CardGameModule : ManagerBase<CardGameModule>
         LevelStore.Instance.Dispose();
     }
 
+    /// <summary>
+    /// 当前是否可接受卡牌操作输入（所有卡牌 Controller 统一用这个判断）
+    /// 锁输入：非对局进行中（选关 / 商店界面）/ 收牌结算中 / 动画播放中 / 全屏面板遮挡中
+    /// （最后一条必需：UI 只挡得住 UI，挡不住走 Physics.Raycast 的卡牌拾取）
+    /// </summary>
+    public bool CanCardInput =>
+        CardsManager.Instance.IsPlaying
+        && !CardsManager.Instance.IsSettling
+        && !CardViewManager.Instance.IsAnimating
+        && !FullScreenPanel.IsBlockingInput;
+
     /// <summary>开始一局新游戏（指定列数与牌包数）</summary>
     public void StartNewGame(int columnCount, int pocketCount)
     {
@@ -61,5 +74,42 @@ public class CardGameModule : ManagerBase<CardGameModule>
     public void DebugCompleteLevel()
     {
         CardsManager.Instance.DebugCompleteLevel();
+    }
+
+    // ==================== 存档 ====================
+
+    /// <summary>把本局进度写入存档（金币 / 牌组 / 关卡进度 / 商店状态）</summary>
+    public void SaveRun()
+    {
+        var data = new RunSaveData();
+        RunManager.Instance.ExportTo(data);
+        LevelManager.Instance.ExportTo(data);
+        ShopManager.Instance.ExportTo(data);
+
+        SaveManager.Instance.Save(E_SaveCustomEnum.RunData, data);
+    }
+
+    /// <summary>
+    /// 读取存档并恢复到各子系统（需在 Init 之后调用）
+    /// 无存档时开始新的一大局面
+    /// </summary>
+    public void LoadRun()
+    {
+        if (!SaveManager.Instance.HasKey(E_SaveCustomEnum.RunData))
+        {
+            RunManager.Instance.StartNewRun();
+            return;
+        }
+
+        var data = SaveManager.Instance.Load<RunSaveData>(E_SaveCustomEnum.RunData);
+        if (data == null)
+        {
+            RunManager.Instance.StartNewRun();
+            return;
+        }
+
+        RunManager.Instance.ImportFrom(data);
+        LevelManager.Instance.ImportFrom(data);
+        ShopManager.Instance.ImportFrom(data);
     }
 }

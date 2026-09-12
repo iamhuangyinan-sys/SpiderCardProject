@@ -4,8 +4,9 @@ using UnityEngine;
 /// <summary>
 /// 控制台面板 —— 输入命令行，点确定（或回车）执行
 /// 关闭时重新显示 ConsoleEntryPanel
+/// 全屏面板（继承 FullScreenPanel）：打开期间遮挡场景输入
 /// </summary>
-public partial class ConsolePanel : NormalPanel
+public partial class ConsolePanel : FullScreenPanel
 {
     protected override void OnOpen()
     {

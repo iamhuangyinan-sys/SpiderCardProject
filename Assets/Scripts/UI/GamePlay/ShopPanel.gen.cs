@@ -15,5 +15,8 @@ public partial class ShopPanel
     {
         public ScrollList listShopCard;
         public Button btnContinue;
+        public Button btnDeleteCard;
+        public TMP_Text txtDeletePrice;
+        public TMP_Text txtDeleteCount;
     }
 }

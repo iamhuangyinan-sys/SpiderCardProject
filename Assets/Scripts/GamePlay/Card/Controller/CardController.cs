@@ -46,7 +46,13 @@ public class CardController : MonoBehaviour
     private void Update()
     {
         if (Mouse.current == null || _view == null || _camera == null) return;
-        if (CardViewManager.Instance.IsAnimating || CardsManager.Instance.IsSettling) return;
+
+        // 输入被锁（全屏面板遮挡 / 结算中 / 动画中）：正在拖的牌立即回弹，避免卡在半空
+        if (!CardGameModule.Instance.CanCardInput)
+        {
+            if (_activeDrag == this) CancelDrag();
+            return;
+        }
 
         bool pressed = Mouse.current.leftButton.wasPressedThisFrame;
         bool released = Mouse.current.leftButton.wasReleasedThisFrame;
@@ -158,6 +164,9 @@ public class CardController : MonoBehaviour
             else CardAnimationHelper.LiftCard(view);
         }
 
+        // 拿起牌音效
+        CardSoundHelper.PlayPick();
+
         _dragging = true;
     }
 
@@ -180,6 +189,12 @@ public class CardController : MonoBehaviour
     /// <summary>结束拖拽：判定落点（牌包/列），能移动则移动，否则回弹</summary>
     private void EndDrag()
     {
+        // 没能拖起来（如点击了被压住的牌）：无需判定落点，也不播音效
+        if (!_dragging) return;
+
+        // 松开牌音效
+        CardSoundHelper.PlayPlace();
+
         // 放下编排：隐藏发光投影 + 影子恢复（无论移动成功还是回弹）
         for (int i = 0; i < _draggedCards.Count; i++)
         {
@@ -230,6 +245,35 @@ public class CardController : MonoBehaviour
             }
         }
 
+        ResetDragState();
+    }
+
+    /// <summary>
+    /// 取消拖拽（输入被锁时调用）：把被拖的牌放回原位并恢复层级，不做落点判定
+    /// </summary>
+    private void CancelDrag()
+    {
+        if (_activeDrag == this) _activeDrag = null;
+
+        if (_dragging)
+        {
+            for (int i = 0; i < _draggedCards.Count; i++)
+            {
+                var view = GetDragView(i);
+                if (view == null) continue;
+
+                CardAnimationHelper.DropCard(view);
+                view.SetSortingOrder(_dragStartSortingOrders[i]);
+                view.SetPosition(_dragStartPositions[i]);
+            }
+        }
+
+        ResetDragState();
+    }
+
+    /// <summary>清空拖拽状态（拖拽结束 / 取消共用）</summary>
+    private void ResetDragState()
+    {
         _dragging = false;
         _draggedCards = null;
         _dragStartPositions = null;

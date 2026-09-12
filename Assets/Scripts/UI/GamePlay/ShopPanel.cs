@@ -6,16 +6,22 @@ using Framework.UI;
 /// </summary>
 public partial class ShopPanel : NormalPanel
 {
+    /// <summary>打开飞入 / 关闭飞出</summary>
+    protected override bool FlyInOnOpen => true;
+    protected override bool FlyOutOnClose => true;
+
     protected override void OnOpen()
     {
         comps.btnContinue.onClick.AddListener(OnClickContinue);
         EventManager.Instance.AddListener(E_EventEnum.OnShopChanged, RefreshList);
 
-        // 打开即随机刷新商品（内部会派发 OnShopChanged → RefreshList）
-        ShopManager.Instance.OpenShop();
+        RefreshList();
     }
 
-    protected override void OnShow() { }
+    protected override void OnShow()
+    {
+        RefreshList();
+    }
 
     protected override void OnHide() { }
 

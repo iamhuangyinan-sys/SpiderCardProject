@@ -54,6 +54,9 @@ public class CardViewManager : ManagerBase<CardViewManager>
     /// <summary>每个牌包的牌 View（null = 空）</summary>
     private readonly List<CardView> _pocketViews = new();
 
+    /// <summary>牌桌场景物件（发牌堆 / 弃牌堆 / 空列垫底 / 空牌包槽 / 两个数量文本）：不玩牌时整体隐藏</summary>
+    private readonly List<GameObject> _tableObjects = new();
+
     /// <summary>是否正在播放动画（动画期间锁定输入）</summary>
     public bool IsAnimating { get; private set; }
 
@@ -71,6 +74,7 @@ public class CardViewManager : ManagerBase<CardViewManager>
         EventManager.Instance.AddListener(E_EventEnum.OnTableChanged, OnTableChanged);
         EventManager.Instance.AddListener<int>(E_EventEnum.OnColumnChanged, OnColumnChanged);
         EventManager.Instance.AddListener<int>(E_EventEnum.OnColumnAppend, OnColumnAppend);
+        EventManager.Instance.AddListener<int>(E_EventEnum.OnColumnPrepend, OnColumnPrepend);
         EventManager.Instance.AddListener<CardData>(E_EventEnum.OnCardChanged, OnCardChanged);
         EventManager.Instance.AddListener<CardData>(E_EventEnum.OnCardToDiscard, OnCardToDiscard);
         EventManager.Instance.AddListener(E_EventEnum.OnShuffleBack, OnShuffleBack);
@@ -93,6 +97,7 @@ public class CardViewManager : ManagerBase<CardViewManager>
         EventManager.Instance.RemoveListener(E_EventEnum.OnTableChanged, OnTableChanged);
         EventManager.Instance.RemoveListener<int>(E_EventEnum.OnColumnChanged, OnColumnChanged);
         EventManager.Instance.RemoveListener<int>(E_EventEnum.OnColumnAppend, OnColumnAppend);
+        EventManager.Instance.RemoveListener<int>(E_EventEnum.OnColumnPrepend, OnColumnPrepend);
         EventManager.Instance.RemoveListener<CardData>(E_EventEnum.OnCardChanged, OnCardChanged);
         EventManager.Instance.RemoveListener<CardData>(E_EventEnum.OnCardToDiscard, OnCardToDiscard);
         EventManager.Instance.RemoveListener(E_EventEnum.OnShuffleBack, OnShuffleBack);
@@ -107,6 +112,20 @@ public class CardViewManager : ManagerBase<CardViewManager>
 
         _animatingCount = 0;
         IsAnimating = false;
+    }
+
+    // ============ 牌桌场景物件显隐 ============
+
+    /// <summary>
+    /// 牌桌场景物件显隐：打牌关开始时显示，结算收牌、选关界面挡上来后再隐藏
+    /// （只控制牌桌装饰物，牌本身由对象池创建，不在这里管）
+    /// </summary>
+    public void SetTableVisible(bool visible)
+    {
+        foreach (var go in _tableObjects)
+        {
+            if (go != null) go.SetActive(visible);
+        }
     }
 
     // ============ 事件回调 ============
@@ -128,6 +147,12 @@ public class CardViewManager : ManagerBase<CardViewManager>
     private void OnColumnAppend(int columnIndex)
     {
         AppendCardToColumn(columnIndex);
+    }
+
+    /// <summary>某列堆底增量插入一张（沉底发牌用）</summary>
+    private void OnColumnPrepend(int columnIndex)
+    {
+        PrependCardToColumn(columnIndex);
     }
 
     /// <summary>单张牌变化（翻牌）：播放翻牌动画</summary>
@@ -289,6 +314,7 @@ public class CardViewManager : ManagerBase<CardViewManager>
         if (controller != null)
         {
             _drawPileTrans = controller.transform;
+            _tableObjects.Add(controller.gameObject);
         }
         else
         {
@@ -309,6 +335,7 @@ public class CardViewManager : ManagerBase<CardViewManager>
         if (go != null)
         {
             _discardPileTrans = go.transform;
+            _tableObjects.Add(go);
         }
         else
         {
@@ -362,7 +389,7 @@ public class CardViewManager : ManagerBase<CardViewManager>
         RefreshEmptySlots();
     }
 
-    /// <summary>在指定列末尾增量添加一张牌的 View（不回收整列）</summary>
+    /// <summary>在指定列末尾增量添加一张牌的 View（发牌用，不回收整列）</summary>
     private void AppendCardToColumn(int columnIndex)
     {
         var store = CardsStore.Instance;
@@ -384,6 +411,60 @@ public class CardViewManager : ManagerBase<CardViewManager>
         // 发牌动画：从发牌堆飞到该列顶部，飞行期间锁定输入，落地恢复层级并解锁
         int finalOrder = GetSortingOrder(columnIndex, row);
         Vector3 target = GetCardPosition(columnIndex, column, row);
+        view.SetSortingOrder(finalOrder);
+        var tween = CardAnimationHelper.FlyTo(view, GetDrawPilePosition(), target);
+
+        _animatingCount++;
+        IsAnimating = true;
+        tween.OnComplete(() =>
+        {
+            view.SetSortingOrder(finalOrder);
+            _animatingCount--;
+            if (_animatingCount <= 0)
+            {
+                _animatingCount = 0;
+                IsAnimating = false;
+            }
+        });
+
+        _viewDict[cardData] = view;
+    }
+
+    /// <summary>
+    /// 在指定列堆底（第 0 位）增量插入一张牌的 View（沉底发牌用，不回收整列）：
+    /// 沉底牌的牌背从发牌堆飞到堆底位置，同列其余牌整体下移一格（同步过渡），期间锁定输入
+    /// </summary>
+    private void PrependCardToColumn(int columnIndex)
+    {
+        var store = CardsStore.Instance;
+        if (columnIndex < 0 || columnIndex >= store.columns.Count) return;
+
+        var column = store.columns[columnIndex];
+        if (column.Count == 0) return;
+
+        // 堆底牌就是刚插入的那张（数据层 Insert(0) 后派发事件）
+        var cardData = column[0];
+        if (_viewDict.ContainsKey(cardData)) return;
+
+        var view = CardPoolManager.Instance.GetCard();
+        if (view == null) return;
+
+        view.Bind(cardData);
+        view.columnIndex = columnIndex;
+
+        // 其余牌整体下移一格（行号 +1）：位置与层级一起过渡
+        for (int row = 1; row < column.Count; row++)
+        {
+            if (!_viewDict.TryGetValue(column[row], out var other) || other == null) continue;
+
+            other.SetSortingOrder(GetSortingOrder(columnIndex, row));
+            AnimationHelper.MoveTo(other.transform, GetCardPosition(columnIndex, column, row),
+                CardAnimationHelper.FlyDuration);
+        }
+
+        // 沉底牌飞入堆底（数据为背面朝上，View 会自动刷成牌背）
+        int finalOrder = GetSortingOrder(columnIndex, 0);
+        Vector3 target = GetCardPosition(columnIndex, column, 0);
         view.SetSortingOrder(finalOrder);
         var tween = CardAnimationHelper.FlyTo(view, GetDrawPilePosition(), target);
 
@@ -441,6 +522,8 @@ public class CardViewManager : ManagerBase<CardViewManager>
             return;
         }
 
+        _tableObjects.Add(cardEmpty);
+
         foreach (Transform child in cardEmpty.transform)
         {
             _emptySlots.Add(child.gameObject);
@@ -464,6 +547,7 @@ public class CardViewManager : ManagerBase<CardViewManager>
         if (go != null)
         {
             _drawPileCountText = go.GetComponent<TMP_Text>();
+            _tableObjects.Add(go);
         }
 
         if (_drawPileCountText == null)
@@ -479,6 +563,7 @@ public class CardViewManager : ManagerBase<CardViewManager>
         if (go != null)
         {
             _discardPileCountText = go.GetComponent<TMP_Text>();
+            _tableObjects.Add(go);
         }
 
         if (_discardPileCountText == null)
@@ -499,6 +584,8 @@ public class CardViewManager : ManagerBase<CardViewManager>
             Debug.LogWarning("[CardViewManager] 场景中未找到 PocketEmpty");
             return;
         }
+
+        _tableObjects.Add(pocketEmpty);
 
         foreach (Transform child in pocketEmpty.transform)
         {

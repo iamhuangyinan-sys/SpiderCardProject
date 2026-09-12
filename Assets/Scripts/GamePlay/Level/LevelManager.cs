@@ -49,12 +49,6 @@ public class LevelManager : ManagerBase<LevelManager>
                 store.unlockedIds.Add(cfg.Id);
             }
         }
-
-        // 初始进度：未通关，记为 "0"
-        if (string.IsNullOrEmpty(store.currentLevelId))
-        {
-            store.currentLevelId = "0";
-        }
     }
 
     /// <summary>取层号（id 第 3-4 位）</summary>
@@ -142,11 +136,15 @@ public class LevelManager : ManagerBase<LevelManager>
         if (!store.IsUnlocked(levelId)) return;
         if (!store.allLevels.TryGetValue(levelId, out var cfg)) return;
 
-        // 商店关：不开局，记下选中关卡后交由 UI 弹商店面板
+        // 记为进行中的关卡，并立即落盘（退出重进时直接重开这一关）
+        store.selectedLevelId = levelId;
+        store.Refresh();
+
+        // 商店关：备好商品后弹商店面板（商品只在首次进入时随机）
         if (cfg.LevelType == (int)E_LevelTypeEnum.Shop)
         {
-            store.selectedLevelId = levelId;
-            store.Refresh();
+            ShopManager.Instance.EnterShop(levelId);
+            CardGameModule.Instance.SaveRun();
 
             EventManager.Instance.Dispatch(E_EventEnum.OnShopOpen);
             return;
@@ -154,8 +152,7 @@ public class LevelManager : ManagerBase<LevelManager>
 
         if (cfg.ColumnNum <= 0) return;   // 其他非打牌关暂不进入
 
-        store.selectedLevelId = levelId;
-        store.Refresh();
+        CardGameModule.Instance.SaveRun();
 
         // 开始一局新游戏
         CardGameModule.Instance.StartNewGame(cfg.ColumnNum, cfg.PocketNum);
@@ -165,7 +162,7 @@ public class LevelManager : ManagerBase<LevelManager>
     }
 
     /// <summary>
-    /// 通关：记录完成关卡 + 挂起通关奖励 + 解锁下一批关卡
+    /// 通关：记录完成关卡 + 挂起奖励 + 解锁下一批关卡
     /// 进入更高层时切层（清掉旧层解锁状态，不走回头路）；已完成的关卡不再可选
     /// 奖励在结算动画结束后由 SettleLevelReward() 发放
     /// </summary>
@@ -174,14 +171,29 @@ public class LevelManager : ManagerBase<LevelManager>
         if (string.IsNullOrEmpty(levelId)) return;
 
         var store = LevelStore.Instance;
-        store.currentLevelId = levelId;   // 记录最近完成的关卡
-        store.selectedLevelId = null;     // 清空选中
+        store.lastLevelId = levelId;      // 记录最后完成的关卡
+        store.selectedLevelId = null;     // 开完了，回到选关状态
 
         // 挂起通关奖励：结算动画结束后由 SettleLevelReward() 发放
         if (store.allLevels.TryGetValue(levelId, out var cfg))
         {
             store.pendingReward = cfg.FinishReward;
         }
+
+        UnlockNext(levelId);
+        store.Refresh();
+
+        // 通知：通关
+        EventManager.Instance.Dispatch(E_EventEnum.OnLevelComplete);
+    }
+
+    /// <summary>
+    /// 解锁某关的下一批关卡（通关与读档共用）
+    /// 进入更高层时切层（清掉旧层解锁状态，不走回头路）；已完成的关卡不再可选
+    /// </summary>
+    private void UnlockNext(string levelId)
+    {
+        var store = LevelStore.Instance;
 
         // 已完成关卡不再可选（不能重复打）
         store.unlockedIds.Remove(levelId);
@@ -207,10 +219,31 @@ public class LevelManager : ManagerBase<LevelManager>
         {
             store.unlockedIds.Add(nextId);
         }
+    }
+
+    // ==================== 存档 ====================
+
+    /// <summary>导出关卡进度（存档用）</summary>
+    public void ExportTo(RunSaveData data)
+    {
+        data.lastLevelId = LevelStore.Instance.lastLevelId;
+        data.selectedLevelId = LevelStore.Instance.selectedLevelId;
+    }
+
+    /// <summary>从存档恢复关卡进度：用「最后完成的关卡」重建解锁状态与当前层</summary>
+    public void ImportFrom(RunSaveData data)
+    {
+        var store = LevelStore.Instance;
+
+        store.lastLevelId = data.lastLevelId;
+        store.selectedLevelId = data.selectedLevelId;
+
+        // 未通关过任何关卡 → 保持初始第一层解锁状态
+        if (!string.IsNullOrEmpty(store.lastLevelId))
+        {
+            UnlockNext(store.lastLevelId);
+        }
 
         store.Refresh();
-
-        // 通知：通关
-        EventManager.Instance.Dispatch(E_EventEnum.OnLevelComplete);
     }
 }

@@ -271,6 +271,132 @@ classDiagram
 | OnCardToDrawPile | CardData | 结算收牌：单张牌本体飞回发牌堆（场上列 / 牌包的牌） |
 | OnCardsCollected | 无 | 结算收牌完成（关卡结束） |
 
+## 场景过渡（黑屏遮罩）
+
+`SceneController.LoadScene()` 内置黑屏过渡，避免看到场景 / UI 元素中途消失。遮罩是 `UIManager` 在 `Layer_System` 下建的全屏黑 `Image`（跨场景常驻），不用碰摄像机。
+
+```
+① 遮罩淡入到全黑（等完成，期间 blocksRaycasts = true 挡点击）
+② UIManager.HideAll() + OnBeforeLoad + PoolManager.ClearOnSceneChange
+③ SceneManager.LoadSceneAsync（保持全黑）
+④ 场景激活 → 等新场景「内容就绪」（NotifySceneReady，最多 3s 兜底）
+⑤ 遮罩淡出
+⑥ OnAfterLoad + onComplete
+```
+
+- 第 ② 步把旧场景的 UI **隐藏**（不是销毁）：面板挂在 `DontDestroyOnLoad` 的 Canvas 上，等切完再关会跟着新场景露出来闪一下；而只隐藏能保留 `_panelCache`，下次 `Show` 直接复用面板实例（不重新加载预制体、不重跑 `UIBinder.Bind`），面板的关闭动画也正好播在黑幕下面。
+- `UIManager` 的两个清理接口区别：`HideAll()` = 只隐藏保留缓存（切场景用）；`CloseAll()` = 触发 `OnClose` 并销毁物体（框架销毁等彻底清理用）。
+
+**新场景入口脚本必须在内容建完后调一句**：
+
+```csharp
+SceneController.Instance.NotifySceneReady();
+```
+
+- `GameEntry`（Main）：`ShowAsync<BeginPanel>` 的回调里调
+- `CardGameEntry`（CardGameScene）：`Start` 末尾（此时选关 / 商店 / 打牌 UI 都已就位）
+
+不调的话会一直等到 3 秒超时才淡出（日志会打 warning）。
+
+时长在 `SceneController` 里：`MaskFadeInDuration = 0.25f`、`MaskFadeOutDuration = 0.3f`、`SceneReadyTimeout = 3f`。
+
+## 存档
+
+一大局游戏的进度存在一个自定义存档里：`E_SaveCustomEnum.RunData` → `Saves/run_data.json`。
+
+```csharp
+[System.Serializable]
+public class RunSaveData
+{
+    public int coin;                             // 金币
+    public List<string> deck = new();            // 牌组（牌 id 列表，重复即多份）
+    public string lastLevelId;                   // 最后完成的关卡（重建解锁状态与当前层）
+    public string selectedLevelId;               // 进行中的关卡（空 = 停在选关界面）
+    public List<ShopGoods> shopGoods = new();    // 停在商店关时的商品（含 sold，防刷）
+}
+```
+
+牌局本身**不存**：`selectedLevelId` 只记录"卡在哪一关"，重进后从头重开这一关。
+
+### 关卡进度的两个 id
+
+| `LevelStore` 字段 | 含义 | 写入 | 清空 |
+|------------------|------|------|------|
+| `lastLevelId` | 最后**完成**的关卡（空 = 没通关过） | `CompleteLevel` | 从不（累计） |
+| `selectedLevelId` | **进行中**的关卡（空 = 停在选关） | `SelectLevel` | `CompleteLevel` / 商店 Continue |
+
+读档时用 `lastLevelId` 走一遍 `LevelManager.UnlockNext()`（和通关解锁是同一个方法，不重复实现），把 `unlockedIds` / `currentLayer` 重建出来 —— 所以依旧是"只解锁当前层、不走回头路"。
+
+### 读档分流（`CardGameEntry.Start`）
+
+| 存档状态 | 重进后 |
+|---------|--------|
+| 无存档 | 新的一大局面 → 选关 |
+| `selectedLevelId` 为空 | 继续选关 |
+| `selectedLevelId` 是普通 / BOSS 关 | 直接重开这一关 |
+| `selectedLevelId` 是商店关 | 直接回商店，商品沿用存档里的 |
+
+三种情况都走 `LevelManager.SelectLevel(currentId)`，和玩家点关卡的路径完全一致。
+
+### 存档时机
+
+| 时机 | 位置 | 写入 |
+|------|------|------|
+| 选关成功 / 进商店 | `LevelManager.SelectLevel` | `selectedLevelId` + 全部 |
+| 进商店首次随机 | `ShopManager.EnterShop`（由上面的 `SaveRun` 一并落盘） | `shopGoods` |
+| 商店买入成功 | `ShopManager.TryBuy` | 金币 / 牌组 / `sold` |
+| 通关结算完成 | `CardsManager.CollectAllRoutine` 末尾 | `lastLevelId`、`selectedLevelId = null`、金币 |
+| 商店 Continue | `ShopManager.ContinueNextLevel` | 同上 + 清商店 |
+| 菜单两个按钮 | `MenuPanel` | 全部 |
+
+读写编排都在门面 `CardGameModule.SaveRun()` / `LoadRun()`，各 Manager 只提供 `ExportTo(data)` / `ImportFrom(data)`。
+
+### 商店防刷
+
+- 商品只在 `ShopManager.EnterShop()` **首次进入**时随机（`_goodsPrepared` 标记），之后（含退出重进）沿用同一批。
+- `ImportFrom` 会按存档里的 `shopGoods` 恢复（含 `sold`），并把 `_goodsPrepared = true`，所以读档进商店不会重刷。
+- `ShopPanel.OnOpen` / `OnShow` **只刷新列表，不再触发随机**。
+
+### 主菜单
+
+`BeginPanel`：
+
+- `btnStart` = 开始新游戏 → `SaveManager.DeleteKey(RunData)` 删档后进 `CardGameScene`
+- `btnContinue` = 继续游戏 → 直接进 `CardGameScene`（**无存档时不显示该按钮**）
+- `Main` 场景的 `GameEntry.InitGame()` 会先 `UIManager.CloseAll()`，清掉从 `CardGameScene` 带回来的常驻面板
+
+### 菜单面板
+
+`MainTopPanel.btnMenu`（受 `CardGameModule.CanCardInput` 限制，结算 / 动画中不给开）→ `MenuPanel`：
+
+- `btnSaveReturn`：`SaveRun()` → `SceneController.LoadScene("Main")`
+- `btnSaveQuit`：`SaveRun()` → 编辑器停 Play / 否则 `Application.Quit()`
+- `btnClose`：关闭面板
+
+## 展示牌面板与牌堆查看
+
+`ShowCardsPanel`（`UI/GamePlay/`）是通用的「展示一批牌」面板，`ShowCardItem` 铺在 `listCard` 里，只显示牌图。
+
+```csharp
+ShowCardsPanel.ShowCards(cardIds);   // 打开面板并展示（静态入口，内部 Show + SetCards）
+```
+
+牌堆查看的两个控制器（挂场景物体，需 Collider，用新 Input System 点击）：
+
+| 脚本 | 行为 |
+|------|------|
+| `DrawPileInfoController` | 点击展示发牌堆全部牌 |
+| `DiscardPileInfoController` | 点击展示弃牌堆全部牌 |
+
+数据由 `CardsManager` 提供，**展示顺序重新排序**（不按栈顺序）：
+
+```csharp
+CardsManager.Instance.GetDrawPileCardIds();      // 按点数、花色排序后的牌 id 列表
+CardsManager.Instance.GetDiscardPileCardIds();
+```
+
+排序规则：`rank` 升序（A→K），同点数按 `suit` 升序（红心 0 → 梅花 1 → 黑桃 2 → 方块 3）；特殊牌 `rank = -1` 会排在最前。排序只作用于返回的副本，不改动 `CardsStore` 里的原始数据。
+
 ## 接龙回收流程（A-K 同花顺）
 
 `CheckAndDiscard(col)` 只负责找出顺子并**启动回收协程**：
@@ -368,13 +494,15 @@ CheckAndDiscard(col)
   **待接**：金币校验（`TODO`）、购买后加入玩家牌组（`TODO`）。
 - 事件：`OnShopOpen` / `OnShopChanged` / `OnShopClosed`。
 
-## 一大局资产（金币）
+## 一大局资产（金币 / 牌组）
 
-`RunStore` / `RunManager`（`GamePlay/Run/`）管理**一整局游戏**（一大局：从第一层到通关）的玩家资产，目前只有金币。
+`RunStore` / `RunManager`（`GamePlay/Run/`）管理**一整局游戏**（一大局：从第一层到通关）的玩家资产：金币 + 牌组。
 
 - 作用域是「一大局」，**不是**跨局长期资产；进 card 场景即开始新的一大局：
-  `CardGameEntry.Start()` → `RunManager.StartNewRun()` → `RunStore.Reset()`（金币归零）
+  `CardGameEntry.Start()` → `RunManager.StartNewRun()` → `RunStore.Reset()` + 重建初始牌组
 - 暂时**不接存档**；`RunStore.Reset()` 后续会换成"读档 / 建档"的逻辑，支持中途继续。
+
+### 金币
 
 ```csharp
 RunManager.Instance.Coin;              // 当前金币
@@ -387,6 +515,23 @@ RunManager.Instance.TrySpend(100);     // 扣钱（不足返回 false）
 |------|------|
 | +`LevelConfig.FinishReward` | `LevelManager.SettleLevelReward()` —— 与层号刷新同一时机（结算动画之后） |
 | −`ShopGoods.price` | `ShopManager.TryBuy()`（先 `IsEnough` 判定，不足则购买失败） |
+
+### 牌组
+
+`RunStore.deck` 是**牌 id 列表**，同一 id 出现多次即多份（不是 `CardData`，方便以后存档）。
+
+| 操作 | 位置 |
+|------|------|
+| 初始牌组：红桃 A-K 各两份 + 黑桃 A-K 各两份（共 52 张） | `RunManager.BuildDefaultDeck()`，在 `StartNewRun()` 里重建 |
+| 开始关卡时组牌 | `CardsManager.CreateDeck()` 遍历 `RunManager.Deck`，逐个查 `CardConfig` 再建 `CardData` |
+| 购买入牌组 | `ShopManager.TryBuy()` → `RunManager.AddCardToDeck(goods.cardId)`，下一关组牌时生效 |
+
+```csharp
+RunManager.Instance.Deck;                        // 本局牌组（IReadOnlyList<string>）
+RunManager.Instance.AddCardToDeck("0200001");    // 加一张牌
+```
+
+初始牌组只含红桃 / 黑桃的 A-K，蜘蛛牌（`02` 前缀，`Rank = -1`）等特殊牌不入初始牌组，需从商店购买。
 
 **奖励发放时机**（与层号刷新对齐，都在结算动画之后）：
 

@@ -18,7 +18,7 @@ public class DrawPileController : MonoBehaviour
     private void Update()
     {
         if (Mouse.current == null || _camera == null || _collider == null) return;
-        if (CardViewManager.Instance.IsAnimating || CardsManager.Instance.IsSettling) return;
+        if (!CardGameModule.Instance.CanCardInput) return;
 
         if (Mouse.current.leftButton.wasPressedThisFrame)
         {

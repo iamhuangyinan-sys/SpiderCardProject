@@ -7,5 +7,8 @@ public class CardConfig
     public string Image;
     public int Suit;
     public int Rank;
+    public int Price;
     public bool SingleGrab;
+    public bool AnyTarget;
+    public int PlaceSkill;
 }

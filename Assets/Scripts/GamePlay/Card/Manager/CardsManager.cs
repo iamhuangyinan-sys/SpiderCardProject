@@ -13,6 +13,9 @@ public class CardsManager : ManagerBase<CardsManager>
 {
     private readonly System.Random _random = new System.Random();
 
+    /// <summary>沉底概率：牌收入弃牌堆时被打上沉底标记的概率（后续可移入配表）</summary>
+    private const float SunkProbability = 0.8f;
+
     /// <summary>测试模式：跳过洗牌直接发牌（仅编辑器下生效）</summary>
     public bool isTestMode = true;
 
@@ -56,15 +59,19 @@ public class CardsManager : ManagerBase<CardsManager>
         EventManager.Instance.Dispatch(E_EventEnum.OnStraightCountChanged);
     }
 
-    /// <summary>按配表生成一副牌，默认牌背朝上</summary>
+    /// <summary>按当前牌组（RunManager.Deck）生成一副牌，默认牌背朝上</summary>
     private List<CardData> CreateDeck()
     {
         var deck = new List<CardData>();
-        foreach (var cfg in ConfigHelper.GetAll<CardConfig>())
+
+        foreach (var cardId in RunManager.Instance.Deck)
         {
+            var cfg = ConfigHelper.Get<CardConfig>(cardId);
+            if (cfg == null) continue;
+
             deck.Add(CreateCard(cfg));
         }
-        
+
         return deck;
     }
 
@@ -78,6 +85,8 @@ public class CardsManager : ManagerBase<CardsManager>
             rank = cfg.Rank,
             isFaceUp = false,
             isSingleGrab = cfg.SingleGrab,
+            isAnyTarget = cfg.AnyTarget,   // 配表只给默认值，运行时还可被赋予（同 SingleGrab）
+            placeSkill = (E_PlaceSkillEnum)cfg.PlaceSkill,
         };
     }
 
@@ -128,9 +137,8 @@ public class CardsManager : ManagerBase<CardsManager>
 
             var card = store.drawPile.Pop();
             int col = i % store.columnCount;
-            store.columns[col].Add(card);
+            PlaceDealtCard(col, card, faceUp: false);
 
-            EventManager.Instance.Dispatch<int>(E_EventEnum.OnColumnAppend, col);
             EventManager.Instance.Dispatch<int>(E_EventEnum.OnDrawPileChanged, store.drawPile.Count);
 
             yield return new WaitForSeconds(CardAnimationHelper.FlyInterval);
@@ -148,7 +156,13 @@ public class CardsManager : ManagerBase<CardsManager>
     /// <summary>从发牌堆给每列顶部逐张发一张牌（翻开），发牌堆数量逐张减少</summary>
     public void DealFromDrawPile()
     {
-        if (!CardRuleManager.Instance.CanDeal()) return;
+        if (!CardRuleManager.Instance.CanDeal())
+        {
+            // 有空列时不能发牌（文案先写死，后续接提示表 / 语言表时改 TipHelper）
+            TipHelper.Show("有空列时不能发牌");
+            return;
+        }
+
         MonoManager.Instance.StartCoroutine(DealFromDrawPileRoutine());
     }
 
@@ -162,10 +176,8 @@ public class CardsManager : ManagerBase<CardsManager>
             if (store.drawPile.Count == 0) break;
 
             var card = store.drawPile.Pop();
-            card.isFaceUp = true;
-            store.columns[col].Add(card);
+            PlaceDealtCard(col, card, faceUp: true);
 
-            EventManager.Instance.Dispatch<int>(E_EventEnum.OnColumnAppend, col);
             EventManager.Instance.Dispatch<int>(E_EventEnum.OnDrawPileChanged, store.drawPile.Count);
 
             yield return new WaitForSeconds(CardAnimationHelper.FlyInterval);
@@ -188,6 +200,30 @@ public class CardsManager : ManagerBase<CardsManager>
         }
     }
 
+    /// <summary>
+    /// 把一张刚发出的牌放进指定列（发牌落位的唯一入口）：
+    /// 普通牌正面朝上放堆顶（OnColumnAppend 增量追加）；
+    /// 沉底牌背面朝上插到堆底第 0 位（OnColumnPrepend 牌背飞入 + 其余牌下移）。
+    /// 沉底标记只服务于「发到堆底」这一次，发出后即清除。
+    /// </summary>
+    private void PlaceDealtCard(int columnIndex, CardData card, bool faceUp)
+    {
+        var store = CardsStore.Instance;
+        card.isFaceUp = faceUp;
+
+        if (card.isSunk)
+        {
+            card.isSunk = false;
+            card.isFaceUp = false;   // 沉底牌以牌背发出，埋进堆底（表面看不出是哪张）
+            store.columns[columnIndex].Insert(0, card);
+            EventManager.Instance.Dispatch<int>(E_EventEnum.OnColumnPrepend, columnIndex);
+            return;
+        }
+
+        store.columns[columnIndex].Add(card);
+        EventManager.Instance.Dispatch<int>(E_EventEnum.OnColumnAppend, columnIndex);
+    }
+
     /// <summary>翻牌：置为正面并派发单张刷新（供表现层播放翻牌动画）</summary>
     private void FlipCardUp(CardData card)
     {
@@ -197,27 +233,44 @@ public class CardsManager : ManagerBase<CardsManager>
     }
 
     /// <summary>
-    /// 顺子回收：逐张把 A-K 飞向弃牌堆（数据随动画同步推进），
-    /// 动画播完后再增加接龙次数并判定达标
+    /// 把一张牌收进弃牌堆（全项目唯一入口）：按概率打沉底标记 → 移入弃牌堆 → 派发表现事件。
+    /// 顺子回收 / 回收技能 / 以后任何「牌进弃牌堆」都走这里，保证沉底规则只有一处
     /// </summary>
-    private IEnumerator RecycleToDiscardRoutine(int columnIndex, int count)
+    private void TakeToDiscard(CardData card)
+    {
+        var store = CardsStore.Instance;
+
+        // 沉底标记：进弃牌堆就按概率 roll（每次入堆重新 roll，发出时生效、发完即清）
+        card.isSunk = _random.NextDouble() < SunkProbability;
+
+        store.discardPile.Add(card);
+
+        EventManager.Instance.Dispatch<CardData>(E_EventEnum.OnCardToDiscard, card);
+        EventManager.Instance.Dispatch<int>(E_EventEnum.OnDiscardPileChanged, store.discardPile.Count);
+    }
+
+    /// <summary>
+    /// 从某列堆顶往下逐张收进弃牌堆（顺子回收 / 回收技能共用）：
+    /// 数据逐张同步推进并播飞行动画，全部落地后统一收尾（重建列 → 翻新顶牌 → 复判顺子 → 洗回检查）
+    /// </summary>
+    /// <param name="columnIndex">目标列</param>
+    /// <param name="count">收几张（从堆顶往下数）</param>
+    /// <param name="countAsStraight">是否计入接龙次数（顺子回收 = true，回收技能 = false）</param>
+    private IEnumerator RecycleFromColumnRoutine(int columnIndex, int count, bool countAsStraight)
     {
         var store = CardsStore.Instance;
         if (columnIndex < 0 || columnIndex >= store.columns.Count) yield break;
 
         var column = store.columns[columnIndex];
 
-        // 逐张从列顶（A）往下回收
+        // 逐张从堆顶往下收
         for (int i = 0; i < count; i++)
         {
             if (column.Count == 0) break;
 
             var card = column[column.Count - 1];
             column.RemoveAt(column.Count - 1);
-            store.discardPile.Add(card);
-
-            EventManager.Instance.Dispatch<CardData>(E_EventEnum.OnCardToDiscard, card);
-            EventManager.Instance.Dispatch<int>(E_EventEnum.OnDiscardPileChanged, store.discardPile.Count);
+            TakeToDiscard(card);
 
             yield return new WaitForSeconds(CardAnimationHelper.FlyInterval);
         }
@@ -234,14 +287,23 @@ public class CardsManager : ManagerBase<CardsManager>
             FlipCardUp(column[column.Count - 1]);
         }
 
-        // 接龙次数 +1：等回收动画播完才增加，进度面板此时才刷新
-        store.straightCount++;
-        EventManager.Instance.Dispatch(E_EventEnum.OnStraightCountChanged);
-
-        // 达标 → 关卡完成 + 收牌结算（弃牌堆连同刚收的顺子一起飞回发牌堆）
-        if (CheckWin())
+        if (countAsStraight)
         {
-            StartCollectAll();
+            // 接龙次数 +1：等回收动画播完才增加，进度面板此时才刷新
+            store.straightCount++;
+            EventManager.Instance.Dispatch(E_EventEnum.OnStraightCountChanged);
+
+            // 达标 → 关卡完成 + 收牌结算（弃牌堆连同刚收的顺子一起飞回发牌堆）
+            if (CheckWin())
+            {
+                StartCollectAll();
+                yield break;
+            }
+        }
+        else if (CheckAndDiscard(columnIndex))
+        {
+            // 回收技能：把堆顶的牌撑走后，这列可能才凑成顺子
+            // （后续含洗回交给顺子回收协程收尾）
             yield break;
         }
 
@@ -297,7 +359,59 @@ public class CardsManager : ManagerBase<CardsManager>
         {
             FlipCardUp(fromColumn[fromColumn.Count - 1]);
         }
-        CheckAndDiscard(targetColumnIndex);
+
+        // 目标列：顺子优先；没触发顺子才看落牌技能
+        if (!CheckAndDiscard(targetColumnIndex))
+        {
+            TryApplyPlaceSkill(targetColumnIndex);
+        }
+    }
+
+    // ==================== 落牌技能 ====================
+
+    /// <summary>
+    /// 落牌技能：牌放下到列上之后触发（回收 / 复制）。
+    /// 放在空列上不触发（放下后该列只有它一张，没有"下面的牌"）。
+    /// </summary>
+    private void TryApplyPlaceSkill(int columnIndex)
+    {
+        var store = CardsStore.Instance;
+        if (IsSettling) return;
+        if (columnIndex < 0 || columnIndex >= store.columns.Count) return;
+
+        var column = store.columns[columnIndex];
+        if (column.Count < 2) return;   // 放在空列上：不触发
+
+        var anchor = column[column.Count - 1];   // 刚放下的牌 = 堆顶
+        if (anchor.placeSkill == E_PlaceSkillEnum.None) return;
+
+        switch (anchor.placeSkill)
+        {
+            case E_PlaceSkillEnum.Recycle:
+                // 自己 + 自己下面紧邻的 1 张一起进弃牌堆（不计接龙次数）
+                MonoManager.Instance.StartCoroutine(RecycleFromColumnRoutine(columnIndex, 2, false));
+                break;
+
+            case E_PlaceSkillEnum.Copy:
+                ApplyCopy(columnIndex, anchor);
+                break;
+        }
+    }
+
+    /// <summary>复制：把自己变成下面紧邻那张牌（复制其全部属性，含技能 → 复制牌可以继续复制）</summary>
+    private void ApplyCopy(int columnIndex, CardData anchor)
+    {
+        var column = CardsStore.Instance.columns[columnIndex];
+        int idx = column.IndexOf(anchor);
+        if (idx <= 0) return;   // 下面没牌，没得复制
+
+        anchor.CopyFrom(column[idx - 1]);
+
+        // 单张刷新：表现层播翻牌动画，翻到中途 Refresh() 按新 id 换上新的牌面
+        EventManager.Instance.Dispatch<CardData>(E_EventEnum.OnCardChanged, anchor);
+
+        // 复制来的牌可能是万能牌，这列可能刚好凑成顺子
+        CheckAndDiscard(columnIndex);
     }
 
     /// <summary>检查某列是否形成 A-K 同花顺，是则播放回收动画（数据在动画播完后统一更新）</summary>
@@ -312,7 +426,7 @@ public class CardsManager : ManagerBase<CardsManager>
         if (seq == null) return false;
 
         // 先播回收动画：列数据、接龙计数、达标结算都在动画播完后统一处理
-        MonoManager.Instance.StartCoroutine(RecycleToDiscardRoutine(columnIndex, seq.Count));
+        MonoManager.Instance.StartCoroutine(RecycleFromColumnRoutine(columnIndex, seq.Count, countAsStraight: true));
         return true;
     }
 
@@ -418,6 +532,9 @@ public class CardsManager : ManagerBase<CardsManager>
         // 结算动画已结束 → 发放本关奖励（与层号刷新同时机）
         LevelManager.Instance.SettleLevelReward();
 
+        // 关卡进度 + 金币落盘（正在进行中的关不存牌局，重进后重开）
+        CardGameModule.Instance.SaveRun();
+
         EventManager.Instance.Dispatch(E_EventEnum.OnCardsCollected);
     }
 
@@ -497,5 +614,32 @@ public class CardsManager : ManagerBase<CardsManager>
 
         EventManager.Instance.Dispatch<int>(E_EventEnum.OnPocketChanged, pocketIndex);
         EventManager.Instance.Dispatch<int>(E_EventEnum.OnColumnChanged, targetColumnIndex);
+
+        // 目标列：顺子优先；没触发顺子才看落牌技能
+        if (!CheckAndDiscard(targetColumnIndex))
+        {
+            TryApplyPlaceSkill(targetColumnIndex);
+        }
+    }
+
+    // ==================== 牌堆展示 ====================
+
+    /// <summary>取发牌堆全部牌（按点数、花色排序，供展示用；带沉底标记）</summary>
+    public List<CardData> GetDrawPileCards() => SortForDisplay(CardsStore.Instance.drawPile);
+
+    /// <summary>取弃牌堆全部牌（按点数、花色排序，供展示用；带沉底标记）</summary>
+    public List<CardData> GetDiscardPileCards() => SortForDisplay(CardsStore.Instance.discardPile);
+
+    /// <summary>按点数（A→K）→ 花色 排序后返回（展示用，不改变原数据顺序）</summary>
+    private static List<CardData> SortForDisplay(IEnumerable<CardData> cards)
+    {
+        var list = new List<CardData>(cards);
+        list.Sort((a, b) =>
+        {
+            int byRank = a.rank.CompareTo(b.rank);
+            return byRank != 0 ? byRank : a.suit.CompareTo(b.suit);
+        });
+
+        return list;
     }
 }

@@ -46,6 +46,7 @@ namespace Framework.UI
             transform.SetAsLastSibling();
             BindUI();
             OnOpen();
+            OnPanelOpened();
         }
 
         /// <summary> 隐藏后重新显示（UIManager 内部） </summary>
@@ -57,6 +58,7 @@ namespace Framework.UI
             transform.SetAsLastSibling();
             BindUI();
             OnShow();
+            OnPanelOpened();
         }
 
         /// <summary> 隐藏（保留缓存，UIManager 内部） </summary>
@@ -65,18 +67,36 @@ namespace Framework.UI
             if (!IsOpen) return;
             IsOpen = false;
             OnHide();
+
+            // 子类接管隐藏（如先播关闭动画，动画结束后再自行隐藏）
+            if (OnPanelClosing()) return;
+
             gameObject.SetActive(false);
         }
 
         /// <summary> 永久关闭（UIManager 内部） </summary>
         internal void CloseInternal()
         {
-            if (!IsOpen) return;
+            // 从未打开过 → 没有配对的 OnClose 需要触发
+            if (!HasOpened) return;
+
+            // 已经 Hide 过的面板也要走 OnClose（它负责解绑事件、回收列表项等资源）
             IsOpen = false;
             OnClose();
             gameObject.SetActive(false);
         }
+        // ==================== 面板动画钩子（子类重写） ====================
 
+        /// <summary>
+        /// 面板已打开（OnOpen / OnShow 之后调用），子类可在此播入场动画
+        /// </summary>
+        protected virtual void OnPanelOpened() { }
+
+        /// <summary>
+        /// 面板即将隐藏（OnHide 之后调用）
+        /// 返回 true 表示子类接管隐藏流程（如等关闭动画播完再自行隐藏），基类不再直接 SetActive(false)
+        /// </summary>
+        protected virtual bool OnPanelClosing() => false;
         // ==================== 生命周期（子类重写） ====================
 
         /// <summary> 首次打开 </summary>

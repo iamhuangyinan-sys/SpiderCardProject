@@ -8,17 +8,21 @@ using UnityEngine;
 /// </summary>
 public partial class LevelPanel : NormalPanel
 {
+    /// <summary>打开飞入 / 关闭飞出</summary>
+    protected override bool FlyInOnOpen => true;
+    protected override bool FlyOutOnClose => true;
+
     /// <summary>关卡按钮模组预制体路径</summary>
     private const string ModulePrefabPath = "Prefab/UI/GamePlay/Module/LevelBtnModule";
 
     /// <summary>按钮间距</summary>
-    private const float Spacing = 170f;
+    private const float Spacing = 250f;
 
     /// <summary>路径连线粗细</summary>
     private const float LineThickness = 10f;
 
     /// <summary>路径连线两头收缩比例</summary>
-    private const float LineShrinkRatio = 0.35f;
+    private const float LineShrinkRatio = 0.3f;
 
     private readonly List<LevelBtnModule> _modules = new();
 
@@ -34,14 +38,11 @@ public partial class LevelPanel : NormalPanel
         BuildLevels();
         BuildLines();
         RefreshLevels();
-
-        PlayFlyIn();
     }
 
     protected override void OnShow()
     {
         RefreshLevels();
-        PlayFlyIn();
     }
 
     protected override void OnHide()
@@ -113,12 +114,6 @@ public partial class LevelPanel : NormalPanel
                 if (line != null) _lines.Add(line.gameObject);
             }
         }
-    }
-
-    /// <summary>入场动画：从屏幕下方飞上来（位移 + 淡入）</summary>
-    private void PlayFlyIn()
-    {
-        AnimationHelper.FlyInFromBottom(RectTransform, CanvasGroup, 1080f);
     }
 
     /// <summary>清掉所有路径连线</summary>

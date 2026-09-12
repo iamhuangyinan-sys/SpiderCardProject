@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Framework.Store;
 
 /// <summary>
@@ -10,6 +11,9 @@ public class RunStore : StoreBase<RunStore>
 {
     /// <summary>本局金币</summary>
     public int coin;
+
+    /// <summary>本局牌组（牌 id 列表，同一 id 出现多次即多份）</summary>
+    public readonly List<string> deck = new();
 
     protected override void OnInit()
     {
@@ -25,7 +29,8 @@ public class RunStore : StoreBase<RunStore>
     public void Reset()
     {
         coin = 0;
-        // 以后：本局获得的牌、临时 buff 等
+        deck.Clear();
+        // 以后：临时 buff 等
     }
 
     /// <summary>通知数据变更（UI 刷新）</summary>

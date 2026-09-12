@@ -41,9 +41,13 @@ namespace Framework.UI
             // ===== 主界面 =====
             Register<BeginPanel>("Main/BeginPanel", E_UILayerEnum.Normal);
             Register<MainTopPanel>("Main/MainTopPanel", E_UILayerEnum.Normal);
+            Register<MenuPanel>("Main/MenuPanel", E_UILayerEnum.Normal);
+            // ===== 通用提示（置顶层，避免被面板遮挡）=====
+            Register<TipPanel>("Main/TipPanel", E_UILayerEnum.Top);
             // ===== 关卡 =====
             Register<LevelPanel>("GamePlay/LevelPanel", E_UILayerEnum.Normal);
             Register<ShopPanel>("GamePlay/ShopPanel", E_UILayerEnum.Normal);
+            Register<ShowCardsPanel>("GamePlay/ShowCardsPanel", E_UILayerEnum.Normal);
             // ===== 控制台（调试工具，置顶层避免被遮挡）=====
             Register<ConsoleEntryPanel>("Console/ConsoleEntryPanel", E_UILayerEnum.Top);
             Register<ConsolePanel>("Console/ConsolePanel", E_UILayerEnum.Top);

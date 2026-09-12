@@ -1,3 +1,4 @@
+using Framework;
 using Framework.UI;
 using UnityEngine;
 
@@ -20,12 +21,14 @@ public class GameEntry : MonoBehaviour
         Debug.Log("[GameEntry] 游戏业务初始化开始...");
 
         // ===== 1. 打开开始界面 =====
-        UIManager.Instance.ShowAsync<BeginPanel>(_ => { });
+        UIManager.Instance.ShowAsync<BeginPanel>(_ =>
+        {
+            // 内容就绪：告知场景控制器可以淡出黑屏遮罩
+            SceneController.Instance.NotifySceneReady();
+        });
 
-#if UNITY_EDITOR
-        // ===== 2. 编辑器模式：常驻控制台入口 =====
-        UIManager.Instance.Show<ConsoleEntryPanel>();
-#endif
+        // ===== 2. 编辑器模式：控制台入口 =====
+        ConsoleEntryPanel.ShowInEditor();
 
         Debug.Log("[GameEntry] 游戏业务初始化完成");
     }

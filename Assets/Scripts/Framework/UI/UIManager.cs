@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using Framework.Mgr;
@@ -35,10 +36,20 @@ namespace Framework.UI
         /// <summary> 弹窗栈（后进先出，用于 CloseTopPopup） </summary>
         private readonly List<PopupPanel> _popupStack = new();
 
+        /// <summary> 场景切换遮罩（独立 Canvas，跨场景常驻） </summary>
+        private CanvasGroup _sceneMask;
+
+        /// <summary> 场景遮罩的 sortingOrder（压过所有常规 UI） </summary>
+        private const int SceneMaskSortingOrder = 32000;
+
         protected override void OnInit()
         {
+            // 幂等：重复 Init（如多个场景都挂了入口脚本）不重建，避免出现两套 Canvas / EventSystem
+            if (_canvas != null) return;
+
             CreateCanvas();
             CreateLayers();
+            CreateSceneMask();
         }
 
         protected override void OnDispose()
@@ -46,6 +57,10 @@ namespace Framework.UI
             CloseAll();
             _panelCache.Clear();
             _layers.Clear();
+
+            if (_sceneMask != null)
+                Object.Destroy(_sceneMask.gameObject);
+
             if (_canvas != null)
                 Object.Destroy(_canvas.gameObject);
         }
@@ -90,6 +105,62 @@ namespace Framework.UI
                 layerGo.transform.SetAsLastSibling();
                 _layers[values[i]] = layerGo.transform;
             }
+        }
+
+        /// <summary>
+        /// 创建场景切换遮罩：独立 Canvas + 极高 sortingOrder，
+        /// 保证盖住 UIManager 自己的 Canvas，也盖住场景里手摆的其他 Canvas
+        /// </summary>
+        private void CreateSceneMask()
+        {
+            var go = new GameObject("[SceneMask]", typeof(RectTransform), typeof(Canvas),
+                typeof(UnityEngine.UI.GraphicRaycaster));
+            Object.DontDestroyOnLoad(go);
+
+            var canvas = go.GetComponent<Canvas>();
+            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+            canvas.sortingOrder = SceneMaskSortingOrder;
+
+            // 全屏拉伸
+            var rt = go.GetComponent<RectTransform>();
+            rt.anchorMin = Vector2.zero;
+            rt.anchorMax = Vector2.one;
+            rt.offsetMin = Vector2.zero;
+            rt.offsetMax = Vector2.zero;
+
+            var img = go.AddComponent<UnityEngine.UI.Image>();
+            img.color = Color.black;
+            img.raycastTarget = true;      // 配合 GraphicRaycaster，过渡期间挡住所有点击
+
+            _sceneMask = go.AddComponent<CanvasGroup>();
+            _sceneMask.alpha = 0f;
+            _sceneMask.blocksRaycasts = false;
+
+            go.SetActive(false);
+        }
+
+        // ==================== 场景切换遮罩 ====================
+
+        /// <summary>遮罩淡入到全黑（协程，供 SceneController 等待完成）</summary>
+        public IEnumerator FadeInSceneMask(float duration = 0.25f)
+        {
+            if (_sceneMask == null) yield break;
+
+            _sceneMask.gameObject.SetActive(true);
+            _sceneMask.blocksRaycasts = true;   // 过渡期间不许点
+
+            yield return AnimationHelper.FadeRoutine(_sceneMask, 1f, duration);
+        }
+
+        /// <summary>遮罩淡出（协程），淡完自动隐藏并恢复点击</summary>
+        public IEnumerator FadeOutSceneMask(float duration = 0.3f)
+        {
+            if (_sceneMask == null) yield break;
+
+            yield return AnimationHelper.FadeRoutine(_sceneMask, 0f, duration);
+
+            _sceneMask.blocksRaycasts = false;
+            _sceneMask.gameObject.SetActive(false);
         }
 
         // ==================== 显示面板 ====================
@@ -247,16 +318,37 @@ namespace Framework.UI
         }
 
         /// <summary>
-        /// 关闭所有面板
+        /// 隐藏所有已打开的面板（切场景时调用）
+        /// 只隐藏、**保留缓存**：面板下次 Show 可直接复用，无需重新加载预制体；
+        /// 监听不会解绑（那是 OnClose 的事），所以重新 Show 时状态是连续的
         /// </summary>
-        public void CloseAll()
+        public void HideAll()
         {
             foreach (var kv in _panelCache)
             {
-                if (kv.Value.IsOpen)
+                if (kv.Value != null && kv.Value.IsOpen)
                     kv.Value.HideInternal();
             }
+        }
+
+        /// <summary>
+        /// 关闭并销毁所有面板（彻底清理，用于框架销毁等场景）
+        /// 会触发 OnClose 并真正销毁物体
+        /// </summary>
+        public void CloseAll()
+        {
+            var panels = new List<BasePanel>(_panelCache.Values);
+
             _panelCache.Clear();
+            _popupStack.Clear();
+
+            foreach (var panel in panels)
+            {
+                if (panel == null) continue;
+
+                panel.CloseInternal();          // 触发 OnClose，解除事件监听
+                Object.Destroy(panel.gameObject);
+            }
         }
 
         // ==================== 查询 ====================

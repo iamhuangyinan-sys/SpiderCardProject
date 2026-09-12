@@ -144,8 +144,51 @@ SceneController.Instance.OnAfterLoad += () => { /* 遮罩淡出 */ };
 | 类 | 用途 |
 |----|------|
 | `BasePanel` | 所有面板基类，生命周期 OnOpen/OnShow/OnHide/OnClose（抽象，必须实现） |
-| `NormalPanel` | 普通面板 |
+| `NormalPanel` | 普通面板，可声明式开关动画 |
+| `FullScreenPanel` | 全屏面板（展示牌、菜单），无动画 + 自动遮挡场景输入 |
 | `PopupPanel` | 弹窗（栈管理，`CloseTopPopup()`/`CloseAllPopups()`） |
+
+### 声明式开关动画（NormalPanel）
+
+面板不写动画代码，只 override 开关：
+
+```csharp
+protected override bool  FlyInOnOpen    => true;   // 从下方飞入（LevelPanel / ShopPanel 用）
+protected override bool  FlyOutOnClose  => true;
+protected override bool  FadeInOnOpen   => true;   // 原地淡入（提示条用）
+protected override bool  FadeOutOnClose => true;
+protected override float FlyOffsetY     => 400f;
+protected override float FadeDuration   => 0.2f;
+```
+
+### 全屏面板（FullScreenPanel）
+
+与 `NormalPanel` **并列**（都直接继承 `BasePanel`）：不带飞入 / 飞出等开关动画，打开期间自动遮挡场景输入。
+
+| 基类 | 用途 |
+|------|------|
+| `NormalPanel` | 普通面板，可声明式开关动画 |
+| `FullScreenPanel` | 铺满屏幕、盖住整个场景的面板（展示牌、菜单） |
+
+UI 之间的点击由 EventSystem 挡住，但**挡不住**场景里走 `Physics.Raycast` 的拾取（卡牌拖拽等），所以由 `FullScreenPanel` 自己维护打开计数，业务侧查它锁输入：
+
+```csharp
+public bool CanCardInput => ... && !FullScreenPanel.IsBlockingInput;
+```
+
+- 新增全屏面板：继承 `FullScreenPanel` 并在 `UIConfig` 注册即可，无需额外代码。
+- 现有全屏面板：`ShowCardsPanel` / `MenuPanel` / `ConsolePanel`。
+- 场景输入被锁时，正在进行中的拖拽要自行回弹（参见 `CardController.CancelDrag`），否则牌会卡在半空。
+
+### 通用提示（TipHelper / TipPanel）
+
+```csharp
+TipHelper.Show("有空列时不能发牌");   // 淡入 → 停留 1s → 淡出 → 自动隐藏
+```
+
+- `TipPanel` 挂在 `E_UILayerEnum.Top`，注册路径 `Main/TipPanel`。
+- `TipHelper` 在 `Assets/Scripts/Helper/`；业务层不直接 `UIManager.Show<TipPanel>()`，文案后续接提示表 / 语言表时只改 `TipHelper`。
+- 提示显示期间再次调用会刷新文案 + 重置停留时间，不重播淡入。
 
 ### 生命周期
 

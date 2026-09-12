@@ -47,6 +47,9 @@ public static class SaveRegistry
         // sm.RegisterCustom(E_SaveCustomEnum.GameSettings, "game_settings");
         // sm.RegisterCustom(E_SaveCustomEnum.CardCollection, "card_collection");
 
+        // ===== 一大局游戏进度（金币 / 牌组 / 关卡进度 / 商店状态）=====
+        sm.RegisterCustom(E_SaveCustomEnum.RunData, "run_data");
+
         // ================================================================
         //  数据迁移（改名后使用，保留一段时间后可删除）
         // ================================================================

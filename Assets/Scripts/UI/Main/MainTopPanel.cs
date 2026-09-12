@@ -12,6 +12,9 @@ public partial class MainTopPanel : NormalPanel
         EventManager.Instance.AddListener(E_EventEnum.OnShopClosed, RefreshLevelInfo);
         EventManager.Instance.AddListener(E_EventEnum.OnCoinChanged, RefreshCoinInfo);
 
+        comps.btnCardBuild.onClick.AddListener(OnClickCardBuild);
+        comps.btnMenu.onClick.AddListener(OnClickMenu);
+
         RefreshLevelInfo();
         RefreshCoinInfo();
         SetProgressVisible(false);   // 选关状态不显示进度
@@ -36,6 +39,25 @@ public partial class MainTopPanel : NormalPanel
         EventManager.Instance.RemoveListener(E_EventEnum.OnCardsCollected, OnLevelEnd);
         EventManager.Instance.RemoveListener(E_EventEnum.OnShopClosed, RefreshLevelInfo);
         EventManager.Instance.RemoveListener(E_EventEnum.OnCoinChanged, RefreshCoinInfo);
+
+        comps.btnCardBuild.onClick.RemoveListener(OnClickCardBuild);
+        comps.btnMenu.onClick.RemoveListener(OnClickMenu);
+    }
+
+    /// <summary>查看当前牌组</summary>
+    private void OnClickCardBuild()
+    {
+        ShowCardsPanel.ShowCards(RunManager.Instance.Deck);
+    }
+
+    /// <summary>打开菜单（保存 / 回主菜单 / 退出）</summary>
+    private void OnClickMenu()
+    {
+        // 只挡收牌结算期间：此时关卡已完成但奖励还没发，存档会留下坏档
+        // （选关界面 / 商店 / 打牌中随时可开，牌局本身不入档）
+        if (CardsManager.Instance.IsSettling) return;
+
+        UIManager.Instance.Show<MenuPanel>();
     }
 
     /// <summary>开始一局：显示接龙进度并刷新</summary>
