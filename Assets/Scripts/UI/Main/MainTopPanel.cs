@@ -9,8 +9,11 @@ public partial class MainTopPanel : NormalPanel
         EventManager.Instance.AddListener(E_EventEnum.OnStraightCountChanged, RefreshProgress);
         EventManager.Instance.AddListener(E_EventEnum.OnLevelStart, OnLevelStart);
         EventManager.Instance.AddListener(E_EventEnum.OnCardsCollected, OnLevelEnd);
+        EventManager.Instance.AddListener(E_EventEnum.OnShopClosed, RefreshLevelInfo);
+        EventManager.Instance.AddListener(E_EventEnum.OnCoinChanged, RefreshCoinInfo);
 
         RefreshLevelInfo();
+        RefreshCoinInfo();
         SetProgressVisible(false);   // 选关状态不显示进度
     }
 
@@ -18,6 +21,7 @@ public partial class MainTopPanel : NormalPanel
     {
         RefreshProgress();
         RefreshLevelInfo();
+        RefreshCoinInfo();
     }
 
     protected override void OnHide()
@@ -30,6 +34,8 @@ public partial class MainTopPanel : NormalPanel
         EventManager.Instance.RemoveListener(E_EventEnum.OnStraightCountChanged, RefreshProgress);
         EventManager.Instance.RemoveListener(E_EventEnum.OnLevelStart, OnLevelStart);
         EventManager.Instance.RemoveListener(E_EventEnum.OnCardsCollected, OnLevelEnd);
+        EventManager.Instance.RemoveListener(E_EventEnum.OnShopClosed, RefreshLevelInfo);
+        EventManager.Instance.RemoveListener(E_EventEnum.OnCoinChanged, RefreshCoinInfo);
     }
 
     /// <summary>开始一局：显示接龙进度并刷新</summary>
@@ -66,5 +72,11 @@ public partial class MainTopPanel : NormalPanel
     private void RefreshLevelInfo()
     {
         comps.txtLevelInfo.text = LevelStore.Instance.currentLayer.ToString();
+    }
+
+    /// <summary>刷新金币数量（只显示数字）</summary>
+    private void RefreshCoinInfo()
+    {
+        comps.txtCoinInfo.text = RunManager.Instance.Coin.ToString();
     }
 }

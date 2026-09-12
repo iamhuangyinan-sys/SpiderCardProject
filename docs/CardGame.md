@@ -271,10 +271,31 @@ classDiagram
 | OnCardToDrawPile | CardData | 结算收牌：单张牌本体飞回发牌堆（场上列 / 牌包的牌） |
 | OnCardsCollected | 无 | 结算收牌完成（关卡结束） |
 
+## 接龙回收流程（A-K 同花顺）
+
+`CheckAndDiscard(col)` 只负责找出顺子并**启动回收协程**：
+
+```
+CheckAndDiscard(col)
+  → RecycleToDiscardRoutine(col, 13)
+
+  ① 逐张播 A-K 飞向弃牌堆的动画（从列底往上，FlyInterval 间隔）
+       每张同步：column 移除 → discardPile 加入 → OnCardToDiscard / OnDiscardPileChanged
+  ② 等最后一张落地（FlyDuration）
+  ③ OnColumnChanged 整列重建 + 新顶牌翻牌
+  ④ straightCount++ → OnStraightCountChanged      ← 接龙次数等动画播完才增加
+  ⑤ 达标？→ CheckWin（CompleteLevel 解锁/切层/挂奖励）→ StartCollectAll 收牌结算
+     未达标 → TryShuffleBack
+```
+
+关键点：**接龙完成次数在回收动画播完之后才 +1**，所以进度面板不会先跳数字、再收牌；达标判定紧随其后，因此一局里最后一个接龙和普通接龙走的是同一条路。
+
+> 注意：弃牌堆数据（`discardPile`、`OnDiscardPileChanged`）是**逐张随动画同步更新**的，与接龙次数不是一回事，不要混在一起改。
+
 ## 关卡完成结算流程
 
-1. `straightCount` 达到 `needStraightNum` → `CheckWin()` 触发：
-   - `LevelManager.CompleteLevel()` 记录进度、解锁 `NextLevelId`，派发 `OnLevelComplete`
+1. 最后一个接龙回收动画播完 → `RecycleToDiscardRoutine` 末尾 `CheckWin()` 达标：
+   - `LevelManager.CompleteLevel()` 记录进度、解锁 `NextLevelId`、切层、挂起奖励，派发 `OnLevelComplete`
    - `CardsManager.StartCollectAll()` 开始收牌（`IsSettling = true`，期间锁输入）
 2. 收牌顺序（`CollectAllRoutine`）：
    1. 弃牌堆 → 发牌堆：洗牌后整堆压回；表现层用**一张牌背**代表整堆飞回（与洗回动画一致）
@@ -308,5 +329,92 @@ classDiagram
 - `LevelResManager`（`GamePlay/Level/`）只维护「类型 id → 资源路径」映射并预热，图标缓存/引用计数复用 `ResManager`。
   - `GetIcon(int / E_LevelTypeEnum)`：同步返回 `Sprite`（`ResManager.Load` 命中缓存；若预热尚未完成，ResManager 内部会自动转同步）。
 - UI 使用：`LevelBtnModule` 在 `Bind` 时 `_imgIcon.sprite = LevelResManager.Instance.GetIcon(cfg.LevelType)`。
+
+## 商店
+
+商店关（`LevelType == Shop`）进入时不开局，改为弹 `ShopPanel`。
+
+| 层 | 文件 |
+|----|------|
+| Store | `GamePlay/Shop/ShopStore.cs`（`List<ShopGoods> goods`） |
+| Manager | `GamePlay/Shop/ShopManager.cs` |
+| UI | `UI/GamePlay/ShopPanel.cs` + `UI/GamePlay/Item/ShopCardItem.cs` |
+
+### 商品刷新（`ShopManager.OpenShop`）
+
+| 位置 | 来源 | 数量 | 单价 |
+|------|------|------|------|
+| 前 2 件 | `CardConfig.Id` 以 `02` 开头的特殊牌 | 2 | 100 |
+| 后 4 件 | `CardConfig.Id` 以 `01` 开头的普通牌 | 4 | 0 |
+
+- 按前缀分组后各自洗牌取前 N，同批不重复；候选不足时有多少取多少。
+- 每次打开 `ShopPanel` 都重新随机（`OnOpen` 里调 `OpenShop`）。
+
+### 流程
+
+```
+选关点商店关
+  → LevelManager.SelectLevel：LevelType==Shop → 记 selectedLevelId → Dispatch(OnShopOpen)
+  → CardGameEntry：Hide(LevelPanel) + Show<ShopPanel>
+  → ShopPanel.OnOpen：OpenShop() 随机商品 → Dispatch(OnShopChanged) → 列表刷新
+  → 点 btnContinue → ShopManager.ContinueNextLevel()
+        CompleteLevel(selectedLevelId)   // 解锁下一批 + 层号推进 + Dispatch(OnLevelComplete)
+        Dispatch(OnShopClosed)
+  → CardGameEntry：Hide(ShopPanel) + Show<LevelPanel>()
+```
+
+- `ShopCardItem.Bind(index, goods)`：`btnCard.image.sprite = CardResManager.GetCardImage(cfg.Image)`，价格写到 `txtCoin`。
+- 点击 `btnCard` → `ShopManager.TryBuy(index)`：当前只把 `goods.sold = true` 并刷新列表（按钮置灰、文案变"已售出"）。
+  **待接**：金币校验（`TODO`）、购买后加入玩家牌组（`TODO`）。
+- 事件：`OnShopOpen` / `OnShopChanged` / `OnShopClosed`。
+
+## 一大局资产（金币）
+
+`RunStore` / `RunManager`（`GamePlay/Run/`）管理**一整局游戏**（一大局：从第一层到通关）的玩家资产，目前只有金币。
+
+- 作用域是「一大局」，**不是**跨局长期资产；进 card 场景即开始新的一大局：
+  `CardGameEntry.Start()` → `RunManager.StartNewRun()` → `RunStore.Reset()`（金币归零）
+- 暂时**不接存档**；`RunStore.Reset()` 后续会换成"读档 / 建档"的逻辑，支持中途继续。
+
+```csharp
+RunManager.Instance.Coin;              // 当前金币
+RunManager.Instance.IsEnough(100);     // 是否够
+RunManager.Instance.AddCoin(150);      // 加钱（通关奖励）
+RunManager.Instance.TrySpend(100);     // 扣钱（不足返回 false）
+```
+
+| 收支 | 位置 |
+|------|------|
+| +`LevelConfig.FinishReward` | `LevelManager.SettleLevelReward()` —— 与层号刷新同一时机（结算动画之后） |
+| −`ShopGoods.price` | `ShopManager.TryBuy()`（先 `IsEnough` 判定，不足则购买失败） |
+
+**奖励发放时机**（与层号刷新对齐，都在结算动画之后）：
+
+1. 接龙达标 → `LevelManager.CompleteLevel()`：解锁下一批、切层，同时把 `FinishReward` 挂到 `LevelStore.pendingReward`（**此时不加钱**）
+2. 收牌结算动画播完 → `CardsManager.CollectAllRoutine` 末尾调 `LevelManager.SettleLevelReward()` → `RunManager.AddCoin(pendingReward)` → `Dispatch(OnCoinChanged)`
+3. 紧接着 `Dispatch(OnCardsCollected)` → `MainTopPanel` 刷新层号
+
+商店关没有收牌结算，由 `ShopManager.ContinueNextLevel()` 在 `CompleteLevel` 之后直接调 `SettleLevelReward()`（商店关 `FinishReward` 配 0，实际加 0）。
+
+- 事件 `OnCoinChanged`（无参）→ `MainTopPanel.RefreshCoinInfo()` 把数字写到 `txtCoinInfo`。
+- `MainTopPanel` 在 `OnOpen` / `OnShow` 也会主动拉一次，覆盖"事件派发时面板还没打开"的情况。
+
+## 模块初始化归口
+
+关卡（含关卡图标）、商店、一大局资产、卡牌这些**卡牌游戏业务**模块，由 `CardGameModule` 门面统一初始化（按依赖顺序）与销毁（反序）：
+
+```
+CardGameEntry.Start()    → CardGameModule.Instance.Init()      // 进 card 场景
+CardGameEntry.OnDestroy  → CardGameModule.Instance.Dispose()   // 离开 card 场景
+```
+
+| 门面内（业务） | 注册的 Store | 注册的 Manager |
+|---------------|-------------|---------------|
+| 关卡 | `LevelStore` | `LevelManager`、`LevelResManager` |
+| 资产 | `RunStore` | `RunManager` |
+| 商店 | `ShopStore` | `ShopManager` |
+| 卡牌 | `CardsStore` | `CardResManager`、`CardPoolManager`、`CardViewManager`、`CardRuleManager`、`CardsManager` |
+
+框架级模块（`MonoManager` / `ResStore` / `ResManager` / `PoolStore` / `PoolManager` / `EventManager` / `SaveManager` / `UIManager` / `BgmManager` / `SoundManager` / `SceneController` / `ConsoleCommandManager`）仍由 `FrameworkEntry.InitFramework()` 负责，两者互不越界。
 
 

@@ -43,6 +43,7 @@ namespace Framework.UI
             Register<MainTopPanel>("Main/MainTopPanel", E_UILayerEnum.Normal);
             // ===== 关卡 =====
             Register<LevelPanel>("GamePlay/LevelPanel", E_UILayerEnum.Normal);
+            Register<ShopPanel>("GamePlay/ShopPanel", E_UILayerEnum.Normal);
             // ===== 控制台（调试工具，置顶层避免被遮挡）=====
             Register<ConsoleEntryPanel>("Console/ConsoleEntryPanel", E_UILayerEnum.Top);
             Register<ConsolePanel>("Console/ConsolePanel", E_UILayerEnum.Top);

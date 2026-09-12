@@ -26,5 +26,13 @@
         OnDiscardToDrawPile,     // 无参数：结算收牌 —— 弃牌堆收回发牌堆动画（一张牌背代表整堆）
         OnCardToDrawPile,        // 参数：CardData（单张牌收回发牌堆动画，场上/牌包的牌本体飞行）
         OnCardsCollected,        // 无参数：结算收牌完成（关卡结束）
+
+        // ---- 本局（一大局）资产 ----
+        OnCoinChanged,           // 无参数：本局金币变化
+
+        // ---- 商店 ----
+        OnShopOpen,              // 无参数：选中商店关，打开商店面板
+        OnShopChanged,           // 无参数：商店商品变化（刷新 / 售出）
+        OnShopClosed,            // 无参数：商店结束（回选关）
     }
 }

@@ -12,6 +12,9 @@ public class LevelStore : StoreBase<LevelStore>
     /// <summary>当前层数（只解锁当前层的关卡，不走回头路）</summary>
     public int currentLayer;
 
+    /// <summary>待发放的通关奖励（接龙达标时挂起，结算动画结束后发放）</summary>
+    public int pendingReward;
+
     /// <summary>当前选中要玩的关卡 id</summary>
     public string selectedLevelId;
 
@@ -39,6 +42,7 @@ public class LevelStore : StoreBase<LevelStore>
         currentLevelId = null;
         selectedLevelId = null;
         currentLayer = 0;
+        pendingReward = 0;
         unlockedIds.Clear();
         allLevels.Clear();
         levelsByLayer.Clear();

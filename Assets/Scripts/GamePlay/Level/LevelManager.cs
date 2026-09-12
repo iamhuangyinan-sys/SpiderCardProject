@@ -96,6 +96,21 @@ public class LevelManager : ManagerBase<LevelManager>
         return max;
     }
 
+    /// <summary>
+    /// 结算完成：发放挂起的通关奖励（加金币）
+    /// 由收牌结算结束（打牌关）或商店结束（商店关）时调用，保证金币变化与层号刷新同时机
+    /// </summary>
+    public void SettleLevelReward()
+    {
+        var store = LevelStore.Instance;
+        if (store.pendingReward <= 0) return;
+
+        int reward = store.pendingReward;
+        store.pendingReward = 0;
+
+        RunManager.Instance.AddCoin(reward);
+    }
+
     /// <summary>解析 NextLevelId（; 分割）</summary>
     public List<string> GetNextIds(string levelId)
     {
@@ -120,13 +135,24 @@ public class LevelManager : ManagerBase<LevelManager>
         return cfg.NeedStraightNum;
     }
 
-    /// <summary>选择关卡：记录选中关卡并开始一局新游戏</summary>
+    /// <summary>选择关卡：商店关开商店，普通 / BOSS 关开始一局新游戏</summary>
     public void SelectLevel(string levelId)
     {
         var store = LevelStore.Instance;
         if (!store.IsUnlocked(levelId)) return;
         if (!store.allLevels.TryGetValue(levelId, out var cfg)) return;
-        if (cfg.ColumnNum <= 0) return;   // 商店关等非打牌关暂不进入
+
+        // 商店关：不开局，记下选中关卡后交由 UI 弹商店面板
+        if (cfg.LevelType == (int)E_LevelTypeEnum.Shop)
+        {
+            store.selectedLevelId = levelId;
+            store.Refresh();
+
+            EventManager.Instance.Dispatch(E_EventEnum.OnShopOpen);
+            return;
+        }
+
+        if (cfg.ColumnNum <= 0) return;   // 其他非打牌关暂不进入
 
         store.selectedLevelId = levelId;
         store.Refresh();
@@ -139,8 +165,9 @@ public class LevelManager : ManagerBase<LevelManager>
     }
 
     /// <summary>
-    /// 通关：记录完成关卡 + 解锁下一批关卡
+    /// 通关：记录完成关卡 + 挂起通关奖励 + 解锁下一批关卡
     /// 进入更高层时切层（清掉旧层解锁状态，不走回头路）；已完成的关卡不再可选
+    /// 奖励在结算动画结束后由 SettleLevelReward() 发放
     /// </summary>
     public void CompleteLevel(string levelId)
     {
@@ -149,6 +176,12 @@ public class LevelManager : ManagerBase<LevelManager>
         var store = LevelStore.Instance;
         store.currentLevelId = levelId;   // 记录最近完成的关卡
         store.selectedLevelId = null;     // 清空选中
+
+        // 挂起通关奖励：结算动画结束后由 SettleLevelReward() 发放
+        if (store.allLevels.TryGetValue(levelId, out var cfg))
+        {
+            store.pendingReward = cfg.FinishReward;
+        }
 
         // 已完成关卡不再可选（不能重复打）
         store.unlockedIds.Remove(levelId);

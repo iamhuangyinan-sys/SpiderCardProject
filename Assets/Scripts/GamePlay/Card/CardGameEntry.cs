@@ -13,14 +13,20 @@ public class CardGameEntry : MonoBehaviour
 
     private LevelPanel _levelPanel;
     private MainTopPanel _mainTopPanel;
+    private ShopPanel _shopPanel;
 
     private void Start()
     {
         CardGameModule.Instance.Init();
         IsInCardScene = true;
 
+        // 进入卡牌场景 = 开始新的一大局：本局资产清零
+        RunManager.Instance.StartNewRun();
+
         EventManager.Instance.AddListener(E_EventEnum.OnLevelStart, OnLevelStart);
         EventManager.Instance.AddListener(E_EventEnum.OnCardsCollected, OnLevelEnd);
+        EventManager.Instance.AddListener(E_EventEnum.OnShopOpen, OnShopOpen);
+        EventManager.Instance.AddListener(E_EventEnum.OnShopClosed, OnShopClosed);
 
         // 进入场景先弹选关，顶部 UI 一并显示
         _levelPanel = UIManager.Instance.Show<LevelPanel>();
@@ -40,12 +46,28 @@ public class CardGameEntry : MonoBehaviour
         _levelPanel = UIManager.Instance.Show<LevelPanel>();
     }
 
+    /// <summary>选中商店关：关选关面板，开商店面板（顶部 UI 保留）</summary>
+    private void OnShopOpen()
+    {
+        if (_levelPanel != null) UIManager.Instance.Hide(_levelPanel);
+        _shopPanel = UIManager.Instance.Show<ShopPanel>();
+    }
+
+    /// <summary>商店结束：关商店面板，回选关</summary>
+    private void OnShopClosed()
+    {
+        if (_shopPanel != null) UIManager.Instance.Hide(_shopPanel);
+        _levelPanel = UIManager.Instance.Show<LevelPanel>();
+    }
+
     private void OnDestroy()
     {
         IsInCardScene = false;
 
         EventManager.Instance.RemoveListener(E_EventEnum.OnLevelStart, OnLevelStart);
         EventManager.Instance.RemoveListener(E_EventEnum.OnCardsCollected, OnLevelEnd);
+        EventManager.Instance.RemoveListener(E_EventEnum.OnShopOpen, OnShopOpen);
+        EventManager.Instance.RemoveListener(E_EventEnum.OnShopClosed, OnShopClosed);
         CardGameModule.Instance.Dispose();
     }
 }

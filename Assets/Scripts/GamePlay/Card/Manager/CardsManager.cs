@@ -22,9 +22,6 @@ public class CardsManager : ManagerBase<CardsManager>
     /// <summary>是否正在一局对局中（发牌开始 → 收牌结算结束）</summary>
     public bool IsPlaying { get; private set; }
 
-    /// <summary>进行中的回收协程（结算开始时会被中止）</summary>
-    private Coroutine _recycleRoutine;
-
     /// <summary>开始一局新游戏：设置列数/牌包数 → 清空数据 → 组牌 → 洗牌 → 发牌</summary>
     public void StartNewGame(int columnCount, int pocketCount)
     {
@@ -174,7 +171,7 @@ public class CardsManager : ManagerBase<CardsManager>
             yield return new WaitForSeconds(CardAnimationHelper.FlyInterval);
         }
 
-        // 等最后一张落地，再检查顺子（顺子回收由 RecycleToDiscard 异步完成）
+        // 等最后一张落地，再检查顺子（顺子的回收动画与数据更新由 RecycleToDiscardRoutine 处理）
         yield return new WaitForSeconds(CardAnimationHelper.FlyDuration);
 
         bool anyRecycled = false;
@@ -199,16 +196,10 @@ public class CardsManager : ManagerBase<CardsManager>
         EventManager.Instance.Dispatch<CardData>(E_EventEnum.OnCardChanged, card);
     }
 
-    /// <summary>回收某列顶部 count 张牌到弃牌堆（统一回收入口，逐张飞行动画）</summary>
-    private void RecycleToDiscard(int columnIndex, int count)
-    {
-        if (IsSettling) return;
-
-        // 同一时刻只允许一个回收协程（连点/连锁触发时以最后一次为准）
-        if (_recycleRoutine != null) MonoManager.Instance.StopCoroutine(_recycleRoutine);
-        _recycleRoutine = MonoManager.Instance.StartCoroutine(RecycleToDiscardRoutine(columnIndex, count));
-    }
-
+    /// <summary>
+    /// 顺子回收：逐张把 A-K 飞向弃牌堆（数据随动画同步推进），
+    /// 动画播完后再增加接龙次数并判定达标
+    /// </summary>
     private IEnumerator RecycleToDiscardRoutine(int columnIndex, int count)
     {
         var store = CardsStore.Instance;
@@ -241,6 +232,17 @@ public class CardsManager : ManagerBase<CardsManager>
         if (column.Count > 0)
         {
             FlipCardUp(column[column.Count - 1]);
+        }
+
+        // 接龙次数 +1：等回收动画播完才增加，进度面板此时才刷新
+        store.straightCount++;
+        EventManager.Instance.Dispatch(E_EventEnum.OnStraightCountChanged);
+
+        // 达标 → 关卡完成 + 收牌结算（弃牌堆连同刚收的顺子一起飞回发牌堆）
+        if (CheckWin())
+        {
+            StartCollectAll();
+            yield break;
         }
 
         // 发牌堆空了则把弃牌堆洗回（洗回动画与数量派发由洗回协程内部完成）
@@ -298,7 +300,7 @@ public class CardsManager : ManagerBase<CardsManager>
         CheckAndDiscard(targetColumnIndex);
     }
 
-    /// <summary>检查某列是否形成 A-K 同花顺，是则接龙次数 +1 并触发逐张回收动画</summary>
+    /// <summary>检查某列是否形成 A-K 同花顺，是则播放回收动画（数据在动画播完后统一更新）</summary>
     private bool CheckAndDiscard(int columnIndex)
     {
         var store = CardsStore.Instance;
@@ -309,31 +311,21 @@ public class CardsManager : ManagerBase<CardsManager>
         var seq = CardRuleManager.Instance.GetCompletedSequence(column);
         if (seq == null) return false;
 
-        // 接龙次数 +1，刷新进度，检查通关
-        store.straightCount++;
-        EventManager.Instance.Dispatch(E_EventEnum.OnStraightCountChanged);
-
-        // 达标 → 关卡完成，改走收牌结算（这 13 张顺子连同场上其他牌一起收回发牌堆）
-        if (CheckWin()) return true;
-
-        // 触发逐张回收（异步）：统一回收入口，动画/翻牌/洗回都由它收尾
-        RecycleToDiscard(columnIndex, seq.Count);
+        // 先播回收动画：列数据、接龙计数、达标结算都在动画播完后统一处理
+        MonoManager.Instance.StartCoroutine(RecycleToDiscardRoutine(columnIndex, seq.Count));
         return true;
     }
 
-    /// <summary>接龙次数达到要求则关卡完成并开始收牌结算（返回是否已进入结算）</summary>
+    /// <summary>接龙次数达到要求则关卡完成（解锁下一批 + 挂起奖励；返回是否达标）</summary>
     private bool CheckWin()
     {
         var store = CardsStore.Instance;
-        if (IsSettling) return true;
+        if (IsSettling) return false;
         if (store.needStraightNum <= 0) return false;
         if (store.straightCount < store.needStraightNum) return false;
 
-        // 关卡完成：记录进度 + 解锁下一关
+        // 关卡完成：记录进度 + 解锁下一关 + 挂起奖励，奖励在结算动画结束后发放
         LevelManager.Instance.CompleteLevel(LevelStore.Instance.selectedLevelId);
-
-        // 收牌结算：全部牌收回发牌堆，收完派发 OnCardsCollected
-        StartCollectAll();
         return true;
     }
 
@@ -349,6 +341,7 @@ public class CardsManager : ManagerBase<CardsManager>
         EventManager.Instance.Dispatch(E_EventEnum.OnStraightCountChanged);
 
         CheckWin();
+        StartCollectAll();   // 测试接口：没有顺子回收动画，直接进结算
     }
 
     // ==================== 结算收牌 ====================
@@ -364,13 +357,6 @@ public class CardsManager : ManagerBase<CardsManager>
     private IEnumerator CollectAllRoutine()
     {
         var store = CardsStore.Instance;
-
-        // 中止进行中的回收协程，避免它与结算抢同一批牌
-        if (_recycleRoutine != null)
-        {
-            MonoManager.Instance.StopCoroutine(_recycleRoutine);
-            _recycleRoutine = null;
-        }
 
         // 1. 弃牌堆 → 发牌堆（与洗回动画一致）
         if (store.discardPile.Count > 0)
@@ -428,6 +414,10 @@ public class CardsManager : ManagerBase<CardsManager>
 
         IsSettling = false;
         IsPlaying = false;
+
+        // 结算动画已结束 → 发放本关奖励（与层号刷新同时机）
+        LevelManager.Instance.SettleLevelReward();
+
         EventManager.Instance.Dispatch(E_EventEnum.OnCardsCollected);
     }
 
