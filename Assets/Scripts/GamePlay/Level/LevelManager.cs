@@ -39,8 +39,9 @@ public class LevelManager : ManagerBase<LevelManager>
             list.Sort((a, b) => GetLayerIndex(a.Id).CompareTo(GetLayerIndex(b.Id)));
         }
 
-        // 初始解锁第一层全部
+        // 初始解锁第一层全部，当前层 = 最小层
         int minLayer = GetMinLayer();
+        store.currentLayer = minLayer;
         if (store.levelsByLayer.TryGetValue(minLayer, out var firstList))
         {
             foreach (var cfg in firstList)
@@ -137,7 +138,10 @@ public class LevelManager : ManagerBase<LevelManager>
         EventManager.Instance.Dispatch(E_EventEnum.OnLevelStart);
     }
 
-    /// <summary>通关：记录完成关卡 + 解锁其 NextLevelId 指向的关卡</summary>
+    /// <summary>
+    /// 通关：记录完成关卡 + 解锁下一批关卡
+    /// 进入更高层时切层（清掉旧层解锁状态，不走回头路）；已完成的关卡不再可选
+    /// </summary>
     public void CompleteLevel(string levelId)
     {
         if (string.IsNullOrEmpty(levelId)) return;
@@ -146,10 +150,31 @@ public class LevelManager : ManagerBase<LevelManager>
         store.currentLevelId = levelId;   // 记录最近完成的关卡
         store.selectedLevelId = null;     // 清空选中
 
-        foreach (var nextId in GetNextIds(levelId))
+        // 已完成关卡不再可选（不能重复打）
+        store.unlockedIds.Remove(levelId);
+
+        var nextIds = GetNextIds(levelId);
+
+        // 下一批所在的高层号
+        int nextLayer = 0;
+        foreach (var nextId in nextIds)
+        {
+            int layer = GetLayer(nextId);
+            if (layer > nextLayer) nextLayer = layer;
+        }
+
+        // 进入新层：旧层的解锁状态全部作废
+        if (nextLayer > store.currentLayer)
+        {
+            store.currentLayer = nextLayer;
+            store.unlockedIds.Clear();
+        }
+
+        foreach (var nextId in nextIds)
         {
             store.unlockedIds.Add(nextId);
         }
+
         store.Refresh();
 
         // 通知：通关

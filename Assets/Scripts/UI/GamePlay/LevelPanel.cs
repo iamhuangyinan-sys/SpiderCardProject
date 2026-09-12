@@ -34,11 +34,14 @@ public partial class LevelPanel : NormalPanel
         BuildLevels();
         BuildLines();
         RefreshLevels();
+
+        PlayFlyIn();
     }
 
     protected override void OnShow()
     {
         RefreshLevels();
+        PlayFlyIn();
     }
 
     protected override void OnHide()
@@ -110,6 +113,12 @@ public partial class LevelPanel : NormalPanel
                 if (line != null) _lines.Add(line.gameObject);
             }
         }
+    }
+
+    /// <summary>入场动画：从屏幕下方飞上来（位移 + 淡入）</summary>
+    private void PlayFlyIn()
+    {
+        AnimationHelper.FlyInFromBottom(RectTransform, CanvasGroup, 1080f);
     }
 
     /// <summary>清掉所有路径连线</summary>

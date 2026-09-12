@@ -9,6 +9,9 @@ public class LevelStore : StoreBase<LevelStore>
     /// <summary>最近完成的关卡 id（空 = 未通关）</summary>
     public string currentLevelId;
 
+    /// <summary>当前层数（只解锁当前层的关卡，不走回头路）</summary>
+    public int currentLayer;
+
     /// <summary>当前选中要玩的关卡 id</summary>
     public string selectedLevelId;
 
@@ -35,6 +38,7 @@ public class LevelStore : StoreBase<LevelStore>
     {
         currentLevelId = null;
         selectedLevelId = null;
+        currentLayer = 0;
         unlockedIds.Clear();
         allLevels.Clear();
         levelsByLayer.Clear();

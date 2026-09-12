@@ -22,11 +22,12 @@ public class CardGameEntry : MonoBehaviour
         EventManager.Instance.AddListener(E_EventEnum.OnLevelStart, OnLevelStart);
         EventManager.Instance.AddListener(E_EventEnum.OnCardsCollected, OnLevelEnd);
 
-        // 进入场景先弹选关
+        // 进入场景先弹选关，顶部 UI 一并显示
         _levelPanel = UIManager.Instance.Show<LevelPanel>();
+        _mainTopPanel = UIManager.Instance.Show<MainTopPanel>();
     }
 
-    /// <summary>选关开局：关选关面板，开游戏面板</summary>
+    /// <summary>选关开局：关选关面板（顶部 UI 保持显示）</summary>
     private void OnLevelStart()
     {
         if (_levelPanel != null) UIManager.Instance.Hide(_levelPanel);
