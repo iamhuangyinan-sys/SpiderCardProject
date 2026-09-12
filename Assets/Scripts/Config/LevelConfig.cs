@@ -10,4 +10,5 @@ public class LevelConfig
     public int PocketNum;
     public string NextLevelId;
     public int NeedStraightNum;
+    public int LevelEvent;
 }

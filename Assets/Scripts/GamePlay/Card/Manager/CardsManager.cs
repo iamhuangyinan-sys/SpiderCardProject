@@ -16,8 +16,13 @@ public class CardsManager : ManagerBase<CardsManager>
     /// <summary>沉底概率：牌收入弃牌堆时被打上沉底标记的概率（后续可移入配表）</summary>
     private const float SunkProbability = 0.8f;
 
+    /// <summary>开局发牌：前 ShortDealColumnCount 列各短发 ShortDealCount 张，其余列各发 LongDealCount 张（后续可移入配表）</summary>
+    private const int ShortDealColumnCount = 5;
+    private const int ShortDealCount = 2;
+    private const int LongDealCount = 5;
+
     /// <summary>测试模式：跳过洗牌直接发牌（仅编辑器下生效）</summary>
-    public bool isTestMode = true;
+    public bool isTestMode = false;
 
     /// <summary>是否正在结算收牌（收牌期间锁输入、不再触发新的回收/洗回）</summary>
     public bool IsSettling { get; private set; }
@@ -35,11 +40,16 @@ public class CardsManager : ManagerBase<CardsManager>
         store.straightCount = 0;
         IsSettling = false;
         IsPlaying = true;
+        _washInQueue.Clear();   // 丢掉上一局残留的洗入队列
 
         // 设置本局列数与牌包数，再清空（重建结构）
         store.columnCount = columnCount;
         store.pocketCount = pocketCount;
         store.Clear();              // 1. 清空旧数据
+
+        // 立刻把空桌摆出来（垫底图 / 空牌包槽数量按本关列数、牌包数）
+        // 必须放在洗入 / 发牌之前：否则有开局事件时会等到事件动画结束、发牌那一刻才突然出现
+        EventManager.Instance.Dispatch(E_EventEnum.OnTableChanged);
 
         var deck = CreateDeck();    // 2. 组牌
 
@@ -53,7 +63,21 @@ public class CardsManager : ManagerBase<CardsManager>
 #endif
 
         StoreToDrawPile(deck);      // 4. 压入发牌堆
-        Deal();                     // 5. 发牌
+
+        // 数量文本按新牌局初始化（发牌前发牌堆就是满的、弃牌堆是空的）
+        EventManager.Instance.Dispatch<int>(E_EventEnum.OnDrawPileChanged, store.drawPile.Count);
+        EventManager.Instance.Dispatch<int>(E_EventEnum.OnDiscardPileChanged, store.discardPile.Count);
+
+        // 5. 开局事件：先把事件牌洗入（等整段动画播完），再发牌
+        var levelEvent = LevelManager.Instance.GetSelectedLevelEvent();
+        if (levelEvent == E_LevelEventEnum.None)
+        {
+            Deal();                 // 6. 发牌
+        }
+        else
+        {
+            MonoManager.Instance.StartCoroutine(StartWithLevelEventRoutine(levelEvent));
+        }
 
         // 通知进度刷新（x / y）
         EventManager.Instance.Dispatch(E_EventEnum.OnStraightCountChanged);
@@ -121,32 +145,43 @@ public class CardsManager : ManagerBase<CardsManager>
     {
         var store = CardsStore.Instance;
 
-        // 清空各列，派发整桌刷新（空桌）
-        foreach (var column in store.columns)
+        // 逐张发牌：每列轮流一张，前几列少发、其余列多发；某列发满时及时翻该列顶牌
+        int columnCount = store.columns.Count;
+        var quota = new int[columnCount];
+        int maxQuota = 0;
+        for (int col = 0; col < columnCount; col++)
         {
-            column.Clear();
+            quota[col] = col < ShortDealColumnCount ? ShortDealCount : LongDealCount;
+            if (quota[col] > maxQuota) maxQuota = quota[col];
         }
-        EventManager.Instance.Dispatch(E_EventEnum.OnTableChanged);
 
-        // 逐张发牌：每列轮流一张，某列发满 3 张时及时翻该列顶牌
-        int perColumn = 3;
-        int dealCount = store.columnCount * perColumn;
-        for (int i = 0; i < dealCount; i++)
+        bool runOut = false;
+
+        // 按轮发牌：一轮给每列各发一张，已发满的列跳过（保持原来的「逐排铺开」节奏）
+        for (int round = 0; round < maxQuota && !runOut; round++)
         {
-            if (store.drawPile.Count == 0) break;
-
-            var card = store.drawPile.Pop();
-            int col = i % store.columnCount;
-            PlaceDealtCard(col, card, faceUp: false);
-
-            EventManager.Instance.Dispatch<int>(E_EventEnum.OnDrawPileChanged, store.drawPile.Count);
-
-            yield return new WaitForSeconds(CardAnimationHelper.FlyInterval);
-
-            // 该列已发满：及时翻该列顶牌（翻牌动画与后续发牌重叠，不额外等待）
-            if (store.columns[col].Count >= perColumn)
+            for (int col = 0; col < columnCount; col++)
             {
-                FlipCardUp(store.columns[col][store.columns[col].Count - 1]);
+                if (round >= quota[col]) continue;
+
+                if (store.drawPile.Count == 0)
+                {
+                    runOut = true;
+                    break;
+                }
+
+                var card = store.drawPile.Pop();
+                PlaceDealtCard(col, card, faceUp: false);
+
+                EventManager.Instance.Dispatch<int>(E_EventEnum.OnDrawPileChanged, store.drawPile.Count);
+
+                yield return new WaitForSeconds(CardAnimationHelper.FlyInterval);
+
+                // 该列已发满：及时翻该列顶牌（翻牌动画与后续发牌重叠，不额外等待）
+                if (store.columns[col].Count >= quota[col])
+                {
+                    FlipCardUp(store.columns[col][store.columns[col].Count - 1]);
+                }
             }
         }
 
@@ -619,6 +654,149 @@ public class CardsManager : ManagerBase<CardsManager>
         if (!CheckAndDiscard(targetColumnIndex))
         {
             TryApplyPlaceSkill(targetColumnIndex);
+        }
+    }
+
+    // ==================== 开局事件 ====================
+
+    /// <summary>开局事件：蜘蛛牌 id</summary>
+    private const string EventSpiderCardId = "0200005";
+
+    /// <summary>开局事件：黑色牌 id</summary>
+    private const string EventBlackCardId = "0300001";
+
+    /// <summary>开局事件流程：洗入事件牌（等整段动画播完）→ 发牌</summary>
+    private IEnumerator StartWithLevelEventRoutine(E_LevelEventEnum levelEvent)
+    {
+        yield return WashInAndWait(BuildLevelEventCardIds(levelEvent));
+
+        Deal();
+    }
+
+    /// <summary>
+    /// 开局事件要洗入的牌 id（先写死，后续可改成事件配表：事件 → 牌 id 列表）
+    /// </summary>
+    private List<string> BuildLevelEventCardIds(E_LevelEventEnum levelEvent)
+    {
+        var ids = new List<string>();
+
+        switch (levelEvent)
+        {
+            case E_LevelEventEnum.AddSpider:
+                ids.Add(EventSpiderCardId);
+                break;
+
+            case E_LevelEventEnum.AddRandom:
+                // 两张可以抽到同一张（各自独立随机），只出梅花，和初始牌组混花色 → 加难度
+                ids.Add(RandomClubCardId());
+                ids.Add(RandomClubCardId());
+                ids.Add(EventBlackCardId);
+                break;
+        }
+
+        return ids;
+    }
+
+    /// <summary>随机取一张梅花 A-K 的牌 id（用配表字段判断，不依赖 id 前缀）</summary>
+    private string RandomClubCardId()
+    {
+        var ids = new List<string>();
+
+        foreach (var cfg in ConfigHelper.GetAll<CardConfig>())
+        {
+            if (cfg.Suit != (int)E_CardSuitEnum.Clubs) continue;
+            if (cfg.Rank < 1 || cfg.Rank > 13) continue;
+
+            ids.Add(cfg.Id);
+        }
+
+        return ids.Count > 0 ? ids[_random.Next(ids.Count)] : null;
+    }
+
+    // ==================== 洗入发牌堆 ====================
+
+    /// <summary>待洗入发牌堆的牌 id 队列（连续调用时排队，逐张错开飞入）</summary>
+    private readonly Queue<string> _washInQueue = new();
+
+    /// <summary>洗入协程是否在跑（保证同一时刻只有一个队列在出队）</summary>
+    private bool _washingIn;
+
+    /// <summary>
+    /// 往发牌堆洗入一张牌（牌 id 来自配表）：随机插进发牌堆任意位置，
+    /// 并派发「中央生成一张正面牌 → 飞入发牌堆」动画。连续调用会排队，逐张错开飞入
+    /// </summary>
+    /// <returns>牌 id 合法返回 true</returns>
+    public bool WashInCard(string cardId)
+    {
+        if (string.IsNullOrEmpty(cardId)) return false;
+        if (ConfigHelper.Get<CardConfig>(cardId) == null) return false;
+
+        _washInQueue.Enqueue(cardId);
+        if (!_washingIn) MonoManager.Instance.StartCoroutine(WashInRoutine());
+
+        return true;
+    }
+
+    /// <summary>
+    /// 洗入若干张牌并等待整段动画播完（关卡开局事件用）。
+    /// 与控制台 add 共用同一个队列，所以两者不会在生成点重叠
+    /// </summary>
+    public IEnumerator WashInAndWait(IReadOnlyList<string> cardIds)
+    {
+        if (cardIds == null || cardIds.Count == 0) yield break;
+
+        foreach (var id in cardIds)
+        {
+            if (!string.IsNullOrEmpty(id)) _washInQueue.Enqueue(id);
+        }
+
+        if (!_washingIn) MonoManager.Instance.StartCoroutine(WashInRoutine());
+
+        while (_washingIn) yield return null;   // 等队列排空
+    }
+
+    private IEnumerator WashInRoutine()
+    {
+        _washingIn = true;
+
+        while (_washInQueue.Count > 0)
+        {
+            if (IsSettling) break;
+
+            string cardId = _washInQueue.Dequeue();
+
+            var cfg = ConfigHelper.Get<CardConfig>(cardId);
+            if (cfg == null) continue;   // 配表里没有这张牌：跳过
+
+            InsertIntoDrawPileRandom(CreateCard(cfg));
+
+            EventManager.Instance.Dispatch<int>(E_EventEnum.OnDrawPileChanged, CardsStore.Instance.drawPile.Count);
+            EventManager.Instance.Dispatch<string>(E_EventEnum.OnCardWashIn, cardId);
+
+            // 队列还有牌 → 到下一张该出场的时刻就走；队列空了 → 等到这张落地才收工
+            // （等待期间若又有新牌入队，循环会继续，不会丢牌）
+            yield return new WaitForSeconds(_washInQueue.Count > 0
+                ? CardAnimationHelper.WashInInterval
+                : CardAnimationHelper.WashInShowDuration + CardAnimationHelper.FlyDuration);
+        }
+
+        _washInQueue.Clear();
+        _washingIn = false;
+    }
+
+    /// <summary>把一张牌随机插进发牌堆（栈只能后进先出，整体摊开 → 插入 → 反向压回）</summary>
+    private void InsertIntoDrawPileRandom(CardData card)
+    {
+        var pile = CardsStore.Instance.drawPile;
+
+        // Stack 的枚举顺序是「栈顶 → 栈底」，插在 index 0 = 下次先发，插在最末 = 最后才发
+        var list = new List<CardData>(pile);
+        list.Insert(_random.Next(list.Count + 1), card);
+
+        pile.Clear();
+        for (int i = list.Count - 1; i >= 0; i--)
+        {
+            pile.Push(list[i]);
         }
     }
 

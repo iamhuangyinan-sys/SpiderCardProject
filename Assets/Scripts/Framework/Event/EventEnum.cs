@@ -21,6 +21,7 @@
         OnCardChanged,       // 参数：CardData（单张牌变化，如翻牌）
         OnCardToDiscard,     // 参数：CardData（单张牌回收，播放飞到弃牌堆动画）
         OnShuffleBack,       // 无参数：弃牌堆洗回发牌堆动画
+        OnCardWashIn,        // 参数：string（牌 id，洗入发牌堆：中央生成一张牌飞向发牌堆）
         OnStraightCountChanged,  // 无参数：接龙次数变化（进度刷新）
         OnLevelStart,            // 无参数：一局游戏开始（选关后）
         OnLevelComplete,         // 无参数：通关

@@ -3,27 +3,26 @@ using Framework.Event;
 using Framework.Mgr;
 
 /// <summary>
-/// 商店业务层 —— 随机刷新商品、购买、继续进入下一层
+/// 商店业务层 —— 刷新商品、购买、继续进入下一层
 ///
-/// 商品构成：
-///   前 2 件：Id 以 "02" 开头的特殊牌，单价 100
-///   后 4 件：Id 以 "01" 开头的普通牌，单价 0
+/// 商品构成（共 8 件）：
+///   前 5 件：常驻特殊牌，价格取配表 Price 并随机上下波动 ±10%
+///   后 3 件：随机 01 开头普通牌，价格直接取配表 Price（不波动）
 /// </summary>
 public class ShopManager : ManagerBase<ShopManager>
 {
-    /// <summary>特殊牌（Id 以 02 开头）数量</summary>
-    public const int SpecialCount = 2;
+    /// <summary>常驻特殊牌（顺序即商品顺序）</summary>
+    private static readonly string[] SpecialCardIds =
+    {
+        "0200005", "0200001", "0200003", "0200006", "0200007",
+    };
 
-    /// <summary>特殊牌价格</summary>
-    public const int SpecialPrice = 100;
+    /// <summary>随机普通牌（Id 以 01 开头）数量</summary>
+    private const int NormalCount = 3;
 
-    /// <summary>普通牌（Id 以 01 开头）数量</summary>
-    public const int NormalCount = 4;
+    /// <summary>特殊牌价格波动幅度（±10%）</summary>
+    private const float SpecialPriceFluctuation = 0.1f;
 
-    /// <summary>普通牌价格</summary>
-    public const int NormalPrice = 0;
-
-    private const string SpecialPrefix = "02";
     private const string NormalPrefix = "01";
 
     private readonly System.Random _random = new System.Random();
@@ -72,25 +71,48 @@ public class ShopManager : ManagerBase<ShopManager>
 
     // ==================== 刷新商品 ====================
 
-    /// <summary>随机刷新商品（前 2 张特殊牌，后 4 张普通牌）</summary>
+    /// <summary>
+    /// 刷新商品：前 5 张常驻特殊牌（价格读配表并 ±10% 波动），
+    /// 后 3 张随机普通牌（价格直接用配表 Price）
+    /// </summary>
     private void RandomizeGoods()
     {
-        ShopStore.Instance.goods.Clear();
+        var store = ShopStore.Instance;
+        store.goods.Clear();
 
-        var all = ConfigHelper.GetAll<CardConfig>();
-        AppendRandomGoods(all, SpecialPrefix, SpecialCount, SpecialPrice);
-        AppendRandomGoods(all, NormalPrefix, NormalCount, NormalPrice);
+        // 1. 常驻特殊牌：固定 5 张，顺序固定
+        foreach (var cardId in SpecialCardIds)
+        {
+            var cfg = ConfigHelper.Get<CardConfig>(cardId);
+            if (cfg == null) continue;   // 配表里没有这张牌：跳过
+
+            store.goods.Add(new ShopGoods
+            {
+                cardId = cardId,
+                price = FluctuatePrice(cfg.Price),
+            });
+        }
+
+        // 2. 随机普通牌：01 开头，价格不波动
+        AppendRandomNormalGoods(NormalCount);
     }
 
-    /// <summary>按 id 前缀随机挑 count 张牌加入商品列表（同批不重复；不足则有多少取多少）</summary>
-    private void AppendRandomGoods(List<CardConfig> all, string idPrefix, int count, int price)
+    /// <summary>价格在配表 Price 基础上随机上下波动 ±10%（四舍五入到整数）</summary>
+    private int FluctuatePrice(int basePrice)
     {
-        var candidates = new List<string>();
-        foreach (var cfg in all)
+        float factor = 1f + ((float)_random.NextDouble() * 2f - 1f) * SpecialPriceFluctuation;
+        return (int)System.Math.Round(basePrice * factor);
+    }
+
+    /// <summary>按 Id 前缀随机挑 count 张普通牌加入商品列表（同批不重复；不足则有多少取多少）</summary>
+    private void AppendRandomNormalGoods(int count)
+    {
+        var candidates = new List<CardConfig>();
+        foreach (var cfg in ConfigHelper.GetAll<CardConfig>())
         {
-            if (!string.IsNullOrEmpty(cfg.Id) && cfg.Id.StartsWith(idPrefix))
+            if (!string.IsNullOrEmpty(cfg.Id) && cfg.Id.StartsWith(NormalPrefix))
             {
-                candidates.Add(cfg.Id);
+                candidates.Add(cfg);
             }
         }
 
@@ -101,14 +123,14 @@ public class ShopManager : ManagerBase<ShopManager>
         {
             ShopStore.Instance.goods.Add(new ShopGoods
             {
-                cardId = candidates[i],
-                price = price,
+                cardId = candidates[i].Id,
+                price = candidates[i].Price,   // 普通牌价格直接用配表值（当前是 0），不波动
             });
         }
     }
 
     /// <summary>Fisher-Yates 洗牌</summary>
-    private void Shuffle(List<string> list)
+    private void Shuffle<T>(List<T> list)
     {
         for (int i = list.Count - 1; i > 0; i--)
         {

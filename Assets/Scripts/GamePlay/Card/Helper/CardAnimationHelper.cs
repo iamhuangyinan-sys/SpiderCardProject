@@ -17,6 +17,15 @@ public static class CardAnimationHelper
     /// <summary>逐张飞行间隔（秒，发牌/回收逐张的时间差）</summary>
     public const float FlyInterval = 0.1f;
 
+    /// <summary>洗入发牌堆的牌在生成点的停留展示时长（秒）</summary>
+    public const float WashInShowDuration = 0.7f;
+
+    /// <summary>
+    /// 洗入发牌堆时逐张的错开间隔（秒）：必须 ≥ 停留展示时长，
+    /// 否则下一张会在生成点与前一张重叠，反而看不清
+    /// </summary>
+    public const float WashInInterval = WashInShowDuration + FlyInterval;
+
     /// <summary>翻牌单段旋转时长（秒）</summary>
     public const float FlipDuration = 0.1f;
 
@@ -44,6 +53,23 @@ public static class CardAnimationHelper
         CardSoundHelper.PlayPlace();
         view.SetSortingOrder(view.CurrentSortingOrder + FlySortingOffset);
         return AnimationHelper.FlyTo(view.transform, from, to, FlyDuration);
+    }
+
+    /// <summary>
+    /// 洗入发牌堆：一张牌在 from 生成、原地停留展示 showDuration 秒后飞到 to。
+    /// 返回整段动画（含停留段），期间临时抬高排序（落地由调用方回收）
+    /// </summary>
+    public static Tween WashInTo(CardView view, Vector3 from, Vector3 to, float showDuration = WashInShowDuration)
+    {
+        view.SetSortingOrder(view.CurrentSortingOrder + FlySortingOffset);
+        view.SetPosition(from);
+
+        var seq = DOTween.Sequence();
+        seq.AppendInterval(showDuration);                        // 先原地展示一下，让玩家看清是哪张牌
+        seq.AppendCallback(CardSoundHelper.PlayPlace);           // 起飞音效
+        seq.Append(AnimationHelper.FlyTo(view.transform, from, to, FlyDuration));
+
+        return seq;
     }
 
     /// <summary>

@@ -63,6 +63,9 @@ public class CardViewManager : ManagerBase<CardViewManager>
     /// <summary>发牌堆 Transform（发牌动画起点）</summary>
     private Transform _drawPileTrans;
 
+    /// <summary>洗入动画的生成点（场景物体 CardSpawnPos，一般在屏幕中央）</summary>
+    private Transform _cardSpawnTrans;
+
     /// <summary>弃牌堆 Transform（回收动画终点）</summary>
     private Transform _discardPileTrans;
 
@@ -78,6 +81,7 @@ public class CardViewManager : ManagerBase<CardViewManager>
         EventManager.Instance.AddListener<CardData>(E_EventEnum.OnCardChanged, OnCardChanged);
         EventManager.Instance.AddListener<CardData>(E_EventEnum.OnCardToDiscard, OnCardToDiscard);
         EventManager.Instance.AddListener(E_EventEnum.OnShuffleBack, OnShuffleBack);
+        EventManager.Instance.AddListener<string>(E_EventEnum.OnCardWashIn, OnCardWashIn);
         EventManager.Instance.AddListener(E_EventEnum.OnDiscardToDrawPile, OnDiscardToDrawPile);
         EventManager.Instance.AddListener<CardData>(E_EventEnum.OnCardToDrawPile, OnCardToDrawPile);
         EventManager.Instance.AddListener<int>(E_EventEnum.OnDrawPileChanged, OnDrawPileChanged);
@@ -90,6 +94,7 @@ public class CardViewManager : ManagerBase<CardViewManager>
         FindPocketSlots();
         FindDrawPile();
         FindDiscardPile();
+        FindCardSpawnPos();
     }
 
     protected override void OnDispose()
@@ -101,6 +106,7 @@ public class CardViewManager : ManagerBase<CardViewManager>
         EventManager.Instance.RemoveListener<CardData>(E_EventEnum.OnCardChanged, OnCardChanged);
         EventManager.Instance.RemoveListener<CardData>(E_EventEnum.OnCardToDiscard, OnCardToDiscard);
         EventManager.Instance.RemoveListener(E_EventEnum.OnShuffleBack, OnShuffleBack);
+        EventManager.Instance.RemoveListener<string>(E_EventEnum.OnCardWashIn, OnCardWashIn);
         EventManager.Instance.RemoveListener(E_EventEnum.OnDiscardToDrawPile, OnDiscardToDrawPile);
         EventManager.Instance.RemoveListener<CardData>(E_EventEnum.OnCardToDrawPile, OnCardToDrawPile);
         EventManager.Instance.RemoveListener<int>(E_EventEnum.OnDrawPileChanged, OnDrawPileChanged);
@@ -184,6 +190,22 @@ public class CardViewManager : ManagerBase<CardViewManager>
         FlyViewAndRecycle(view, view.transform.position, GetDiscardPilePosition());
     }
 
+    /// <summary>洗入发牌堆：在 CardSpawnPos 生成一张正面牌，停留展示一下再飞到发牌堆，落地回收</summary>
+    private void OnCardWashIn(string cardId)
+    {
+        var view = CardPoolManager.Instance.GetCard();
+        if (view == null)
+        {
+            Debug.LogWarning("[洗入] 取牌失败：对象池返回 null");
+            return;
+        }
+
+        view.ShowFace(cardId);
+
+        var tween = CardAnimationHelper.WashInTo(view, GetCardSpawnPosition(), GetDrawPilePosition());
+        PlayAndRecycle(tween, view);
+    }
+
     /// <summary>弃牌堆洗回：临时一张牌背从弃牌堆飞到发牌堆，落地回收</summary>
     private void OnShuffleBack()
     {
@@ -229,10 +251,15 @@ public class CardViewManager : ManagerBase<CardViewManager>
     /// <summary>一张牌从 from 飞到 to，落地后回收 View（弃牌堆 / 发牌堆共用），飞行期间锁输入</summary>
     private void FlyViewAndRecycle(CardView view, Vector3 from, Vector3 to)
     {
-        var tween = CardAnimationHelper.FlyTo(view, from, to);
+        PlayAndRecycle(CardAnimationHelper.FlyTo(view, from, to), view);
+    }
 
+    /// <summary>播完整段动画并收回 View：动画（含停留段）期间锁输入，播完还给对象池</summary>
+    private void PlayAndRecycle(Tween tween, CardView view)
+    {
         _animatingCount++;
         IsAnimating = true;
+
         tween.OnComplete(() =>
         {
             _animatingCount--;
@@ -241,6 +268,7 @@ public class CardViewManager : ManagerBase<CardViewManager>
                 _animatingCount = 0;
                 IsAnimating = false;
             }
+
             CardPoolManager.Instance.Recycle(view);
         });
     }
@@ -347,6 +375,26 @@ public class CardViewManager : ManagerBase<CardViewManager>
     private Vector3 GetDiscardPilePosition()
     {
         return _discardPileTrans != null ? _discardPileTrans.position : _startPos;
+    }
+
+    /// <summary>在场景中查找洗入动画的生成点（空物体 CardSpawnPos）</summary>
+    private void FindCardSpawnPos()
+    {
+        var go = GameObject.Find("CardSpawnPos");
+        if (go != null)
+        {
+            _cardSpawnTrans = go.transform;
+        }
+        else
+        {
+            Debug.LogWarning("[CardViewManager] 场景中未找到 CardSpawnPos，洗入动画将使用默认生成点");
+        }
+    }
+
+    /// <summary>洗入动画生成点世界坐标（未找到则用初始生成点）</summary>
+    private Vector3 GetCardSpawnPosition()
+    {
+        return _cardSpawnTrans != null ? _cardSpawnTrans.position : _startPos;
     }
 
     /// <summary>回收某列的所有 View 并重建该列</summary>

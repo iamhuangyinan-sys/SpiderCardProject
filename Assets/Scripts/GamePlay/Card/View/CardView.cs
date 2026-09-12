@@ -124,4 +124,15 @@ public class CardView : MonoBehaviour
             _rootRenderer.sprite = CardResManager.Instance.GetBackSprite();
         }
     }
+
+    /// <summary>直接显示指定牌的正面（洗入发牌堆等临时牌用，无需绑定数据）</summary>
+    public void ShowFace(string cardId)
+    {
+        if (_rootRenderer == null || string.IsNullOrEmpty(cardId)) return;
+
+        var cfg = CardResManager.Instance.GetCardConfig(cardId);
+        _rootRenderer.sprite = cfg != null
+            ? CardResManager.Instance.GetCardImage(cfg.Image)
+            : null;
+    }
 }

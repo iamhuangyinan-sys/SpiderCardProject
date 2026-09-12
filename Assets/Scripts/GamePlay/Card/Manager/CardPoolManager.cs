@@ -28,12 +28,18 @@ public class CardPoolManager : ManagerBase<CardPoolManager>
         });
     }
 
-    /// <summary>回收一张牌（先解绑数据，再回池）</summary>
+    /// <summary>回收一张牌（先解绑数据 + 复位渲染排序，再回池）</summary>
     public void Recycle(CardView view)
     {
         if (view == null) return;
         AnimationHelper.Kill(view.transform);
         view.Unbind();
+
+        // 复位渲染排序：临时牌（洗入 / 洗回 / 结算收牌）是在「当前排序 + FlySortingOffset」上飞行的，
+        // 而池是 LIFO、每次都会复用刚回收的同一个实例，不复位就会随复用次数一路累加，
+        // 涨过 16 位上限（±32767）后渲染异常（表现为牌看不见了）
+        view.SetSortingOrder(0);
+
         PoolManager.Instance.Despawn(view.gameObject);
     }
 }
