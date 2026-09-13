@@ -42,3 +42,11 @@ Desktop.ini
 
 # ---------- 保留 .meta 文件（仅对 tracked 资产） ---------- #
 # 不要整体忽略 .meta，因为 Unity 需要它们
+
+# ---------- 本地私有文档（不纳入版本管理） ---------- #
+# 本地生成的文档统一放 private_doc，不进 git
+private_doc/
+
+# ---------- Python 脚本产物 ---------- #
+__pycache__/
+*.py[cod]
