@@ -1,7 +1,8 @@
 using Framework.UI;
 
 /// <summary>
-/// 展示用的单张牌 —— 只显示牌图（沉底牌显示黄色），不可点击；鼠标悬停放大
+/// 展示用的单张牌 —— 只显示牌图（沉底牌显示黄色）；默认不可点击，鼠标悬停放大
+/// 选牌模式（ShopCardsPanel.PickCard）下会被挂上点击回调
 /// </summary>
 public partial class ShowCardItem : BaseListItem
 {
@@ -29,5 +30,11 @@ public partial class ShowCardItem : BaseListItem
     public void Bind(string cardId, bool isSunk = false)
     {
         comps.modCard.Bind(cardId, isSunk);
+    }
+
+    /// <summary>设置点击回调；传 null 表示不可点击（删牌选牌等场合用）</summary>
+    public void SetClickable(System.Action onClick)
+    {
+        comps.modCard.SetClickable(onClick);
     }
 }

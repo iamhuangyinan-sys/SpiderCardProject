@@ -34,7 +34,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 83.68945, y: -25.299988}
+  m_AnchoredPosition: {x: 83.68945, y: -24}
   m_SizeDelta: {x: 77.379, y: 25}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &2321063290895291649
@@ -92,8 +92,8 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 20
-  m_fontSizeBase: 20
+  m_fontSize: 25
+  m_fontSizeBase: 25
   m_fontWeight: 400
   m_enableAutoSizing: 0
   m_fontSizeMin: 18
@@ -869,13 +869,14 @@ GameObject:
   - component: {fileID: 1929629230092075350}
   - component: {fileID: 3600137927793697168}
   - component: {fileID: 3491513214192057440}
+  - component: {fileID: 5187293044761238908}
   m_Layer: 5
   m_Name: btn_DeleteCard
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!224 &4812002194192163822
 RectTransform:
   m_ObjectHideFlags: 0
@@ -979,6 +980,26 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls: []
+--- !u!114 &5187293044761238908
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8833053176992603650}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1271b70e11fab274f9605c3ec70cef75, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::HoverScaleBehaviour
+  target: {fileID: 0}
+  hoverScale: 1.3
+  duration: 0.1
+  ease: 6
+  autoTrigger: 1
+  raiseOnHover: 1
+  raiseTarget: {fileID: 0}
+  useUnscaledTime: 1
 --- !u!1001 &3336570641001916945
 PrefabInstance:
   m_ObjectHideFlags: 0

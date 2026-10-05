@@ -90,6 +90,23 @@ public class RunManager : ManagerBase<RunManager>
         RunStore.Instance.deck.Add(cardId);
     }
 
+    /// <summary>
+    /// 从本局牌组里移除一张牌（商店删牌等）
+    /// 同一张牌有多份时只移除第一份；牌不在牌组里返回 false
+    /// </summary>
+    public bool RemoveCardFromDeck(string cardId)
+    {
+        if (string.IsNullOrEmpty(cardId)) return false;
+
+        var deck = RunStore.Instance.deck;
+        int index = deck.IndexOf(cardId);
+        if (index < 0) return false;
+
+        deck.RemoveAt(index);
+        RunStore.Instance.Refresh();
+        return true;
+    }
+
     /// <summary>构建初始牌组：红桃 A-K + 黑桃 A-K，各两份</summary>
     private void BuildDefaultDeck()
     {

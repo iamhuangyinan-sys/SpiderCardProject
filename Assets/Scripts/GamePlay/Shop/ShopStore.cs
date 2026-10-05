@@ -12,6 +12,12 @@ public class ShopStore : StoreBase<ShopStore>
     /// <summary>当前商店的商品（前 2 件特殊牌，后 4 件普通牌）</summary>
     public readonly List<ShopGoods> goods = new();
 
+    /// <summary>
+    /// 本次商店已用的删牌次数
+    /// （上限 / 费用是固定值，不进这里；次数在 Clear 时归零，续档时从存档恢复）
+    /// </summary>
+    public int deleteCount;
+
     protected override void OnInit()
     {
         Clear();
@@ -22,11 +28,12 @@ public class ShopStore : StoreBase<ShopStore>
         Clear();
     }
 
-    /// <summary>清空商品与商店关标记</summary>
+    /// <summary>清空商品与商店关标记（删牌次数一并归零：一次商店结束就作废）</summary>
     public void Clear()
     {
         shopLevelId = null;
         goods.Clear();
+        deleteCount = 0;
     }
 
     /// <summary>取某件商品（越界返回 null）</summary>

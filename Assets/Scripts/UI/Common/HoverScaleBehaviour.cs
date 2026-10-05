@@ -122,7 +122,10 @@ public class HoverScaleBehaviour : MonoBehaviour, IPointerEnterHandler, IPointer
 
         if (_rect != null) _rect.localScale = _baseScale;
 
-        RestoreSibling();
+        // 这里只能复位缩放与状态：失活过程中改同级顺序会被 Unity 报错（见 RestoreSibling）
+        _raised = false;
+        _raisedNode = null;
+        _originSibling = -1;
 
         if (IsHovering)
         {
@@ -182,15 +185,25 @@ public class HoverScaleBehaviour : MonoBehaviour, IPointerEnterHandler, IPointer
         _raised = true;
     }
 
-    /// <summary>还原同级顺序（幂等）</summary>
+    /// <summary>还原同级顺序（幂等）
+    ///
+    /// 注意：整个面板在批量 SetActive(false) 时，Unity 禁止在这个过程里改同级顺序，
+    /// 会报 “Cannot change the sibling position ... while activating or deactivating”。
+    /// 所以失活期间只把提层状态丢掉、不写回顺序 —— 我们的父级都是手动定位的容器
+    /// （ScrollList.Content / 面板根节点），同级顺序不影响显示，下次悬停会重新提层。
+    /// </summary>
     private void RestoreSibling()
     {
         if (!_raised) return;
 
         _raised = false;
 
-        if (_raisedNode != null && _originSibling >= 0) _raisedNode.SetSiblingIndex(_originSibling);
-
+        var node = _raisedNode;
         _raisedNode = null;
+
+        if (node == null || _originSibling < 0) return;
+        if (!node.gameObject.activeInHierarchy) return;   // 正在失活（或已失活）→ 这次不写
+
+        node.SetSiblingIndex(_originSibling);
     }
 }

@@ -23,6 +23,12 @@ public class ShopManager : ManagerBase<ShopManager>
     /// <summary>特殊牌价格波动幅度（±10%）</summary>
     private const float SpecialPriceFluctuation = 0.1f;
 
+    /// <summary>本次商店的删牌上限（暂写死；后续可扩展成 LevelConfig 的字段）</summary>
+    private const int DefaultDeleteLimit = 5;
+
+    /// <summary>删牌单次费用（暂写死）</summary>
+    private const int DefaultDeletePrice = 20;
+
     private const string NormalPrefix = "01";
 
     private readonly System.Random _random = new System.Random();
@@ -58,6 +64,9 @@ public class ShopManager : ManagerBase<ShopManager>
         }
 
         store.shopLevelId = levelId;
+
+        // 删牌次数不用在这里重置：一次商店结束（ContinueNextLevel → ShopStore.Clear）就已经归零了，
+        // 关卡不能回头，所以「新进商店」时它本来就是 0；只有续档进来的那一次要保持存档里的值
 
         if (!_goodsPrepared)
         {
@@ -180,6 +189,49 @@ public class ShopManager : ManagerBase<ShopManager>
         EventManager.Instance.Dispatch(E_EventEnum.OnShopClosed);
     }
 
+    // ==================== 删牌 ====================
+
+    /// <summary>本次商店的删牌上限</summary>
+    public int DeleteLimit => DefaultDeleteLimit;
+
+    /// <summary>删牌单次费用</summary>
+    public int DeletePrice => DefaultDeletePrice;
+
+    /// <summary>本次商店已用的删牌次数</summary>
+    public int DeleteCount => ShopStore.Instance.deleteCount;
+
+    /// <summary>次数已到上限</summary>
+    public bool IsDeleteLimitReached => DeleteCount >= DeleteLimit;
+
+    /// <summary>金币够不够删一次</summary>
+    public bool IsDeleteAffordable => RunManager.Instance.IsEnough(DeletePrice);
+
+    /// <summary>能不能删牌（次数没到上限 + 金币够）</summary>
+    public bool CanDelete => !IsDeleteLimitReached && IsDeleteAffordable;
+
+    /// <summary>
+    /// 从牌组里删掉一张牌：扣一次次数 + 扣费用
+    /// 牌不在牌组里就整个不动（不扣钱也不扣次数）
+    /// </summary>
+    public bool TryDeleteCard(string cardId)
+    {
+        if (string.IsNullOrEmpty(cardId)) return false;
+        if (!CanDelete) return false;
+
+        // 先移除再扣钱：移除失败就什么都不动
+        if (!RunManager.Instance.RemoveCardFromDeck(cardId)) return false;
+
+        RunManager.Instance.TrySpend(DeletePrice);
+        ShopStore.Instance.deleteCount++;
+
+        ShopStore.Instance.Refresh();
+        EventManager.Instance.Dispatch(E_EventEnum.OnShopChanged);
+
+        // 删了不能反悔：立即落盘
+        CardGameModule.Instance.SaveRun();
+        return true;
+    }
+
     // ==================== 存档 ====================
 
     /// <summary>
@@ -191,15 +243,23 @@ public class ShopManager : ManagerBase<ShopManager>
         var store = ShopStore.Instance;
 
         data.shopGoods.Clear();
-        if (!IsInShop) return;
+
+        if (!IsInShop)
+        {
+            // 不在商店里就不写，避免把上一次商店的残留带进存档
+            return;
+        }
 
         foreach (var g in store.goods)
         {
             data.shopGoods.Add(new ShopGoods { cardId = g.cardId, price = g.price, sold = g.sold });
         }
+
+        // 删牌次数也要落盘：退出重进同一个商店要保持一样（次数不能洗回来）
+        data.shopDeleteCount = store.deleteCount;
     }
 
-    /// <summary>从存档恢复商店商品（含已售出标记）</summary>
+    /// <summary>从存档恢复商店商品（含已售出标记）与已用删牌次数</summary>
     public void ImportFrom(RunSaveData data)
     {
         var store = ShopStore.Instance;
@@ -214,5 +274,8 @@ public class ShopManager : ManagerBase<ShopManager>
         }
 
         _goodsPrepared = true;   // 已有商品 → 不再重新随机
+
+        // 续档进来：把已用的删牌次数也恢复（存档里那一次商店还没结束）
+        store.deleteCount = data.shopDeleteCount;
     }
 }
