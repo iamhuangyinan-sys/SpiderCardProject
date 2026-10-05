@@ -6,13 +6,15 @@ using UnityEngine.UI;
 using TMPro;
 using Framework.UI;
 
-public partial class ShowCardItem
+public partial class HoverTipPanel
 {
     [System.NonSerialized] public CompsData comps = new CompsData();
 
     [System.Serializable]
     public class CompsData : CompsDataBase
     {
-        public CardModule modCard;
+        public Image imgBg;
+        public TMP_Text txtTitle;
+        public TMP_Text txtContent;
     }
 }

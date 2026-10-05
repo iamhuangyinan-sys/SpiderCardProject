@@ -1,31 +1,33 @@
 using Framework.UI;
-using UnityEngine;
 
 /// <summary>
-/// 展示用的单张牌 —— 只显示牌图（沉底牌显示黄色）
+/// 展示用的单张牌 —— 只显示牌图（沉底牌显示黄色），不可点击；鼠标悬停放大
 /// </summary>
 public partial class ShowCardItem : BaseListItem
 {
-    /// <summary>沉底牌的显示颜色（黄色）</summary>
-    private static readonly Color SunkColor = new Color(1f, 0.85f, 0.25f, 1f);
+    /// <summary>悬停缩放（挂在根节点上，缩放目标是内部的 mod_Card；没有就退化成不缩放）</summary>
+    private HoverScaleBehaviour _hoverScale;
 
-    public override void OnActivate() { }
+    public override void OnActivate()
+    {
+        if (_hoverScale == null) _hoverScale = GetComponent<HoverScaleBehaviour>();
+
+        comps.modCard.OnHoverChanged = OnCardHover;
+    }
 
     public override void OnRecycle()
     {
-        comps.imgCard.sprite = null;
-        comps.imgCard.color = Color.white;   // 复用前复位，避免黄色残留到别的牌上
+        comps.modCard.OnHoverChanged = null;
+        _hoverScale?.SetHover(false, true);   // 回收：立即复位（组件 OnDisable 也会兜底）
+        comps.modCard.Clear();
     }
+
+    /// <summary>牌面悬停变化 → 整个格子缩放</summary>
+    private void OnCardHover(bool hovering) => _hoverScale?.SetHover(hovering);
 
     /// <summary>按牌 id 显示牌图（isSunk = 沉底牌，染黄）</summary>
     public void Bind(string cardId, bool isSunk = false)
     {
-        if (string.IsNullOrEmpty(cardId)) return;
-
-        var cfg = ConfigHelper.Get<CardConfig>(cardId);
-        if (cfg == null) return;
-
-        comps.imgCard.sprite = CardResManager.Instance.GetCardImage(cfg.Image);
-        comps.imgCard.color = isSunk ? SunkColor : Color.white;
+        comps.modCard.Bind(cardId, isSunk);
     }
 }

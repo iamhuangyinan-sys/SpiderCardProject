@@ -1,40 +1,58 @@
 using Framework.UI;
 
 /// <summary>
-/// 商店商品格 —— 显示牌图与价格，点击购买
+/// 商店商品格 —— 显示牌图与价格，点击购买；鼠标悬停整个格子放大
 /// </summary>
 public partial class ShopCardItem : BaseListItem
 {
     private int _index = -1;
 
-    public override void OnActivate() { }
+    /// <summary>悬停缩放（挂在根节点上，缩放目标是内部那个轴心居中的 layout；没有就退化成不缩放）</summary>
+    private HoverScaleBehaviour _hoverScale;
+
+    public override void OnActivate()
+    {
+        if (_hoverScale == null) _hoverScale = GetComponent<HoverScaleBehaviour>();
+
+        comps.modCard.OnHoverChanged = OnCardHover;
+    }
 
     public override void OnRecycle()
     {
-        comps.btnCard.onClick.RemoveListener(OnClickCard);
+        comps.modCard.OnHoverChanged = null;
+        _hoverScale?.SetHover(false, true);   // 回收：立即复位（组件 OnDisable 也会兜底）
+        comps.modCard.Clear();
         _index = -1;
     }
+
+    /// <summary>牌面悬停变化 → 整个格子缩放（连价格一起）</summary>
+    private void OnCardHover(bool hovering) => _hoverScale?.SetHover(hovering);
 
     /// <summary>绑定商品并刷新显示</summary>
     public void Bind(int index, ShopGoods goods)
     {
         _index = index;
 
-        comps.btnCard.onClick.RemoveListener(OnClickCard);
-        comps.btnCard.onClick.AddListener(OnClickCard);
-
-        if (goods == null) return;
-
-        // 牌图（与场上卡牌同一套图，路径 Resources/GamePlay/Card/）
-        var cfg = ConfigHelper.Get<CardConfig>(goods.cardId);
-        if (cfg != null && comps.btnCard.image != null)
+        if (goods == null)
         {
-            comps.btnCard.image.sprite = CardResManager.Instance.GetCardImage(cfg.Image);
+            comps.modCard.Clear();
+            comps.txtCoin.text = string.Empty;
+            return;
         }
 
-        // 价格 / 已售出
-        comps.txtCoin.text = goods.sold ? "已售出" : goods.price.ToString();
-        comps.btnCard.interactable = !goods.sold;
+        comps.modCard.Bind(goods.cardId);
+
+        // 已售出 → 不可点击（模组会把按钮组件关掉）
+        if (goods.sold)
+        {
+            comps.modCard.SetClickable(null);
+            comps.txtCoin.text = "已售出";
+        }
+        else
+        {
+            comps.modCard.SetClickable(OnClickCard);
+            comps.txtCoin.text = goods.price.ToString();
+        }
     }
 
     private void OnClickCard()

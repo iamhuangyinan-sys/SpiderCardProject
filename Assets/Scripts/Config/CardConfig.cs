@@ -8,6 +8,8 @@ public class CardConfig
     public int Suit;
     public int Rank;
     public int Price;
+    public string Name;
+    public string Description;
     public bool SingleGrab;
     public bool AnyTarget;
     public int PlaceSkill;

@@ -33,6 +33,19 @@ namespace Framework.UI
         [Header("布局")]
         [SerializeField] private int _columns = 1;
 
+        [Header("边缘内容留白")]
+        /// <summary> 网格距内容区上边缘的留白（建议 ≥ (悬停放大倍数 - 1) × itemHeight ÷ 2） </summary>
+        [SerializeField] private float _paddingTop = 0f;
+
+        /// <summary> 网格距内容区下边缘的留白 </summary>
+        [SerializeField] private float _paddingBottom = 0f;
+
+        /// <summary> 网格两侧的留白（网格在这一对留白之间水平居中） </summary>
+        [SerializeField] private float _paddingLeft = 0f;
+
+        /// <summary> 网格两侧的留白 </summary>
+        [SerializeField] private float _paddingRight = 0f;
+
         // ==================== 公开 API ====================
 
         /// <summary> 数据总数，设值即刷新 </summary>
@@ -112,7 +125,7 @@ namespace Framework.UI
             if (_totalCount == 0) return;
             index = Mathf.Clamp(index, 0, _totalCount - 1);
             int row = index / _columns;
-            float targetY = row * (_itemHeight + _rowGap);
+            float targetY = _paddingTop + row * (_itemHeight + _rowGap);
             float maxY = Mathf.Max(0, _content.sizeDelta.y - _scrollRect.viewport.rect.height);
             _content.anchoredPosition = new Vector2(0, Mathf.Min(targetY, maxY));
             Refresh();
@@ -147,7 +160,7 @@ namespace Framework.UI
         private int GetFirstVisibleIndex()
         {
             float rowH = _itemHeight + _rowGap;
-            int row = Mathf.Max(0, Mathf.FloorToInt(_content.anchoredPosition.y / rowH));
+            int row = Mathf.Max(0, Mathf.FloorToInt((_content.anchoredPosition.y - _paddingTop) / rowH));
             return row * _columns;
         }
 
@@ -159,12 +172,15 @@ namespace Framework.UI
 
             int idx = _firstVisibleIndex;
             float rowH = _itemHeight + _rowGap;
-            float y = (idx / _columns) * rowH;
+            float y = _paddingTop + (idx / _columns) * rowH;
+
+            // 网格在左右留白之间水平居中（留白为 0 时就是原来的最左对齐，只要列数没填满宽度）
+            float startX = CalcStartX();
 
             while (idx < _totalCount && y < viewBottom)
             {
                 int col = idx % _columns;
-                float x = col * (_itemWidth + _columnGap);
+                float x = startX + col * (_itemWidth + _columnGap);
 
                 // 先查找已有 slot，复用；没有再向池取
                 BaseListItem item = null;
@@ -206,10 +222,26 @@ namespace Framework.UI
             }
         }
 
+        /// <summary>
+        /// 网格第一列的起始 X：在左右留白之间居中。
+        /// 内容区宽度不够时（列数把宽度填满了）直接贴左留白，不会把网格推出去。
+        /// </summary>
+        private float CalcStartX()
+        {
+            float gridWidth = _columns * _itemWidth + Mathf.Max(0, _columns - 1) * _columnGap;
+            float availWidth = _content.rect.width - _paddingLeft - _paddingRight;
+
+            return _paddingLeft + Mathf.Max(0f, (availWidth - gridWidth) * 0.5f);
+        }
+
         private void UpdateContentSize()
         {
             int rows = Mathf.CeilToInt((float)_totalCount / _columns);
-            float height = rows * (_itemHeight + _rowGap) - _rowGap;
+
+            float height = _totalCount == 0
+                ? 0f
+                : _paddingTop + rows * (_itemHeight + _rowGap) - _rowGap + _paddingBottom;
+
             _content.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, Mathf.Max(height, 0));
         }
 

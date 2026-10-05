@@ -44,6 +44,7 @@ namespace Framework.UI
             Register<MenuPanel>("Main/MenuPanel", E_UILayerEnum.Normal);
             // ===== 通用提示（置顶层，避免被面板遮挡）=====
             Register<TipPanel>("Main/TipPanel", E_UILayerEnum.Top);
+            Register<HoverTipPanel>("Main/HoverTipPanel", E_UILayerEnum.Top);
             // ===== 关卡 =====
             Register<LevelPanel>("GamePlay/LevelPanel", E_UILayerEnum.Normal);
             Register<ShopPanel>("GamePlay/ShopPanel", E_UILayerEnum.Normal);

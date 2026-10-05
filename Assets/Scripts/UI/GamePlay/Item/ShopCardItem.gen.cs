@@ -13,7 +13,7 @@ public partial class ShopCardItem
     [System.Serializable]
     public class CompsData : CompsDataBase
     {
-        public Button btnCard;
+        public CardModule modCard;
         public TMP_Text txtCoin;
     }
 }

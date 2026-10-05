@@ -6,13 +6,13 @@ using UnityEngine.UI;
 using TMPro;
 using Framework.UI;
 
-public partial class ShowCardItem
+public partial class CardModule
 {
     [System.NonSerialized] public CompsData comps = new CompsData();
 
     [System.Serializable]
     public class CompsData : CompsDataBase
     {
-        public CardModule modCard;
+        public Button btnCard;
     }
 }
