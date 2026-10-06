@@ -4,9 +4,9 @@ using UnityEngine;
 /// <summary>
 /// 控制台面板 —— 输入命令行，点确定（或回车）执行
 /// 关闭时重新显示 ConsoleEntryPanel
-/// 全屏面板（继承 FullScreenPanel）：打开期间遮挡场景输入
+/// 遮挡场景输入（实现 ISceneInputBlockPanel）：控制台开着时牌桌不能拖
 /// </summary>
-public partial class ConsolePanel : FullScreenPanel
+public partial class ConsolePanel : NormalPanel, ISceneInputBlockPanel
 {
     protected override void OnOpen()
     {

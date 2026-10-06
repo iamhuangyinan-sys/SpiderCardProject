@@ -14,5 +14,6 @@ public partial class LevelBtnModule
     public class CompsData : CompsDataBase
     {
         public Button btnLevel;
+        public Image imgArrow;
     }
 }

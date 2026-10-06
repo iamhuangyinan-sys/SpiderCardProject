@@ -29,11 +29,16 @@ namespace Framework.UI
 
         protected CanvasGroup CanvasGroup { get; private set; }
 
+        /// <summary>本面板是否实现了「遮挡场景输入」接口（Awake 时转一次，避免每次查询都转）</summary>
+        private ISceneInputBlockPanel _sceneInputBlock;
+
         protected virtual void Awake()
         {
             CanvasGroup = GetComponent<CanvasGroup>();
             if (CanvasGroup == null)
                 CanvasGroup = gameObject.AddComponent<CanvasGroup>();
+
+            _sceneInputBlock = this as ISceneInputBlockPanel;
         }
 
         /// <summary> 首次打开（UIManager 内部） </summary>
@@ -47,6 +52,7 @@ namespace Framework.UI
             BindUI();
             OnOpen();
             OnPanelOpened();
+            LockSceneInput();
         }
 
         /// <summary> 隐藏后重新显示（UIManager 内部） </summary>
@@ -59,6 +65,7 @@ namespace Framework.UI
             BindUI();
             OnShow();
             OnPanelOpened();
+            LockSceneInput();
         }
 
         /// <summary> 隐藏（保留缓存，UIManager 内部） </summary>
@@ -66,6 +73,7 @@ namespace Framework.UI
         {
             if (!IsOpen) return;
             IsOpen = false;
+            UnlockSceneInput();
             OnHide();
 
             // 子类接管隐藏（如先播关闭动画，动画结束后再自行隐藏）
@@ -82,8 +90,23 @@ namespace Framework.UI
 
             // 已经 Hide 过的面板也要走 OnClose（它负责解绑事件、回收列表项等资源）
             IsOpen = false;
+            UnlockSceneInput();
             OnClose();
             gameObject.SetActive(false);
+        }
+
+        // ==================== 场景输入遮挡（实现 ISceneInputBlockPanel 的面板）====================
+
+        /// <summary>实现了接口才上锁（由生命周期统一调用，子类不用管，也不会被 override 顶掉）</summary>
+        private void LockSceneInput()
+        {
+            if (_sceneInputBlock != null) SceneInputLock.Lock(this);
+        }
+
+        /// <summary>解锁（没上过锁时调用也无副作用）</summary>
+        private void UnlockSceneInput()
+        {
+            if (_sceneInputBlock != null) SceneInputLock.Unlock(this);
         }
         // ==================== 面板动画钩子（子类重写） ====================
 

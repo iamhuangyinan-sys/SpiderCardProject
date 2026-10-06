@@ -62,7 +62,7 @@ public class CardGameModule : ManagerBase<CardGameModule>
         CardsManager.Instance.IsPlaying
         && !CardsManager.Instance.IsSettling
         && !CardViewManager.Instance.IsAnimating
-        && !FullScreenPanel.IsBlockingInput;
+        && !SceneInputLock.IsLocked;
 
     /// <summary>开始一局新游戏（指定列数与牌包数）</summary>
     public void StartNewGame(int columnCount, int pocketCount)

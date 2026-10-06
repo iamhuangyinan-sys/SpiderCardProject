@@ -4,8 +4,9 @@ using UnityEngine;
 
 /// <summary>
 /// 游戏菜单面板 —— 保存并回主菜单 / 保存并退出
+/// 遮挡场景输入（实现 ISceneInputBlockPanel）
 /// </summary>
-public partial class MenuPanel : FullScreenPanel
+public partial class MenuPanel : NormalPanel, ISceneInputBlockPanel
 {
     protected override void OnOpen()
     {

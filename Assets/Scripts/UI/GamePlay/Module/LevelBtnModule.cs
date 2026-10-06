@@ -1,3 +1,4 @@
+using System;
 using System.Text;
 using Framework.UI;
 using TMPro;
@@ -14,6 +15,12 @@ public partial class LevelBtnModule : BaseModule
 {
     /// <summary>提示框首选方向（放不下会自动换方向）</summary>
     [SerializeField] private E_TipDirection tipDirection = E_TipDirection.Up;
+
+    /// <summary>
+    /// 点击回调 —— 由 LevelPanel 赋值。
+    /// 选关流程包含「刷白路线 + 停留一小段再进关」，统一交给面板处理
+    /// </summary>
+    public Action<LevelConfig> OnClickLevel;
 
     private LevelConfig _cfg;
     private TextMeshProUGUI _txtType;
@@ -35,6 +42,8 @@ public partial class LevelBtnModule : BaseModule
     protected override void OnUnBind()
     {
         comps.btnLevel.onClick.RemoveListener(OnClick);
+
+        OnClickLevel = null;      // 模组会进对象池复用，回调必须清掉
 
         if (_hoverScale != null) _hoverScale.OnHoverChanged = null;
 
@@ -64,6 +73,9 @@ public partial class LevelBtnModule : BaseModule
         _imgIcon.sprite = LevelResManager.Instance.GetIcon(_cfg.LevelType);
     }
 
+    /// <summary>当前绑定的关卡 id（未绑定时为 null）</summary>
+    public string LevelId => _cfg != null ? _cfg.Id : null;
+
     /// <summary>刷新显示：类型 + 锁定状态</summary>
     public void RefreshState()
     {
@@ -76,6 +88,12 @@ public partial class LevelBtnModule : BaseModule
         {
             _txtType.text = unlocked ? GetTypeName(_cfg.LevelType) : "锁定";
         }
+    }
+
+    /// <summary>标注「玩家在这里」（具体定位由面板统一刷新）</summary>
+    public void SetPlayerHere(bool value)
+    {
+        if (comps.imgArrow != null) comps.imgArrow.gameObject.SetActive(value);
     }
 
     private static string GetTypeName(int levelType)
@@ -165,6 +183,9 @@ public partial class LevelBtnModule : BaseModule
     private void OnClick()
     {
         if (_cfg == null) return;
-        LevelManager.Instance.SelectLevel(_cfg.Id);
+
+        // 面板接管了选关流程；没有接管时（比如单独调试模组）退化成直接进入
+        if (OnClickLevel != null) OnClickLevel.Invoke(_cfg);
+        else LevelManager.Instance.SelectLevel(_cfg.Id);
     }
 }

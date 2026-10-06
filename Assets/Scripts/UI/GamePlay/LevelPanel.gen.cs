@@ -14,5 +14,6 @@ public partial class LevelPanel
     public class CompsData : CompsDataBase
     {
         public Image imgLevelBtns;
+        public Button btnClose;
     }
 }

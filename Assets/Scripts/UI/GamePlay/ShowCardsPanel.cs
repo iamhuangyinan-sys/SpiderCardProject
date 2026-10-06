@@ -6,8 +6,9 @@ using Framework.UI;
 /// 展示牌面板 —— 用一批牌 id 在列表里铺开显示
 /// 牌组查看、奖励预览等需要展示若干张牌的地方都用它
 /// 也可进「选牌模式」：点选一张牌后立即关面板并回调（商店删牌等）
+/// 遮挡场景输入（实现 ISceneInputBlockPanel）
 /// </summary>
-public partial class ShowCardsPanel : FullScreenPanel
+public partial class ShowCardsPanel : NormalPanel, ISceneInputBlockPanel
 {
     private IReadOnlyList<CardData> _cards;
 

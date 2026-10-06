@@ -14,6 +14,7 @@ public partial class MainTopPanel
     public class CompsData : CompsDataBase
     {
         public TMP_Text txtLevelProgress;
+        public Button btnMap;
         public Button btnCardBuild;
         public Button btnMenu;
         public TMP_Text txtLevelInfo;

@@ -33,6 +33,8 @@ public class CardGameEntry : MonoBehaviour
         EventManager.Instance.AddListener(E_EventEnum.OnCardsCollected, OnLevelEnd);
         EventManager.Instance.AddListener(E_EventEnum.OnShopOpen, OnShopOpen);
         EventManager.Instance.AddListener(E_EventEnum.OnShopClosed, OnShopClosed);
+        EventManager.Instance.AddListener(E_EventEnum.OnMapOpen, OnMapOpen);
+        EventManager.Instance.AddListener(E_EventEnum.OnMapClose, OnMapClose);
 
         // 有档读档，无档开新的一大局面
         CardGameModule.Instance.LoadRun();
@@ -44,7 +46,7 @@ public class CardGameEntry : MonoBehaviour
         var currentId = LevelStore.Instance.selectedLevelId;
         if (string.IsNullOrEmpty(currentId))
         {
-            _levelPanel = UIManager.Instance.Show<LevelPanel>();
+            ShowLevelSelect();
         }
         else
         {
@@ -63,6 +65,7 @@ public class CardGameEntry : MonoBehaviour
     {
         if (_levelPanel != null) UIManager.Instance.Hide(_levelPanel);
         _mainTopPanel = UIManager.Instance.Show<MainTopPanel>();
+        SetMapButtonVisible(true);   // 关卡中：可以开地图看路线
 
         // 上一局残留的「延迟隐藏」（玩家在选关面板飞入途中又开了新局）
         if (_hideTableRoutine != null)
@@ -77,7 +80,7 @@ public class CardGameEntry : MonoBehaviour
     /// <summary>收牌结束（关卡结束）：弹选关面板，等它飞入挡住牌桌后再隐藏牌桌物件</summary>
     private void OnLevelEnd()
     {
-        _levelPanel = UIManager.Instance.Show<LevelPanel>();
+        ShowLevelSelect();
         _hideTableRoutine = MonoManager.Instance.StartCoroutine(HideTableRoutine());
     }
 
@@ -94,6 +97,8 @@ public class CardGameEntry : MonoBehaviour
     private void OnShopOpen()
     {
         if (_levelPanel != null) UIManager.Instance.Hide(_levelPanel);
+
+        SetMapButtonVisible(true);   // 商店也算「关卡中」，也能开地图看路线
         _shopPanel = UIManager.Instance.Show<ShopPanel>();
     }
 
@@ -101,7 +106,43 @@ public class CardGameEntry : MonoBehaviour
     private void OnShopClosed()
     {
         if (_shopPanel != null) UIManager.Instance.Hide(_shopPanel);
+        ShowLevelSelect();
+    }
+
+    // ==================== 选关界面 / 地图 ====================
+
+    /// <summary>显示选关面板（可点关）；顺手把地图按钮藏掉 —— 选关界面本身就是地图</summary>
+    private void ShowLevelSelect()
+    {
         _levelPanel = UIManager.Instance.Show<LevelPanel>();
+        if (_levelPanel == null) return;
+
+        _levelPanel.SetViewOnly(false);
+        SetMapButtonVisible(false);
+    }
+
+    /// <summary>关卡中打开地图：只读查看，箭头标出当前所在关卡</summary>
+    private void OnMapOpen()
+    {
+        // 选关界面正开着（它本身就是地图）→ 忽略，否则会把它切成只读、关掉后玩家没法选关
+        if (_levelPanel != null && _levelPanel.IsOpen && !_levelPanel.IsViewOnly) return;
+
+        _levelPanel = UIManager.Instance.Show<LevelPanel>();
+        if (_levelPanel == null) return;
+
+        _levelPanel.SetViewOnly(true);
+        SetMapButtonVisible(true);   // 保持可见，再点一次就是关闭
+    }
+
+    /// <summary>关闭地图（只关「查看模式」，避免误把选关界面关掉）</summary>
+    private void OnMapClose()
+    {
+        if (_levelPanel != null && _levelPanel.IsViewOnly) UIManager.Instance.Hide(_levelPanel);
+    }
+
+    private void SetMapButtonVisible(bool visible)
+    {
+        if (_mainTopPanel != null) _mainTopPanel.SetMapButtonVisible(visible);
     }
 
     private void OnDestroy()
@@ -119,6 +160,8 @@ public class CardGameEntry : MonoBehaviour
         EventManager.Instance.RemoveListener(E_EventEnum.OnCardsCollected, OnLevelEnd);
         EventManager.Instance.RemoveListener(E_EventEnum.OnShopOpen, OnShopOpen);
         EventManager.Instance.RemoveListener(E_EventEnum.OnShopClosed, OnShopClosed);
+        EventManager.Instance.RemoveListener(E_EventEnum.OnMapOpen, OnMapOpen);
+        EventManager.Instance.RemoveListener(E_EventEnum.OnMapClose, OnMapClose);
 
         // 关闭本场景自己的面板：必须走 Close 而不是只 Hide，
         // 否则下个场景再进时 Show 只走 OnShow（不重建列表），

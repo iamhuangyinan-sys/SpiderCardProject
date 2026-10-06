@@ -147,6 +147,14 @@ public class LevelManager : ManagerBase<LevelManager>
 
         // 记为进行中的关卡，并立即落盘（退出重进时直接重开这一关）
         store.selectedLevelId = levelId;
+
+        // 记录选择顺序：路线 = 相邻两次选择之间的连线（选关当下就记，不等通关）
+        // 同一关连续重复不记 —— 读档续玩会再调一次 SelectLevel 重开同一关，靠这个去重
+        if (store.chosenLevelIds.Count == 0 || store.chosenLevelIds[^1] != levelId)
+        {
+            store.chosenLevelIds.Add(levelId);
+        }
+
         store.Refresh();
 
         // 商店关：备好商品后弹商店面板（商品只在首次进入时随机）
@@ -180,8 +188,11 @@ public class LevelManager : ManagerBase<LevelManager>
         if (string.IsNullOrEmpty(levelId)) return;
 
         var store = LevelStore.Instance;
-        store.lastLevelId = levelId;      // 记录最后完成的关卡
-        store.selectedLevelId = null;     // 开完了，回到选关状态
+
+        // 开完了，回到选关状态。
+        // 路线不在这里记：关卡 id 是「选择时」就写进 chosenLevelIds 的，
+        // 清掉 selectedLevelId 后 LastClearedLevelId 自然指向这一关
+        store.selectedLevelId = null;
 
         // 挂起通关奖励：结算动画结束后由 SettleLevelReward() 发放
         if (store.allLevels.TryGetValue(levelId, out var cfg))
@@ -230,27 +241,72 @@ public class LevelManager : ManagerBase<LevelManager>
         }
     }
 
+    // ==================== 路线（选关界面的连线） ====================
+
+    /// <summary>从 fromId 出发到 toId 是否是配表里的一条连线（用于判断玩家是否正沿路线前进）</summary>
+    public bool IsNextLevel(string fromId, string toId)
+    {
+        if (string.IsNullOrEmpty(fromId) || string.IsNullOrEmpty(toId)) return false;
+        return GetNextIds(fromId).Contains(toId);
+    }
+
+    /// <summary>
+    /// a、b 两关之间的连线是否走过（true → 画白色，false → 画灰色）
+    /// 连线是无向的（同一对关卡只画一条），所以两个方向都算
+    /// </summary>
+    public bool HasTraversedEdge(string a, string b)
+    {
+        if (string.IsNullOrEmpty(a) || string.IsNullOrEmpty(b)) return false;
+
+        var path = LevelStore.Instance.chosenLevelIds;
+        for (int i = 0; i < path.Count - 1; i++)
+        {
+            string cur = path[i];
+            string next = path[i + 1];
+
+            if ((cur == a && next == b) || (cur == b && next == a)) return true;
+        }
+        return false;
+    }
+
+    /// <summary>
+    /// 玩家当前所在关卡 id（选关界面标「你在这里」用）：
+    ///   关卡中（含商店）= 进行中的关卡，选关界面 = 最后通关的关卡
+    /// </summary>
+    public string GetPlayerLevelId()
+    {
+        var store = LevelStore.Instance;
+        return string.IsNullOrEmpty(store.selectedLevelId) ? store.LastClearedLevelId : store.selectedLevelId;
+    }
+
     // ==================== 存档 ====================
 
     /// <summary>导出关卡进度（存档用）</summary>
     public void ExportTo(RunSaveData data)
     {
-        data.lastLevelId = LevelStore.Instance.lastLevelId;
-        data.selectedLevelId = LevelStore.Instance.selectedLevelId;
+        var store = LevelStore.Instance;
+
+        data.selectedLevelId = store.selectedLevelId;
+
+        data.chosenLevelIds.Clear();
+        data.chosenLevelIds.AddRange(store.chosenLevelIds);
     }
 
-    /// <summary>从存档恢复关卡进度：用「最后完成的关卡」重建解锁状态与当前层</summary>
+    /// <summary>从存档恢复关卡进度：用「最后通关的关卡」重建解锁状态与当前层</summary>
     public void ImportFrom(RunSaveData data)
     {
         var store = LevelStore.Instance;
 
-        store.lastLevelId = data.lastLevelId;
         store.selectedLevelId = data.selectedLevelId;
 
+        store.chosenLevelIds.Clear();
+        if (data.chosenLevelIds != null) store.chosenLevelIds.AddRange(data.chosenLevelIds);
+
         // 未通关过任何关卡 → 保持初始第一层解锁状态
-        if (!string.IsNullOrEmpty(store.lastLevelId))
+        string lastLevelId = store.LastClearedLevelId;
+        if (!string.IsNullOrEmpty(lastLevelId))
         {
-            UnlockNext(store.lastLevelId);
+            UnlockNext(lastLevelId);
         }
 
         store.Refresh();

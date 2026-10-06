@@ -6,8 +6,30 @@ using Framework.Store;
 /// </summary>
 public class LevelStore : StoreBase<LevelStore>
 {
-    /// <summary>最后完成的关卡 id（空 = 还没通关过任何关卡）—— 用于重建解锁状态与当前层</summary>
-    public string lastLevelId;
+    /// <summary>
+    /// 玩家选择过的关卡 id（按选择顺序追加，含正在打的那一关）
+    ///   相邻两项 = 玩家实际走过的路线（选关界面 / 地图据此把连线置白）
+    /// </summary>
+    public readonly List<string> chosenLevelIds = new();
+
+    /// <summary>
+    /// 最后通关的关卡 id（不单独记录，纯推导；没通关过任何关卡时为 null）：
+    ///   正在打（selectedLevelId 非空）→ 倒数第二个选择
+    ///   停在选关界面（selectedLevelId 为空）→ 最后一个选择
+    /// </summary>
+    public string LastClearedLevelId
+    {
+        get
+        {
+            int count = chosenLevelIds.Count;
+            if (count == 0) return null;
+
+            if (string.IsNullOrEmpty(selectedLevelId)) return chosenLevelIds[count - 1];
+
+            // 正在打：第一关还在打时说明还没通关过任何关卡
+            return count >= 2 ? chosenLevelIds[count - 2] : null;
+        }
+    }
 
     /// <summary>当前层数（只解锁当前层的关卡，不走回头路）</summary>
     public int currentLayer;
@@ -39,7 +61,7 @@ public class LevelStore : StoreBase<LevelStore>
 
     private void Clear()
     {
-        lastLevelId = null;
+        chosenLevelIds.Clear();
         selectedLevelId = null;
         currentLayer = 0;
         pendingReward = 0;

@@ -30,8 +30,9 @@ public static class DrawLineHelper
     /// 两头各往里收缩的比例（0~0.5），按原始线长算：
     /// 实际线长 = 原始长度 × (1 - 2 × shrinkRatio)，两头各留白 shrinkRatio × 原始长度
     /// </param>
+    /// <param name="color">线段颜色（不传则纯白）</param>
     /// <returns>生成的线段 Image；parent 为空时返回 null</returns>
-    public static Image Draw(Transform parent, Vector2 start, Vector2 end, float thickness, float shrinkRatio)
+    public static Image Draw(Transform parent, Vector2 start, Vector2 end, float thickness, float shrinkRatio, Color? color = null)
     {
         if (parent == null) return null;
 
@@ -42,7 +43,7 @@ public static class DrawLineHelper
 
         var img = go.GetComponent<Image>();
         img.sprite = null;              // 无 sprite → 纯白矩形
-        img.color = Color.white;
+        img.color = color ?? Color.white;
         img.raycastTarget = false;      // 不挡点击
 
         ApplyLine(rt, start, end, thickness, shrinkRatio);
