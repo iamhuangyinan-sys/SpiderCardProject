@@ -19,6 +19,7 @@ public class CardView : MonoBehaviour
     private GameObject _glowGo;
     private GameObject _shadowGo;
     private Vector3 _shadowInitLocalPos;
+    private Vector2 _shadowBaseSize;
 
     // ===== 供 CardAnimationHelper 访问的引用 =====
     public SpriteRenderer RootRenderer => _rootRenderer;
@@ -27,6 +28,9 @@ public class CardView : MonoBehaviour
     public GameObject GlowGo => _glowGo;
     public GameObject ShadowGo => _shadowGo;
     public Vector3 ShadowInitLocalPos => _shadowInitLocalPos;
+
+    /// <summary>投影未被拉伸时的尺寸（世界单位）—— 拉牌串投影时以它为基准加长</summary>
+    public Vector2 ShadowBaseSize => _shadowBaseSize;
 
     private void Awake()
     {
@@ -45,6 +49,21 @@ public class CardView : MonoBehaviour
             _shadowGo = shadow.gameObject;
             _shadowRenderer = shadow.GetComponent<SpriteRenderer>();
             _shadowInitLocalPos = shadow.localPosition;   // 记录初始位置（pivot 在顶部时为 (0, 0.95, 0)）
+
+            // 投影要按牌串长度拉伸：必须用 Sliced 绘制模式，九宫格的角才会保持原尺寸；
+            // Simple 模式下 border 完全无效，整张图（含四角）会被一起拉变形。
+            // 拉伸走 SpriteRenderer.size，不要动 localScale。
+            if (_shadowRenderer != null)
+            {
+                _shadowRenderer.drawMode = SpriteDrawMode.Sliced;
+                _shadowBaseSize = _shadowRenderer.size;
+
+                // 兜底：预制体上 size 没设时用精灵自然尺寸
+                if (_shadowBaseSize.y <= 0f && _shadowRenderer.sprite != null)
+                {
+                    _shadowBaseSize = _shadowRenderer.sprite.bounds.size;
+                }
+            }
         }
 
         // 默认隐藏发光与投影（alpha 归零，便于淡入）

@@ -106,21 +106,26 @@ public static class CardAnimationHelper
         view.ShadowRenderer.DOFade(ShadowAlpha, 0.15f);
     }
 
-    /// <summary>显示发光与投影（淡入），投影按牌串实际高度拉伸</summary>
+    /// <summary>显示发光与投影（淡入），投影按牌串实际跨度拉伸</summary>
     public static void ShowGlowShadow(CardView view, int cardCount)
     {
         ShowGlow(view);
         ShowShadow(view);
 
-        float cardHeight = view.RootRenderer != null ? view.RootRenderer.bounds.size.y : 1f;
-        float stretch = 1f + (cardCount - 1) * CardViewManager.FaceUpSpacing / cardHeight;
-        if (view.ShadowGo != null)
+        // 投影要盖住整串牌：跨度取「实际布局」的跨度，不能用常量间距
+        // （列太长时正面间距会被压缩，用常量算出来的投影会偏长）
+        float span = CardViewManager.Instance.GetStackSpan(view, cardCount);
+
+        // 用 size 拉伸（Sliced 九宫格）：只有中间被拉长，四角保持原尺寸。
+        // 千万不要用 localScale —— 那会把整张投影（含四角）一起缩放，角会变形
+        if (view.ShadowRenderer != null)
         {
-            view.ShadowGo.transform.localScale = new Vector3(1f, stretch, 1f);
+            Vector2 baseSize = view.ShadowBaseSize;
+            view.ShadowRenderer.size = new Vector2(baseSize.x, baseSize.y + span);
         }
     }
 
-    /// <summary>隐藏发光与投影（淡出），淡出完成后恢复投影缩放</summary>
+    /// <summary>隐藏发光与投影（淡出），淡出完成后恢复投影尺寸</summary>
     public static void HideGlowShadow(CardView view)
     {
         if (view.GlowRenderer != null)
@@ -132,7 +137,7 @@ public static class CardAnimationHelper
             view.ShadowRenderer.DOFade(0f, 0.1f).OnComplete(() =>
             {
                 view.ShadowGo.SetActive(false);
-                view.ShadowGo.transform.localScale = Vector3.one;
+                view.ShadowRenderer.size = view.ShadowBaseSize;   // 尺寸还原（不是 localScale）
             });
         }
     }
@@ -166,7 +171,7 @@ public static class CardAnimationHelper
         if (view.GlowGo != null) view.GlowGo.SetActive(false);
         if (view.ShadowGo != null)
         {
-            view.ShadowGo.transform.localScale = Vector3.one;
+            if (view.ShadowRenderer != null) view.ShadowRenderer.size = view.ShadowBaseSize;
             view.ShadowGo.transform.localPosition = view.ShadowInitLocalPos;
             view.ShadowGo.SetActive(false);
         }

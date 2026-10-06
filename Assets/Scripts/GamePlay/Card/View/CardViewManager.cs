@@ -19,11 +19,29 @@ public class CardViewManager : ManagerBase<CardViewManager>
     /// <summary>列间隔（向右 +X）</summary>
     private const float ColumnSpacing = 1.7f;
 
-    /// <summary>正面牌（翻开）的向下间隔（投影拉伸计算用）</summary>
+    /// <summary>
+    /// 正面牌（翻开）的「自然」向下间隔 —— 未被压缩时用这个值
+    /// 列太长会按列压缩（下限 = FaceDownSpacing），实际值看 _columnFaceUpSpacing
+    /// </summary>
     public const float FaceUpSpacing = 0.65f;
 
-    /// <summary>反面牌（牌背）的向下间隔</summary>
+    /// <summary>反面牌（牌背）的向下间隔（不参与压缩）</summary>
     private const float FaceDownSpacing = 0.3f;
+
+    /// <summary>牌的世界高度（与美术的牌尺寸一致：1.4 × 1.9）—— 算列尾是否出屏用</summary>
+    private const float CardHeight = 1.9f;
+
+    /// <summary>列底离屏幕底边的留白（世界单位）</summary>
+    private const float BottomMargin = 0.5f;
+
+    // ============ 列内自适应间距 ============
+
+    /// <summary>
+    /// 每列当前实际用的「正面牌间距」（下标 = 列索引）。
+    /// 列的自然高度超出可用高度时只压它（反面间距不动），压到 FaceDownSpacing 为止；
+    /// 还放不下就让它超出屏幕。
+    /// </summary>
+    private float[] _columnFaceUpSpacing = new float[0];
 
     // ============ View 管理 ============
 
@@ -169,6 +187,22 @@ public class CardViewManager : ManagerBase<CardViewManager>
         // 计算该牌的正常排序（翻牌结束后应恢复的层级，避免读到飞行中的临时抬升值）
         int finalOrder = GetNormalSortingOrder(cardData, view);
         CardAnimationHelper.FlipUp(view, finalOrder);
+
+        // 牌背 → 正面会改变间距构成（列会变高），重算本列间距；
+        // 只有它下面的牌会移位（它自己的位置只取决于上面的间隔）
+        if (view.columnIndex < 0) return;
+
+        var store = CardsStore.Instance;
+        if (view.columnIndex >= store.columns.Count) return;
+
+        var column = store.columns[view.columnIndex];
+        int row = column.IndexOf(cardData);
+        if (row < 0) return;
+
+        if (RefreshColumnSpacing(view.columnIndex, column))
+        {
+            MoveColumnCards(view.columnIndex, column, row + 1);
+        }
     }
 
     /// <summary>计算一张牌在列中的正常渲染排序（不在列则保持当前）</summary>
@@ -317,6 +351,9 @@ public class CardViewManager : ManagerBase<CardViewManager>
         for (int col = 0; col < store.columns.Count; col++)
         {
             var column = store.columns[col];
+
+            RefreshColumnSpacing(col, column);   // 先定下本列间距，再算每张牌的位置
+
             for (int row = 0; row < column.Count; row++)
             {
                 var cardData = column[row];
@@ -405,6 +442,8 @@ public class CardViewManager : ManagerBase<CardViewManager>
 
         var column = store.columns[columnIndex];
 
+        RefreshColumnSpacing(columnIndex, column);   // 先定下本列间距，再算每张牌的位置
+
         // 回收该列所有 View（按列归属找，包括已从数据移除的牌）
         var toRemove = new List<CardData>();
         foreach (var kv in _viewDict)
@@ -450,6 +489,12 @@ public class CardViewManager : ManagerBase<CardViewManager>
         var cardData = column[row];
         if (_viewDict.ContainsKey(cardData)) return;
 
+        // 新牌到位前先定下本列间距：变长了可能要压缩，压缩了已有的牌要一起让位
+        if (RefreshColumnSpacing(columnIndex, column))
+        {
+            MoveColumnCards(columnIndex, column, 0);
+        }
+
         var view = CardPoolManager.Instance.GetCard();
         if (view == null) return;
 
@@ -494,21 +539,15 @@ public class CardViewManager : ManagerBase<CardViewManager>
         var cardData = column[0];
         if (_viewDict.ContainsKey(cardData)) return;
 
+        // 插入后列变长了：先重算间距（可能触发压缩），其余牌整体推新位置（行号 +1）
+        RefreshColumnSpacing(columnIndex, column);
+        MoveColumnCards(columnIndex, column, 1);
+
         var view = CardPoolManager.Instance.GetCard();
         if (view == null) return;
 
         view.Bind(cardData);
         view.columnIndex = columnIndex;
-
-        // 其余牌整体下移一格（行号 +1）：位置与层级一起过渡
-        for (int row = 1; row < column.Count; row++)
-        {
-            if (!_viewDict.TryGetValue(column[row], out var other) || other == null) continue;
-
-            other.SetSortingOrder(GetSortingOrder(columnIndex, row));
-            AnimationHelper.MoveTo(other.transform, GetCardPosition(columnIndex, column, row),
-                CardAnimationHelper.FlyDuration);
-        }
 
         // 沉底牌飞入堆底（数据为背面朝上，View 会自动刷成牌背）
         int finalOrder = GetSortingOrder(columnIndex, 0);
@@ -734,20 +773,154 @@ public class CardViewManager : ManagerBase<CardViewManager>
         return col;
     }
 
-    /// <summary>计算卡牌世界坐标：向右为列，向下为行；列内间隔取决于上面那张牌（翻开 0.7、牌背 0.3）</summary>
+    /// <summary>计算卡牌世界坐标：向右为列，向下为行；列内间隔取决于上面那张牌（正面用本列压缩后的间距、牌背固定）</summary>
     private Vector3 GetCardPosition(int columnIndex, List<CardData> column, int rowIndex)
     {
         float x = _startPos.x + columnIndex * ColumnSpacing;
+        float faceUpSpacing = GetFaceUpSpacing(columnIndex);
 
         // 从列顶往下累加：间隔取决于上面那张牌是翻开还是牌背
         float y = _startPos.y;
         for (int i = 1; i <= rowIndex; i++)
         {
-            float spacing = column[i - 1].isFaceUp ? FaceUpSpacing : FaceDownSpacing;
+            float spacing = column[i - 1].isFaceUp ? faceUpSpacing : FaceDownSpacing;
             y -= spacing;
         }
 
         return new Vector3(x, y, _startPos.z);
+    }
+
+    // ============ 列内自适应间距（防出屏） ============
+
+    /// <summary>取某列当前实际用的正面牌间距（越界则返回自然间距）</summary>
+    public float GetFaceUpSpacing(int columnIndex)
+    {
+        return columnIndex >= 0 && columnIndex < _columnFaceUpSpacing.Length
+            ? _columnFaceUpSpacing[columnIndex]
+            : FaceUpSpacing;
+    }
+
+    /// <summary>
+    /// 按当前列数据重算该列的正面牌间距，返回是否发生变化。
+    ///
+    /// 算法（闭式解，不用迭代）：
+    ///   列高 H(s) = 正面间隔数 × s + 牌背间隔数 × FaceDownSpacing
+    ///   令 H(s) ≤ 可用高度 → s ≤ (可用高度 − 牌背部分) / 正面间隔数
+    ///   然后把 s 夹到 [FaceDownSpacing, FaceUpSpacing] 里：
+    ///     列短 → 夹回 FaceUpSpacing（不变）
+    ///     列长 → 压缩，最多压到和牌背一样紧（再紧就不好认牌了）
+    ///     压到底还不够 → 就用下限，让它超出屏幕
+    /// </summary>
+    private bool RefreshColumnSpacing(int columnIndex, List<CardData> column)
+    {
+        if (column == null) return false;
+
+        EnsureSpacingArray(columnIndex + 1);
+
+        float target = CalcFaceUpSpacing(column, GetAvailableColumnHeight());
+        if (Mathf.Approximately(_columnFaceUpSpacing[columnIndex], target)) return false;
+
+        _columnFaceUpSpacing[columnIndex] = target;
+        return true;
+    }
+
+    /// <summary>算出这一列应该用的正面牌间距（下限 = FaceDownSpacing）</summary>
+    private static float CalcFaceUpSpacing(List<CardData> column, float available)
+    {
+        // 最后一张牌下面没有牌，不参与高度累加
+        int faceUpGaps = 0;
+        float faceDownHeight = 0f;
+        for (int i = 0; i < column.Count - 1; i++)
+        {
+            if (column[i].isFaceUp) faceUpGaps++;
+            else faceDownHeight += FaceDownSpacing;
+        }
+
+        if (faceUpGaps == 0) return FaceUpSpacing;   // 全是牌背：压不压都一样
+
+        float spacing = (available - faceDownHeight) / faceUpGaps;
+
+        return Mathf.Clamp(spacing, FaceDownSpacing, FaceUpSpacing);
+    }
+
+    /// <summary>保证间距数组够长（不够就扩容；列数变少时旧值会在下一次布局被重算）</summary>
+    private void EnsureSpacingArray(int count)
+    {
+        if (_columnFaceUpSpacing.Length >= count) return;
+
+        var old = _columnFaceUpSpacing;
+        _columnFaceUpSpacing = new float[count];
+        for (int i = 0; i < old.Length; i++) _columnFaceUpSpacing[i] = old[i];
+    }
+
+    /// <summary>
+    /// 列可用高度（世界单位）：从列顶到「屏底 + 留白」，再扣掉最后一张牌露在列顶下方的部分。
+    /// 牌 pivot 在中心，所以最后一张牌的中心贴在它的 y 上时，底边还要再往下半个牌高。
+    /// </summary>
+    private float GetAvailableColumnHeight()
+    {
+        float bottomLimit = GetColumnBottomY();
+        return Mathf.Max(0f, _startPos.y - bottomLimit - CardHeight * 0.5f);
+    }
+
+    /// <summary>屏底（含留白）的世界 Y：正交相机按 orthographicSize，透视相机按牌所在平面的视锥高度</summary>
+    private float GetColumnBottomY()
+    {
+        var cam = Camera.main;
+        if (cam == null) return _startPos.y - 8f + BottomMargin;   // 兜底：按正交 size 8 估
+
+        if (cam.orthographic)
+        {
+            return cam.transform.position.y - cam.orthographicSize + BottomMargin;
+        }
+
+        float distance = Mathf.Abs(_startPos.z - cam.transform.position.z);
+        float halfHeight = Mathf.Tan(cam.fieldOfView * 0.5f * Mathf.Deg2Rad) * distance;
+        return cam.transform.position.y - halfHeight + BottomMargin;
+    }
+
+    /// <summary>
+    /// 把某列里已有的牌整体过渡到最新布局位置（间距变了、或有牌插入时用）。
+    /// 牌包 / 未创建的牌会自动跳过。
+    /// </summary>
+    private void MoveColumnCards(int columnIndex, List<CardData> column, int fromRow)
+    {
+        for (int row = Mathf.Max(0, fromRow); row < column.Count; row++)
+        {
+            if (!_viewDict.TryGetValue(column[row], out var view) || view == null) continue;
+
+            view.SetSortingOrder(GetSortingOrder(columnIndex, row));
+            AnimationHelper.MoveTo(view.transform, GetCardPosition(columnIndex, column, row),
+                CardAnimationHelper.FlyDuration);
+        }
+    }
+
+    /// <summary>
+    /// 取一串牌（同列、从这张开始连续 count 张）从第一张顶边到最下面那张顶边的实际跨度。
+    /// 抓牌时的投影拉伸要用这个值 —— 列被压缩后间距不再是常量，用常量算投影会偏。
+    /// </summary>
+    public float GetStackSpan(CardView anchorView, int cardCount)
+    {
+        if (anchorView == null || cardCount <= 1) return 0f;
+        if (anchorView.columnIndex < 0) return 0f;
+
+        var store = CardsStore.Instance;
+        if (anchorView.columnIndex >= store.columns.Count) return 0f;
+
+        var column = store.columns[anchorView.columnIndex];
+        int startRow = column.IndexOf(anchorView.data);
+        if (startRow < 0) return 0f;
+
+        float faceUpSpacing = GetFaceUpSpacing(anchorView.columnIndex);
+        int endRow = Mathf.Min(startRow + cardCount - 1, column.Count - 1);
+
+        float span = 0f;
+        for (int i = startRow; i < endRow; i++)
+        {
+            span += column[i].isFaceUp ? faceUpSpacing : FaceDownSpacing;
+        }
+
+        return span;
     }
 
     /// <summary>计算渲染排序：同列内越靠上的牌排序值越大，渲染越靠前</summary>
