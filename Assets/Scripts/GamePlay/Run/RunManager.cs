@@ -132,11 +132,18 @@ public class RunManager : ManagerBase<RunManager>
 #endif
     }
 
-    /// <summary>是否属于初始牌组：红桃 / 黑桃的 A-K</summary>
+    /// <summary>
+    /// 是否属于初始牌组：红桃 / 黑桃的普通 A-K。
+    /// 多重花色 / 多重点数 / 特殊牌（蜘蛛、黑色、复制…）都不算
+    /// </summary>
     private static bool IsDefaultDeckCard(CardConfig cfg)
     {
-        if (cfg.Suit != (int)E_CardSuitEnum.Hearts && cfg.Suit != (int)E_CardSuitEnum.Spades) return false;
-        return cfg.Rank >= 1 && cfg.Rank <= 13;
+        if (cfg.Suit == null || cfg.Suit.Count != 1) return false;
+
+        int suit = cfg.Suit[0];
+        if (suit != (int)E_CardSuitEnum.Hearts && suit != (int)E_CardSuitEnum.Spades) return false;
+
+        return cfg.Rank != null && cfg.Rank.Count == 1 && cfg.Rank[0] >= 1 && cfg.Rank[0] <= 13;
     }
 
     // ==================== 存档 ====================

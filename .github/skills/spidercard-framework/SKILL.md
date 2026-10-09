@@ -271,9 +271,16 @@ comps.listShop.ScrollTo(10);
   - 第3行：注释
   - 第4行起：数据
 - 主键字段名固定为 `Id`，类型用 `string`（支持带前导零的 id）。
+- **列表字段**：第2行写 `list<int>` / `list<string>`，单元格值写成 `[值1;值2;值3]`；
+  支持嵌套 `list<list<int>>` → `[[1;2];[3;4]]`（只按最外层的 `;` 切分）。
+  方括号可省，`;` 分隔、中文 `；` 也认；空项会被跳过（空的嵌套列表写 `[]`）。
+  前提约定：字符串元素里不含 `[` `]`，所以方括号直接当结构符号用，不需要转义。
+  导出后字段类型是 `List<T>`，JSON 是数组，JsonUtility 直接能读。
 - Unity 菜单 `Tools/Export All Configs` 生成：
   - `Assets/Resources/Config/Xxx.json`
   - `Assets/Scripts/Config/Xxx.cs`（数据类，自动生成，勿手动改）
+- ⚠️ Excel 里的**空单元格会被整个省略**，导出的 JSON 就会缺这个字段（JsonUtility 读出来是 `null`，`List` 字段直接 NRE）。
+  导出器已统一补齐缺失列（`FillMissingValues`），所以列表字段永远是空列表而不是 null。
 
 ### 运行时读取（ConfigHelper）
 

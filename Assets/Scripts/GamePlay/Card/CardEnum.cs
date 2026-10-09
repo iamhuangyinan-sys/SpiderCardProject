@@ -17,9 +17,19 @@ public enum E_CardSuitEnum
 
     /// <summary>方块</summary>
     Diamonds = 3,
+}
 
-    /// <summary>万能花色（配表填 -1）：可以当作任意花色</summary>
-    Wild = -1,
+/// <summary>
+/// 特殊点数常量（配表 Rank 列表里的负值，与 1-13 的普通点数共存）
+/// 不是枚举，只是与花色枚举放一起方便查
+/// </summary>
+public static class CardRankConst
+{
+    /// <summary>万能放下：移动到任意牌上（不看点数也不看花色）；连接时无视点数（仍要看花色）</summary>
+    public const int Wild = -1;
+
+    /// <summary>无视点数：连接 / 放下都不比点数，但要看花色（红心牌才能压到红心蜘蛛上）</summary>
+    public const int Ignore = -2;
 }
 
 /// <summary>落牌技能枚举 —— 牌放下后触发的特殊能力（配表 PlaceSkill）</summary>

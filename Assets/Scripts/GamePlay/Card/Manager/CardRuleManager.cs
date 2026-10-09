@@ -3,6 +3,14 @@ using Framework.Mgr;
 
 /// <summary>
 /// 卡牌规则 —— 判断能否拖起、能否拖到目标列、能否发牌（蜘蛛纸牌规则）
+///
+/// 花色 / 点数都是「列表」（支持多重花色、多重点数）：
+///   花色：两牌花色列表有交集才算同花；空列表 = 没有花色，跟谁都不同花
+///   点数：1-13 普通；-1 万能放下；-2 无视点数（但要同花）；空列表 = 没有点数
+///
+/// 一条主线：列的排列是「从上往下点数逐张减 1」（9-8-7…），
+///   所以「上方牌、下方牌」的点数关系恒为：下.ranks 含 上.ranks - 1
+///   能连接(上, 下) = 花色有交集 且 点数能相连
 /// </summary>
 public class CardRuleManager : ManagerBase<CardRuleManager>
 {
@@ -12,54 +20,64 @@ public class CardRuleManager : ManagerBase<CardRuleManager>
         return anchor != null && anchor.isFaceUp;
     }
 
-    /// <summary>点数万能（配表 Rank = -1，蜘蛛牌）：可以当作任意点数</summary>
-    public static bool IsRankWild(CardData card)
+    // ==================== 花色 ====================
+
+    /// <summary>两张牌的花色列表是否有交集（有交集 = 同花；空列表跟谁都没交集）</summary>
+    public static bool HasCommonSuit(CardData a, CardData b)
     {
-        return card != null && card.rank == -1;
+        if (a == null || b == null) return false;
+
+        foreach (int s in a.suits)
+        {
+            if (b.suits.Contains(s)) return true;
+        }
+        return false;
     }
 
-    /// <summary>花色万能（配表 Suit = -1）：可以当作任意花色</summary>
-    public static bool IsSuitWild(CardData card)
-    {
-        return card != null && card.suit == E_CardSuitEnum.Wild;
-    }
+    // ==================== 点数 ====================
 
-    /// <summary>是否全万能（花色 + 点数都万能，配表两个都填 -1）</summary>
-    public static bool IsFullWild(CardData card)
+    /// <summary>点数列表里有没有这个值（判断 -1 / -2 用）</summary>
+    public static bool HasRankValue(CardData card, int rank)
     {
-        return IsRankWild(card) && IsSuitWild(card);
-    }
-
-    /// <summary>这张牌是否带「任意落点」属性：拖起后可以叠到任意牌上（配表只给默认值）</summary>
-    public static bool IsAnyTarget(CardData card)
-    {
-        return card != null && card.isAnyTarget;
-    }
-
-    /// <summary>是否是黑色牌（无花色无点数，点数 -2，不能连接、只能单独拖、只能放空列）</summary>
-    public static bool IsBlack(CardData card)
-    {
-        return card != null && card.rank == -2;
+        return card != null && card.ranks.Contains(rank);
     }
 
     /// <summary>
-    /// 两张相邻牌能否连接（能凑成可整体拖动的同花顺）：
-    /// 万能花色不比花色，万能点数不比点数，两者都万能则与任意牌都能连；黑色牌不能连接
+    /// 列里「上方牌压着下方牌」时，点数能否相连。
+    /// 判定：下.ranks 里存在 上.ranks - 1（从上往下点数逐张减 1，如 9-8-7…）
+    /// 任一侧含 -1（万能）或 -2（无视点数）→ 点数不设限；任一侧没有点数 → 连不上
     /// </summary>
-    private static bool CanConnect(CardData prev, CardData cur)
+    public static bool RankLinks(CardData upper, CardData lower)
     {
-        if (IsBlack(prev) || IsBlack(cur)) return false;
+        if (upper == null || lower == null) return false;
 
-        bool suitOk = IsSuitWild(prev) || IsSuitWild(cur) || prev.suit == cur.suit;
-        bool rankOk = IsRankWild(prev) || IsRankWild(cur) || cur.rank == prev.rank - 1;
+        if (HasRankValue(upper, CardRankConst.Wild) || HasRankValue(lower, CardRankConst.Wild)) return true;
+        if (HasRankValue(upper, CardRankConst.Ignore) || HasRankValue(lower, CardRankConst.Ignore)) return true;
 
-        return suitOk && rankOk;
+        if (upper.ranks.Count == 0 || lower.ranks.Count == 0) return false;   // 没有点数，接不上
+
+        foreach (int u in upper.ranks)
+        {
+            foreach (int l in lower.ranks)
+            {
+                if (l == u - 1) return true;
+            }
+        }
+        return false;
+    }
+
+    /// <summary>两张相邻牌能否连接（凑成可整体拖动的同花顺）：花色有交集 + 点数能相连</summary>
+    public static bool CanConnect(CardData upper, CardData lower)
+    {
+        return HasCommonSuit(upper, lower) && RankLinks(upper, lower);
     }
 
     /// <summary>
     /// 获取能被整体拖动的牌串：
-    /// 锚点牌及其同列下方所有牌，必须整串「翻开、同花色、逐张减 1」才可拖，
+    /// 锚点牌及其同列下方所有牌，必须整串「翻开、同花、逐张减 1」才可拖，
     /// 任何一张不满足则整体不可拖（返回空），并通过 blockedCard 返回导致不可拖的那张牌。
+    ///
+    /// 没有花色 / 没有点数的牌与下方连不上 → 自然就只能单独拖（旧 SingleGrab 字段已删）
     /// </summary>
     public List<CardData> GetDraggableCards(CardData anchor, out CardData blockedCard)
     {
@@ -68,27 +86,6 @@ public class CardRuleManager : ManagerBase<CardRuleManager>
         if (!CanDrag(anchor)) return result;
 
         var columns = CardsStore.Instance.columns;
-
-        // 单抓牌：只能单独拖拽单张，且必须位于列顶（不能被其他牌压住）
-        if (anchor.isSingleGrab)
-        {
-            foreach (var column in columns)
-            {
-                int idx = column.IndexOf(anchor);
-                if (idx < 0) continue;
-                // 只有列顶的单抓牌才可拖起，被压住则不可拖
-                if (idx == column.Count - 1)
-                {
-                    result.Add(anchor);
-                }
-                else
-                {
-                    blockedCard = column[idx + 1];  // 压住它的那张牌
-                }
-                break;
-            }
-            return result;
-        }
 
         foreach (var column in columns)
         {
@@ -101,7 +98,8 @@ public class CardRuleManager : ManagerBase<CardRuleManager>
                 result.Add(column[i]);
             }
 
-            // 整串必须「翻开、可连接（同花色，蜘蛛牌或逐张减 1）」，任何一张不满足则整体不可拖
+            // 整串必须「翻开、能连接（同花 + 点数相连）」，任何一张不满足则整体不可拖
+            // （没有花色 / 没有点数的牌连不上下一张 → 自然就只能单独拖起）
             for (int i = 1; i < result.Count; i++)
             {
                 var prev = result[i - 1];
@@ -122,7 +120,9 @@ public class CardRuleManager : ManagerBase<CardRuleManager>
     /// <summary>
     /// 判断能否把一串牌移动到目标列：
     /// - 空列：可直接移动
-    /// - 非空：普通牌点数比目标堆顶小 1；蜘蛛牌同花色即可连接
+    /// - 万能放下（-1）：可落到任意牌上（不看点数也不看花色）
+    /// - 涉及「无视点数」（-2）：只看花色（红心牌才能压到红心蜘蛛上）
+    /// - 普通牌：只看点数（同花色不是落列的必要条件，同花顺才是）
     /// - 不能移回原列
     /// </summary>
     public bool CanMove(List<CardData> draggedCards, int targetColumnIndex)
@@ -139,24 +139,19 @@ public class CardRuleManager : ManagerBase<CardRuleManager>
         if (fromColumn >= 0 && fromColumn == targetColumnIndex) return false;
 
         var targetColumn = columns[targetColumnIndex];
-        if (targetColumn.Count == 0) return true;
-
-        // 任意落点牌：可以叠到任意牌上（含黑色牌；自身是黑色牌也照常生效）
-        if (IsAnyTarget(anchor)) return true;
-
-        // 黑色牌只能放到空列
-        if (IsBlack(anchor)) return false;
+        if (targetColumn.Count == 0) return true;   // 空列：任何牌都能放
 
         var top = targetColumn[targetColumn.Count - 1];
 
-        // 蜘蛛牌参与（点数万能）：不比点数，只看花色；花色万能则花色也不比
-        if (IsRankWild(anchor) || IsRankWild(top))
-        {
-            return IsSuitWild(anchor) || IsSuitWild(top) || anchor.suit == top.suit;
-        }
+        // 万能放下：直接落，不比点数也不比花色
+        if (HasRankValue(anchor, CardRankConst.Wild)) return true;
 
-        // 普通牌：只看点数（同花色不是落列的必要条件，同花顺才是）
-        return anchor.rank == top.rank - 1;
+        // 只要涉及「无视点数」的牌（-2），就要求同花
+        bool rankIgnored = HasRankValue(anchor, CardRankConst.Ignore) || HasRankValue(top, CardRankConst.Ignore);
+        if (rankIgnored && !HasCommonSuit(anchor, top)) return false;
+
+        // 注意方向：anchor 会落到目标堆顶的「下方」，所以 top 是上方牌
+        return RankLinks(top, anchor);
     }
 
     /// <summary>查找某张牌所在的列索引（找不到返回 -1）</summary>
@@ -182,39 +177,46 @@ public class CardRuleManager : ManagerBase<CardRuleManager>
     }
 
     /// <summary>
-    /// 检查某列末尾 13 张是否形成 A-K 同花顺（13 张、同花色、点数 K→A），
+    /// 检查某列末尾 13 张是否形成 A-K 同花顺（13 张、同花、点数 K→A），
     /// 是则返回该顺子（K 到 A 共 13 张），否则返回 null。
-    /// 万能牌可以顶替它所在位置的牌：万能花色顶替花色，万能点数顶替点数
+    /// 花色：整段花色列表的交集非空（多重花色的牌能顶替它含的任一花色）
+    /// 点数：必须真的是 13→1，每张牌的点数列表里要真的有这个点数（-1 / -2 都不算）
     /// </summary>
     public List<CardData> GetCompletedSequence(List<CardData> column)
     {
         if (column == null || column.Count < 13) return null;
 
         int start = column.Count - 13;
-        int end = start + 13;
 
-        // 花色基准：取第一张非万能花色的牌（整段都是万能花色时，花色不做要求）
-        E_CardSuitEnum suit = E_CardSuitEnum.Wild;
-        for (int i = start; i < end; i++)
+        if (!HasCommonSuitOfRange(column, start, 13)) return null;
+
+        for (int i = 0; i < 13; i++)
         {
-            if (IsSuitWild(column[i])) continue;
-
-            suit = column[i].suit;
-            break;
-        }
-
-        for (int i = start; i < end; i++)
-        {
-            var card = column[i];
-
-            // 花色：万能花色可当基准花色，其余必须与基准一致
-            if (!IsSuitWild(card) && card.suit != suit) return null;
-
-            // 点数：从 K 逐张减到 A；万能点数可当任意点数
-            if (!IsRankWild(card) && card.rank != 13 - (i - start)) return null;
+            if (!column[start + i].ranks.Contains(13 - i)) return null;
         }
 
         return column.GetRange(start, 13);
+    }
+
+    /// <summary>一段牌的花色列表交集是否非空（多重花色：逐张求交）</summary>
+    private static bool HasCommonSuitOfRange(List<CardData> column, int start, int count)
+    {
+        var common = new List<int>(column[start].suits);
+        if (common.Count == 0) return false;
+
+        for (int i = 1; i < count; i++)
+        {
+            var suits = column[start + i].suits;
+
+            for (int j = common.Count - 1; j >= 0; j--)
+            {
+                if (!suits.Contains(common[j])) common.RemoveAt(j);
+            }
+
+            if (common.Count == 0) return false;
+        }
+
+        return true;
     }
 
     /// <summary>判断能否把某张牌移到指定牌包（单张即可，且该牌包为空）</summary>

@@ -105,11 +105,10 @@ public class CardsManager : ManagerBase<CardsManager>
         return new CardData
         {
             id = cfg.Id,
-            suit = (E_CardSuitEnum)cfg.Suit,
-            rank = cfg.Rank,
+            // 列表字段空单元格可能缺失 → 这里兼容 null，避免规则层遍历时炸
+            suits = cfg.Suit != null ? new List<int>(cfg.Suit) : new List<int>(),
+            ranks = cfg.Rank != null ? new List<int>(cfg.Rank) : new List<int>(),
             isFaceUp = false,
-            isSingleGrab = cfg.SingleGrab,
-            isAnyTarget = cfg.AnyTarget,   // 配表只给默认值，运行时还可被赋予（同 SingleGrab）
             placeSkill = (E_PlaceSkillEnum)cfg.PlaceSkill,
         };
     }
@@ -697,15 +696,16 @@ public class CardsManager : ManagerBase<CardsManager>
         return ids;
     }
 
-    /// <summary>随机取一张梅花 A-K 的牌 id（用配表字段判断，不依赖 id 前缀）</summary>
+    /// <summary>随机取一张梅花 A-K 的普通牌 id（用配表字段判断，不依赖 id 前缀）</summary>
     private string RandomClubCardId()
     {
         var ids = new List<string>();
 
         foreach (var cfg in ConfigHelper.GetAll<CardConfig>())
         {
-            if (cfg.Suit != (int)E_CardSuitEnum.Clubs) continue;
-            if (cfg.Rank < 1 || cfg.Rank > 13) continue;
+            if (!cfg.Suit.Contains((int)E_CardSuitEnum.Clubs)) continue;   // 只要含梅花
+            if (cfg.Rank.Count != 1) continue;                            // 排除多重点数 / 特殊牌
+            if (cfg.Rank[0] < 1 || cfg.Rank[0] > 13) continue;
 
             ids.Add(cfg.Id);
         }
@@ -814,10 +814,32 @@ public class CardsManager : ManagerBase<CardsManager>
         var list = new List<CardData>(cards);
         list.Sort((a, b) =>
         {
-            int byRank = a.rank.CompareTo(b.rank);
-            return byRank != 0 ? byRank : a.suit.CompareTo(b.suit);
+            int byRank = MinRank(a).CompareTo(MinRank(b));
+            return byRank != 0 ? byRank : MinSuit(a).CompareTo(MinSuit(b));
         });
 
         return list;
+    }
+
+    /// <summary>展示排序用的点数摘要：最小的普通点数（1-13）；没有普通点数的牌（黑色 / 万能）排最后</summary>
+    private static int MinRank(CardData card)
+    {
+        int min = int.MaxValue;
+        foreach (int r in card.ranks)
+        {
+            if (r >= 1 && r <= 13 && r < min) min = r;
+        }
+        return min;
+    }
+
+    /// <summary>展示排序用的花色摘要：最小花色；没有花色的牌排最后</summary>
+    private static int MinSuit(CardData card)
+    {
+        int min = int.MaxValue;
+        foreach (int s in card.suits)
+        {
+            if (s < min) min = s;
+        }
+        return min;
     }
 }

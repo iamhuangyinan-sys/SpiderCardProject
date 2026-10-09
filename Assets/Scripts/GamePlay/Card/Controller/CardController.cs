@@ -92,8 +92,8 @@ public class CardController : MonoBehaviour
             var view = hit.collider.GetComponentInParent<CardView>();
             if (view == null) continue;
 
-            var sr = view.GetComponent<SpriteRenderer>();
-            int order = sr != null ? sr.sortingOrder : 0;
+            // 牌的渲染序以 Bg 为基准（根节点上没有 SpriteRenderer）
+            int order = view.CurrentSortingOrder;
             if (order > maxOrder)
             {
                 maxOrder = order;
@@ -146,8 +146,7 @@ public class CardController : MonoBehaviour
             _dragStartPositions[i] = view.transform.position;
 
             // 记录原始排序，并临时抬到高层（避免拖拽时被其他牌遮挡）
-            var sr = view.GetComponent<SpriteRenderer>();
-            int order = sr != null ? sr.sortingOrder : 0;
+            int order = view.CurrentSortingOrder;
             _dragStartSortingOrders[i] = order;
             view.SetSortingOrder(order + DragSortingOffset);
         }

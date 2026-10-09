@@ -151,14 +151,15 @@ public static class CardAnimationHelper
         }
     }
 
-    /// <summary>不可拖提示：短暂变灰后恢复</summary>
+    /// <summary>不可拖提示：牌底短暂变灰后恢复（用 Bg 的初始颜色还原，不要硬编码白色）</summary>
     public static void FlashBlocked(CardView view)
     {
-        if (view.RootRenderer == null) return;
-        view.RootRenderer.DOKill();
-        view.RootRenderer.DOColor(Color.gray, 0.1f).OnComplete(() =>
+        if (view == null || view.BgRenderer == null) return;
+
+        view.BgRenderer.DOKill();
+        view.BgRenderer.DOColor(Color.gray, 0.1f).OnComplete(() =>
         {
-            view.RootRenderer.DOColor(Color.white, 0.25f);
+            view.BgRenderer.DOColor(view.BgBaseColor, 0.25f);
         });
     }
 
@@ -167,7 +168,11 @@ public static class CardAnimationHelper
     {
         if (view.GlowRenderer != null) view.GlowRenderer.DOKill();
         if (view.ShadowRenderer != null) view.ShadowRenderer.DOKill();
-        if (view.RootRenderer != null) view.RootRenderer.DOKill();
+        if (view.BgRenderer != null)
+        {
+            view.BgRenderer.DOKill();
+            view.BgRenderer.color = view.BgBaseColor;   // 变灰动画被打断时别把颜色留在灰上
+        }
         if (view.GlowGo != null) view.GlowGo.SetActive(false);
         if (view.ShadowGo != null)
         {
