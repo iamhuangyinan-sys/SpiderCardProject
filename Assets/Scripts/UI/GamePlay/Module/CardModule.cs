@@ -148,9 +148,8 @@ public partial class CardModule : BaseModule, IPointerEnterHandler, IPointerExit
         var img = comps.btnCard.image;
         if (img == null) return;
 
-        var cfg = string.IsNullOrEmpty(CardId) ? null : ConfigHelper.Get<CardConfig>(CardId);
-
-        img.sprite = cfg != null ? CardResManager.Instance.GetCardImage(cfg.Image) : null;
+        // 图案统一走 CardResManager：特殊牌用配表 Image，普通牌按花色点数自动推导
+        img.sprite = string.IsNullOrEmpty(CardId) ? null : CardResManager.Instance.GetFaceSprite(CardId);
         img.color = isSunk ? SunkColor : Color.white;
     }
 

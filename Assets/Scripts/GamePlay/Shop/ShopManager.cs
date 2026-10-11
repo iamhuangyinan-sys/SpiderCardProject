@@ -11,13 +11,17 @@ using Framework.Mgr;
 /// </summary>
 public class ShopManager : ManagerBase<ShopManager>
 {
-    /// <summary>常驻特殊牌（顺序即商品顺序）</summary>
+    /// <summary>
+    /// 常驻特殊牌（顺序即商品顺序），填完整编码 id。
+    /// ⚠️ 价格规则还没做，随机普通牌池也是空的（普通牌已不在配表里）→ 目前商品很少
+    /// </summary>
     private static readonly string[] SpecialCardIds =
     {
-        "0200005", "0200001", "0200003", "0200006", "0200007",
+        "S_m_0200001",   // 复制
+        "S_m_0200002",   // 回收
     };
 
-    /// <summary>随机普通牌（Id 以 01 开头）数量</summary>
+    /// <summary>随机普通牌（普通牌不在配表里 → 现阶段抽不到，等价格规则一起重做）</summary>
     private const int NormalCount = 3;
 
     /// <summary>特殊牌价格波动幅度（±10%）</summary>

@@ -20,13 +20,14 @@ public class RunManager : ManagerBase<RunManager>
     private const int DefaultDeckCopies = 2;
 
 #if UNITY_EDITOR
-    /// <summary>【编辑器测试】额外塞进初始牌组的牌</summary>
+    /// <summary>【编辑器测试】额外塞进初始牌组的牌（编码 id）</summary>
     private static readonly string[] TestExtraCardIds =
     {
-        // "0200001", "0200003", "0200005",   // 万能牌：♥蜘蛛 / ♠蜘蛛 / 全万能
-        // "0300001",                         // 黑色牌
-        // "0200006", "0200006",              // 复制 ×2
-        // "0200007", "0200007",              // 回收 ×2
+        // "N0_s", "N2_s",              // 蜘蛛：红心 / 黑桃
+        // "N01_0jk",                   // 多重花色 + 多重点数
+        // "S__0300001",                // 黑色牌
+        // "S_m_0200001", "S_m_0200001",  // 复制 ×2
+        // "S_m_0200002", "S_m_0200002",  // 回收 ×2
     };
 #endif
 
@@ -107,23 +108,16 @@ public class RunManager : ManagerBase<RunManager>
         return true;
     }
 
-    /// <summary>构建初始牌组：红桃 A-K + 黑桃 A-K，各两份</summary>
+    /// <summary>构建初始牌组：红桃 A-K + 黑桃 A-K，各两份（普通牌按花色点数生成编码 id，不查配表）</summary>
     private void BuildDefaultDeck()
     {
         var deck = RunStore.Instance.deck;
         deck.Clear();
 
-        foreach (var cfg in ConfigHelper.GetAll<CardConfig>())
-        {
-            if (!IsDefaultDeckCard(cfg)) continue;
+        AddDefaultDeckCards(deck, E_CardSuitEnum.Hearts);
+        AddDefaultDeckCards(deck, E_CardSuitEnum.Spades);
 
-            for (int i = 0; i < DefaultDeckCopies; i++)
-            {
-                deck.Add(cfg.Id);
-            }
-        }
-
-        // 【编辑器测试】额外塞几张特殊牌（万能牌），出包不生效
+        // 【编辑器测试】额外塞几张（编码 id），出包不生效
 #if UNITY_EDITOR
         foreach (var id in TestExtraCardIds)
         {
@@ -132,18 +126,18 @@ public class RunManager : ManagerBase<RunManager>
 #endif
     }
 
-    /// <summary>
-    /// 是否属于初始牌组：红桃 / 黑桃的普通 A-K。
-    /// 多重花色 / 多重点数 / 特殊牌（蜘蛛、黑色、复制…）都不算
-    /// </summary>
-    private static bool IsDefaultDeckCard(CardConfig cfg)
+    /// <summary>把一个花色的 A-K 各塞 DefaultDeckCopies 份</summary>
+    private static void AddDefaultDeckCards(List<string> deck, E_CardSuitEnum suit)
     {
-        if (cfg.Suit == null || cfg.Suit.Count != 1) return false;
+        for (int rank = 1; rank <= 13; rank++)
+        {
+            string id = CardIdCodec.Encode((int)suit, rank);
 
-        int suit = cfg.Suit[0];
-        if (suit != (int)E_CardSuitEnum.Hearts && suit != (int)E_CardSuitEnum.Spades) return false;
-
-        return cfg.Rank != null && cfg.Rank.Count == 1 && cfg.Rank[0] >= 1 && cfg.Rank[0] <= 13;
+            for (int i = 0; i < DefaultDeckCopies; i++)
+            {
+                deck.Add(id);
+            }
+        }
     }
 
     // ==================== 存档 ====================

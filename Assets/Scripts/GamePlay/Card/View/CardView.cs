@@ -1,7 +1,4 @@
-using System;
 using System.Collections.Generic;
-using System.Text;
-using TMPro;
 using UnityEngine;
 
 /// <summary>
@@ -9,11 +6,15 @@ using UnityEngine;
 ///
 /// 正面完全由「花色 / 点数数据」拼出来，不再是整张牌图：
 ///   根节点 SpriteRenderer   牌底：正面 cardEmpty，反面 cardBack（反面只显示它）
-///   Image                   图案：配表 Image（唯一读配表的素材；留空则不显示）
+///   Image                   图案：特殊牌读配表 Image，普通牌按「主花色 + 主点数」自动推导
 ///   Suit                    主花色 sprite（没有花色则隐藏）
 ///   Rank                    主点数 sprite（红 / 黑两套；-1 与无点数隐藏）
-///   MutipleSuit / MutipleRank   多重花色 / 多重点数：显示「其余」花色点数（文本）
+///   MutipleSuit / MutipleRank   多重花色 / 多重点数：把「其余」花色点数排成图标行（SpriteRowLayout）
 ///   Shadow / Glow               投影与发光（与花色点数无关）
+///
+/// 「主花色 / 主点数」= 显示用列表的第一个。显示用列表由 CardViewManager 刷新列时
+/// 从列顶往下解析一遍后喂进来（多重花色 / 多重点数跟上面那张牌的实际值对齐），
+/// 没喂（null）就用 CardData 自己的列表 —— 图案、花色、点数三者永远一致
 ///
 /// 只负责"把数据画出来"，不修改数据；数据绑定是单向的（View → Data）
 /// </summary>
@@ -32,12 +33,26 @@ public class CardView : MonoBehaviour
     private SpriteRenderer _rankRenderer;
     private Color _bgBaseColor = Color.white;
 
+    /// <summary>有多重花色时图案的 y（往下沉一点，给花色图标行让位）；没多重花色时回到 0</summary>
+    private const float MultiSuitImageY = -0.2f;
+
     private GameObject _multiSuitGo;
     private GameObject _multiRankGo;
     private SpriteRenderer _multiSuitPlate;
     private SpriteRenderer _multiRankPlate;
-    private TMP_Text _multiSuitText;
-    private TMP_Text _multiRankText;
+    private SpriteRowLayout _multiSuitLayout;
+    private SpriteRowLayout _multiRankLayout;
+
+    /// <summary>图标行要喂的 sprite 列表（两个行共用，避免每次刷新都 new List）</summary>
+    private readonly List<Sprite> _iconBuffer = new();
+
+    /// <summary>
+    /// 显示用花色 / 点数（多重花色 / 多重点数跟上面那张牌对齐之后的结果）。
+    /// 由 CardViewManager 刷新列时喂进来；null = 用 CardData 自己的列表。
+    /// 只影响显示，不改 CardData
+    /// </summary>
+    private IReadOnlyList<int> _displaySuits;
+    private IReadOnlyList<int> _displayRanks;
 
     // ===== 发光 / 投影 =====
     private SpriteRenderer _glowRenderer;
@@ -84,8 +99,8 @@ public class CardView : MonoBehaviour
         _multiRankGo = FindGo("MutipleRank");
         _multiSuitPlate = _multiSuitGo != null ? _multiSuitGo.GetComponent<SpriteRenderer>() : null;
         _multiRankPlate = _multiRankGo != null ? _multiRankGo.GetComponent<SpriteRenderer>() : null;
-        _multiSuitText = _multiSuitGo != null ? _multiSuitGo.GetComponentInChildren<TMP_Text>(true) : null;
-        _multiRankText = _multiRankGo != null ? _multiRankGo.GetComponentInChildren<TMP_Text>(true) : null;
+        _multiSuitLayout = _multiSuitGo != null ? _multiSuitGo.GetComponent<SpriteRowLayout>() : null;
+        _multiRankLayout = _multiRankGo != null ? _multiRankGo.GetComponent<SpriteRowLayout>() : null;
 
         _glowGo = FindGo("Glow");
         _glowRenderer = _glowGo != null ? _glowGo.GetComponent<SpriteRenderer>() : null;
@@ -139,14 +154,23 @@ public class CardView : MonoBehaviour
         AddSortingTarget(_glowRenderer, baseOrder);
         AddSortingTarget(_shadowRenderer, baseOrder);
 
-        // 多重文本是世界空间 TMP，靠自己的 MeshRenderer 参与排序，也要跟着平移
-        AddSortingTarget(_multiSuitText != null ? _multiSuitText.GetComponent<Renderer>() : null, baseOrder);
-        AddSortingTarget(_multiRankText != null ? _multiRankText.GetComponent<Renderer>() : null, baseOrder);
+        // 其余所有子渲染器（多重花色 / 点数的图标槽位、以后再往预制体里加的图层）也按
+        // 「自身相对牌底的初始 order」一起平移 —— 递归收集，调整预制体结构不用改代码
+        foreach (var renderer in GetComponentsInChildren<Renderer>(true))
+        {
+            AddSortingTarget(renderer, baseOrder);
+        }
     }
 
     private void AddSortingTarget(Renderer renderer, int baseOrder)
     {
         if (renderer == null) return;
+
+        // 上面显式登记的那几个会被递归收集再扫一遍，这里去重
+        foreach (var (existing, _) in _sortingTargets)
+        {
+            if (existing == renderer) return;
+        }
 
         _sortingTargets.Add((renderer, renderer.sortingOrder - baseOrder));
     }
@@ -200,12 +224,28 @@ public class CardView : MonoBehaviour
     {
         data = null;
         columnIndex = -1;
+        _displaySuits = null;
+        _displayRanks = null;
     }
 
     /// <summary>设置世界坐标</summary>
     public void SetPosition(Vector3 pos)
     {
         transform.position = pos;
+    }
+
+    /// <summary>
+    /// 喂「显示用」花色 / 点数（多重花色 / 多重点数的对齐结果，由 CardViewManager 刷新列时从列顶往下解析给出）。
+    /// 传 null 表示用 CardData 自己的列表（临时牌 / 牌包里的牌）。只影响显示，不改 CardData
+    /// </summary>
+    public void SetDisplay(IReadOnlyList<int> suits, IReadOnlyList<int> ranks)
+    {
+        if (_displaySuits == suits && _displayRanks == ranks) return;
+
+        _displaySuits = suits;
+        _displayRanks = ranks;
+
+        if (data != null && data.isFaceUp) Refresh();
     }
 
     /// <summary>设置渲染排序（整张牌所有层一起平移，相对层级由预制体决定）</summary>
@@ -227,7 +267,11 @@ public class CardView : MonoBehaviour
     {
         if (data == null) return;
 
-        if (data.isFaceUp) ApplyFace(data.id, data.suits, data.ranks);
+        if (data.isFaceUp)
+        {
+            // 显示用列表优先（没喂过则用原始列表）
+            ApplyFace(data.id, _displaySuits ?? data.suits, _displayRanks ?? data.ranks);
+        }
         else ApplyBack();
     }
 
@@ -237,32 +281,49 @@ public class CardView : MonoBehaviour
         ApplyBack();
     }
 
-    /// <summary>直接显示指定牌的正面（洗入发牌堆等临时牌用，无需绑定数据 —— 这种才需要查配表）</summary>
+    /// <summary>直接显示指定牌的正面（洗入发牌堆等临时牌用，无需绑定数据）</summary>
     public void ShowFace(string cardId)
     {
         if (string.IsNullOrEmpty(cardId)) return;
 
-        var cfg = CardResManager.Instance.GetCardConfig(cardId);
-        ApplyFace(cardId, cfg != null ? cfg.Suit : null, cfg != null ? cfg.Rank : null);
+        CardIdCodec.TryParse(cardId, out var suits, out var ranks);
+
+        _displaySuits = null;   // 临时牌没有列上下文，用原始列表
+        _displayRanks = null;
+        ApplyFace(cardId, suits, ranks);
     }
 
     /// <summary>
-    /// 画正面。花色 / 点数一律用传进来的列表：复制牌复制过之后与配表已经不一致，
-    /// 所以只有「图案」按 id 查表
+    /// 画正面。花色 / 点数一律用传进来的列表：传进来的已经是「显示用列表」（对齐过），
+    /// 复制牌复制过之后与配表也已经不一致，所以都不查 data
     /// </summary>
     private void ApplyFace(string cardId, IReadOnlyList<int> suits, IReadOnlyList<int> ranks)
     {
         var res = CardResManager.Instance;
 
-        // 牌底 + 图案（图案留空就不显示）
         SetSprite(_bgRenderer, res.GetBgSprite(false));
 
-        var cfg = string.IsNullOrEmpty(cardId) ? null : res.GetCardConfig(cardId);
-        string imageName = cfg != null ? cfg.Image : null;
-        SetSprite(_imageRenderer, string.IsNullOrEmpty(imageName) ? null : res.GetCardImage(imageName));
+        // 图案：特殊牌读配表 Image；普通牌按「主花色 + 主点数」推（多重也推得出来）。
+        // 传的就是显示用列表 → 对齐时图案一起换（N02_12345 压在 ♥5 下 → cardHearts4）；
+        // 对齐后的素材不存在（画得少）则退回原始列表，不至于整张图都消失
+        var face = res.GetFaceSprite(cardId, suits, ranks);
+        if (face == null && IsConverged(suits, ranks))
+        {
+            face = res.GetFaceSprite(cardId, data.suits, data.ranks);
+        }
+        SetSprite(_imageRenderer, face);
+
+        // 多重花色：图案下沉一点，给花色图标行让位
+        SetImageY(suits != null && suits.Count > 1 ? MultiSuitImageY : 0f);
 
         ApplySuit(suits);
         ApplyRank(ranks, suits);
+    }
+
+    /// <summary>显示用列表和原始列表不是同一个（= 对齐过）。临时牌没有 data，按没对齐算</summary>
+    private bool IsConverged(IReadOnlyList<int> suits, IReadOnlyList<int> ranks)
+    {
+        return data != null && (suits != data.suits || ranks != data.ranks);
     }
 
     /// <summary>画反面：只显示牌背，其余全部隐藏</summary>
@@ -277,25 +338,31 @@ public class CardView : MonoBehaviour
         if (_multiRankGo != null) _multiRankGo.SetActive(false);
     }
 
-    /// <summary>花色：第一个是主花色（显示 sprite），其余的写进 MutipleSuit 文本</summary>
+    /// <summary>花色：第一个是主花色（显示 Suit 那个 sprite），其余的排进 MutipleSuit 图标行</summary>
     private void ApplySuit(IReadOnlyList<int> suits)
     {
         int count = suits?.Count ?? 0;
+        var res = CardResManager.Instance;
 
         // 主花色
-        SetSprite(_suitRenderer, count > 0 ? CardResManager.Instance.GetSuitSprite(suits[0]) : null);
+        SetSprite(_suitRenderer, count > 0 ? res.GetSuitSprite(suits[0]) : null);
 
-        // 其余花色（文本；颜色用预制体里定好的，代码不动）
-        bool hasMore = count > 1;
-        if (_multiSuitGo != null) _multiSuitGo.SetActive(hasMore);
-        if (hasMore && _multiSuitText != null)
+        if (_multiSuitLayout == null)
         {
-            _multiSuitText.text = JoinFrom(suits, 1, CardResManager.GetSuitSymbol);
+            if (_multiSuitGo != null) _multiSuitGo.SetActive(false);
+            return;
         }
+
+        // 其余花色 → 图标行（槽位数量由预制体决定，多出来的自动忽略）
+        _iconBuffer.Clear();
+        for (int i = 1; i < count; i++) _iconBuffer.Add(res.GetSuitSprite(suits[i]));
+
+        if (_multiSuitGo != null) _multiSuitGo.SetActive(_iconBuffer.Count > 0);
+        _multiSuitLayout.SetItems(_iconBuffer);
     }
 
     /// <summary>
-    /// 点数：第一个「可显示」的点数作主点数（显示 sprite），其余的写进 MutipleRank 文本。
+    /// 点数：第一个「可显示」的点数作主点数（显示 sprite），其余的排进 MutipleRank 图标行。
     /// -1（万能放下）不显示，跟没有这个点数一样；-2 显示成 S
     /// </summary>
     private void ApplyRank(IReadOnlyList<int> ranks, IReadOnlyList<int> suits)
@@ -311,17 +378,23 @@ public class CardView : MonoBehaviour
         }
 
         // 主点数：黑桃 / 梅花用黑套，红心 / 方块用红套；没有花色按黑
+        bool isRed = IsRedSuit(suits);
         SetSprite(_rankRenderer, visible.Count > 0
-            ? CardResManager.Instance.GetRankSprite(visible[0], IsRedSuit(suits))
+            ? CardResManager.Instance.GetRankSprite(visible[0], isRed)
             : null);
 
-        // 其余点数（文本）
-        bool hasMore = visible.Count > 1;
-        if (_multiRankGo != null) _multiRankGo.SetActive(hasMore);
-        if (hasMore && _multiRankText != null)
+        if (_multiRankLayout == null)
         {
-            _multiRankText.text = JoinFrom(visible, 1, CardResManager.GetRankName);
+            if (_multiRankGo != null) _multiRankGo.SetActive(false);
+            return;
         }
+
+        // 其余点数 → 图标行（颜色跟主点数一致；槽位数量由预制体决定，多出来的自动忽略）
+        _iconBuffer.Clear();
+        for (int i = 1; i < visible.Count; i++) _iconBuffer.Add(CardResManager.Instance.GetRankSprite(visible[i], isRed));
+
+        if (_multiRankGo != null) _multiRankGo.SetActive(_iconBuffer.Count > 0);
+        _multiRankLayout.SetItems(_iconBuffer);
     }
 
     /// <summary>点数图案用红套还是黑套：红心 / 方块是红，其余（含没有花色）是黑</summary>
@@ -333,18 +406,16 @@ public class CardView : MonoBehaviour
         return suit == (int)E_CardSuitEnum.Hearts || suit == (int)E_CardSuitEnum.Diamonds;
     }
 
-    /// <summary>把列表 start 之后的项用 " | " 拼起来（toText 负责单项的显示名）</summary>
-    private static string JoinFrom<T>(IReadOnlyList<T> list, int start, Func<T, string> toText)
+    /// <summary>只改图案节点的 y（x / z 保持预制体上设的）</summary>
+    private void SetImageY(float y)
     {
-        var sb = new StringBuilder();
+        if (_imageRenderer == null) return;
 
-        for (int i = start; i < list.Count; i++)
-        {
-            if (sb.Length > 0) sb.Append(" | ");
-            sb.Append(toText(list[i]));
-        }
+        var pos = _imageRenderer.transform.localPosition;
+        if (Mathf.Approximately(pos.y, y)) return;
 
-        return sb.ToString();
+        pos.y = y;
+        _imageRenderer.transform.localPosition = pos;
     }
 
     private static void SetSprite(SpriteRenderer renderer, Sprite sprite)

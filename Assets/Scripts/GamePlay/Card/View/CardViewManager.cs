@@ -203,6 +203,9 @@ public class CardViewManager : ManagerBase<CardViewManager>
         {
             MoveColumnCards(view.columnIndex, column, row + 1);
         }
+
+        // 这张牌翻开了 / 换牌了 → 它自己以及它下面所有牌的实际值都可能变，整列重解析一遍
+        RefreshDisplay(view.columnIndex);
     }
 
     /// <summary>计算一张牌在列中的正常渲染排序（不在列则保持当前）</summary>
@@ -366,10 +369,18 @@ public class CardViewManager : ManagerBase<CardViewManager>
                 view.SetSortingOrder(GetSortingOrder(col, row));
                 _viewDict[cardData] = view;
             }
+
+            RefreshDisplay(col);   // 全量重建也要过一遍解析（多重花色 / 多重点数的对齐）
         }
 
         RefreshEmptySlots();
         RefreshPocketSlots();
+
+        // 全量重建（开局 / 读档）后牌包里的牌也要摆上 View，否则牌包看着是空的
+        for (int i = 0; i < CardsStore.Instance.pockets.Count; i++)
+        {
+            RefreshPocket(i);
+        }
     }
 
     /// <summary>在场景中查找发牌堆（挂 DrawPileController 的物体）</summary>
@@ -434,7 +445,48 @@ public class CardViewManager : ManagerBase<CardViewManager>
         return _cardSpawnTrans != null ? _cardSpawnTrans.position : _startPos;
     }
 
-    /// <summary>回收某列的所有 View 并重建该列</summary>
+    /// <summary>
+    /// 刷新某列的显示：从列顶往下走一遍，每张多重花色 / 多重点数的牌跟**上面那张牌的实际值**
+    /// 对齐（花色同花、点数正好小 1），逐个喂给 CardView。
+    /// 任何列结构变化后都调一次：重建列 / 增量追加 / 沉底插入 / 翻牌
+    /// </summary>
+    private void RefreshDisplay(int columnIndex)
+    {
+        var store = CardsStore.Instance;
+        if (columnIndex < 0 || columnIndex >= store.columns.Count) return;
+
+        var column = store.columns[columnIndex];
+
+        // 上一张牌的「实际值」（列顶没有上面 → null）
+        IReadOnlyList<int> aboveSuits = null;
+        int? aboveRank = null;
+
+        for (int row = 0; row < column.Count; row++)
+        {
+            var card = column[row];
+            var view = GetView(card);
+            if (view == null) continue;
+
+            // 牌背：看不到，也不参与对齐（它下面的牌不受它约束）
+            if (!card.isFaceUp)
+            {
+                view.SetDisplay(null, null);
+                aboveSuits = null;
+                aboveRank = null;
+                continue;
+            }
+
+            var suits = CardDisplayHelper.PromoteSuit(card.suits, aboveSuits);
+            var ranks = CardDisplayHelper.PromoteRank(card.ranks, aboveRank);
+
+            view.SetDisplay(suits, ranks);
+
+            // 继续往下传：花色按显示列表（对齐后的那个已经在最前）、点数按实际值
+            aboveSuits = suits;
+            aboveRank = CardDisplayHelper.EffectiveRank(ranks);
+        }
+    }
+
     private void RebuildColumn(int columnIndex)
     {
         var store = CardsStore.Instance;
@@ -448,11 +500,14 @@ public class CardViewManager : ManagerBase<CardViewManager>
         var toRemove = new List<CardData>();
         foreach (var kv in _viewDict)
         {
-            if (kv.Value != null && kv.Value.columnIndex == columnIndex)
-            {
-                CardPoolManager.Instance.Recycle(kv.Value);
-                toRemove.Add(kv.Key);
-            }
+            if (kv.Value == null || kv.Value.columnIndex != columnIndex) continue;
+
+            // 刚被拖进牌包的牌：View 留着别回收 —— 牌包只是换个位置摆，
+            // 牌面（主花色 / 主点数）要保持原样，由 RefreshPocket 接手
+            if (IsInPocket(kv.Key)) continue;
+
+            CardPoolManager.Instance.Recycle(kv.Value);
+            toRemove.Add(kv.Key);
         }
         foreach (var key in toRemove)
         {
@@ -473,6 +528,7 @@ public class CardViewManager : ManagerBase<CardViewManager>
             _viewDict[cardData] = view;
         }
 
+        RefreshDisplay(columnIndex);
         RefreshEmptySlots();
     }
 
@@ -521,6 +577,7 @@ public class CardViewManager : ManagerBase<CardViewManager>
         });
 
         _viewDict[cardData] = view;
+        RefreshDisplay(columnIndex);
     }
 
     /// <summary>
@@ -569,6 +626,7 @@ public class CardViewManager : ManagerBase<CardViewManager>
         });
 
         _viewDict[cardData] = view;
+        RefreshDisplay(columnIndex);
     }
 
     /// <summary>回收所有 View 并清空索引</summary>
@@ -742,20 +800,31 @@ public class CardViewManager : ManagerBase<CardViewManager>
             _pocketViews[pocketIndex] = null;
         }
 
-        // 有牌则新建 View
+        // 有牌则摆上 View
         var card = store.pockets[pocketIndex];
-        if (card != null)
+        if (card == null) return;
+
+        // 从列里拖进来的牌：接着用原来那个 View —— 牌面（主花色 / 主点数）保持原样，
+        // 不重算对齐（牌包里的牌没有列上下文，重算会变回原始值，看着很怪）
+        var view = TakeViewOf(card);
+        if (view == null)
         {
-            var view = CardPoolManager.Instance.GetCard();
-            if (view != null)
-            {
-                view.Bind(card);
-                view.columnIndex = -1;
-                view.SetPosition(GetPocketPosition(pocketIndex));
-                view.SetSortingOrder(PocketSortingOrder);
-                _pocketViews[pocketIndex] = view;
-            }
+            view = CardPoolManager.Instance.GetCard();
+            if (view == null) return;
+
+            view.Bind(card);
         }
+
+        view.columnIndex = -1;
+        view.SetPosition(GetPocketPosition(pocketIndex));
+        view.SetSortingOrder(PocketSortingOrder);
+        _pocketViews[pocketIndex] = view;
+    }
+
+    /// <summary>这张牌现在是不是在某个牌包里（牌包只暂存，不该重刷牌面）</summary>
+    private static bool IsInPocket(CardData card)
+    {
+        return CardsStore.Instance.pockets.Contains(card);
     }
 
     /// <summary>获取牌包的世界坐标</summary>

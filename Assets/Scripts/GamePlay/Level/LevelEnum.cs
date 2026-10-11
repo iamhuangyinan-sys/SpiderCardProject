@@ -19,9 +19,9 @@ public enum E_LevelEventEnum
     /// <summary>无事件</summary>
     None = 0,
 
-    /// <summary>洗入 1 张 0200005 蜘蛛牌</summary>
+    /// <summary>洗入 1 张万能蜘蛛（编码 id：N0123_s，4 花色 + 无视点数）</summary>
     AddSpider = 1,
 
-    /// <summary>洗入 2 张随机梅花 A-K + 1 张 0300001 黑色牌（BOSS 关加难度）</summary>
+    /// <summary>洗入 2 张随机梅花 A-K + 1 张黑色牌（S__0300001）（BOSS 关加难度）</summary>
     AddRandom = 2,
 }

@@ -90,27 +90,13 @@ public class CardsManager : ManagerBase<CardsManager>
 
         foreach (var cardId in RunManager.Instance.Deck)
         {
-            var cfg = ConfigHelper.Get<CardConfig>(cardId);
-            if (cfg == null) continue;
+            var card = CardFactory.Create(cardId);
+            if (card == null) continue;
 
-            deck.Add(CreateCard(cfg));
+            deck.Add(card);
         }
 
         return deck;
-    }
-
-    /// <summary>由配表数据创建一张牌</summary>
-    private CardData CreateCard(CardConfig cfg)
-    {
-        return new CardData
-        {
-            id = cfg.Id,
-            // 列表字段空单元格可能缺失 → 这里兼容 null，避免规则层遍历时炸
-            suits = cfg.Suit != null ? new List<int>(cfg.Suit) : new List<int>(),
-            ranks = cfg.Rank != null ? new List<int>(cfg.Rank) : new List<int>(),
-            isFaceUp = false,
-            placeSkill = (E_PlaceSkillEnum)cfg.PlaceSkill,
-        };
     }
 
     /// <summary>Fisher-Yates 洗牌（O(n)，等概率生成任意排列）</summary>
@@ -658,11 +644,16 @@ public class CardsManager : ManagerBase<CardsManager>
 
     // ==================== 开局事件 ====================
 
-    /// <summary>开局事件：蜘蛛牌 id</summary>
-    private const string EventSpiderCardId = "0200005";
+    /// <summary>
+    /// 开局事件：万能蜘蛛（4 花色 + 无视点数）。
+    /// 它是普通牌（不查配表），编码 id 为 N0123_s —— 效果等价于「可以连接任意点数花色牌」，
+    /// 但它没有专属整图素材（多花色推不出图案），场上会显示成花色小图 + 多重花色文本
+    /// </summary>
+    private static readonly string EventSpiderCardId =
+        CardIdCodec.Encode(new[] { 0, 1, 2, 3 }, new[] { CardRankConst.Ignore });
 
-    /// <summary>开局事件：黑色牌 id</summary>
-    private const string EventBlackCardId = "0300001";
+    /// <summary>开局事件：黑色牌编码 id（特殊牌）</summary>
+    private const string EventBlackCardId = "S__0300001";
 
     /// <summary>开局事件流程：洗入事件牌（等整段动画播完）→ 发牌</summary>
     private IEnumerator StartWithLevelEventRoutine(E_LevelEventEnum levelEvent)
@@ -696,21 +687,11 @@ public class CardsManager : ManagerBase<CardsManager>
         return ids;
     }
 
-    /// <summary>随机取一张梅花 A-K 的普通牌 id（用配表字段判断，不依赖 id 前缀）</summary>
+    /// <summary>随机取一张梅花 A-K 的编码 id（普通牌，不查配表）</summary>
     private string RandomClubCardId()
     {
-        var ids = new List<string>();
-
-        foreach (var cfg in ConfigHelper.GetAll<CardConfig>())
-        {
-            if (!cfg.Suit.Contains((int)E_CardSuitEnum.Clubs)) continue;   // 只要含梅花
-            if (cfg.Rank.Count != 1) continue;                            // 排除多重点数 / 特殊牌
-            if (cfg.Rank[0] < 1 || cfg.Rank[0] > 13) continue;
-
-            ids.Add(cfg.Id);
-        }
-
-        return ids.Count > 0 ? ids[_random.Next(ids.Count)] : null;
+        int rank = _random.Next(1, 14);   // 1-13 = A-K
+        return CardIdCodec.Encode((int)E_CardSuitEnum.Clubs, rank);
     }
 
     // ==================== 洗入发牌堆 ====================
@@ -722,14 +703,14 @@ public class CardsManager : ManagerBase<CardsManager>
     private bool _washingIn;
 
     /// <summary>
-    /// 往发牌堆洗入一张牌（牌 id 来自配表）：随机插进发牌堆任意位置，
+    /// 往发牌堆洗入一张牌（牌 id 为编码 id）：随机插进发牌堆任意位置，
     /// 并派发「中央生成一张正面牌 → 飞入发牌堆」动画。连续调用会排队，逐张错开飞入
     /// </summary>
     /// <returns>牌 id 合法返回 true</returns>
     public bool WashInCard(string cardId)
     {
         if (string.IsNullOrEmpty(cardId)) return false;
-        if (ConfigHelper.Get<CardConfig>(cardId) == null) return false;
+        if (CardFactory.Create(cardId) == null) return false;   // 编码不合法：拒绝
 
         _washInQueue.Enqueue(cardId);
         if (!_washingIn) MonoManager.Instance.StartCoroutine(WashInRoutine());
@@ -765,10 +746,10 @@ public class CardsManager : ManagerBase<CardsManager>
 
             string cardId = _washInQueue.Dequeue();
 
-            var cfg = ConfigHelper.Get<CardConfig>(cardId);
-            if (cfg == null) continue;   // 配表里没有这张牌：跳过
+            var card = CardFactory.Create(cardId);
+            if (card == null) continue;   // 编码不合法：跳过
 
-            InsertIntoDrawPileRandom(CreateCard(cfg));
+            InsertIntoDrawPileRandom(card);
 
             EventManager.Instance.Dispatch<int>(E_EventEnum.OnDrawPileChanged, CardsStore.Instance.drawPile.Count);
             EventManager.Instance.Dispatch<string>(E_EventEnum.OnCardWashIn, cardId);

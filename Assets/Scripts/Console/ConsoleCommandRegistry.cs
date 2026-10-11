@@ -16,8 +16,11 @@ public static class ConsoleCommandRegistry
         // level skip —— 直接完成当前关卡（走正常收牌结算流程）
         cmd.Register("skip", CmdLevelSkip, "直接完成当前关卡");
 
-        // add <牌 id> —— 往发牌堆随机位置洗入一张牌
-        cmd.Register("add *", CmdAddCard, "往发牌堆洗入一张牌（* = 牌 id）");
+        // add <编码 id> —— 往发牌堆随机位置洗入一张牌
+        //   普通牌：N{花色}_{点数}            例 add N0_1（红心A）、add N02_0jk（红心+黑桃 的 10/J/K）
+        //   特殊牌：S{花色}_{点数}_{配表id}    例 add S_m_0200001（复制）、add S__0300001（黑色）
+        //   花色 0红心 1方块 2黑桃 3梅花；点数 1-9 A-9、0=10、j/q/k、s=-2、m=-1
+        cmd.Register("add *", CmdAddCard, "往发牌堆洗入一张牌（* = 编码 id，如 N0_1 / S_m_0200001）");
 
         // ===== 示例（后续按需开启）=====
         // cmd.Register("card add *", CmdCardAdd, "向场上添加一张牌（* = 牌 id）");
@@ -35,7 +38,7 @@ public static class ConsoleCommandRegistry
         return "已跳过当前关卡";
     }
 
-    /// <summary>add <牌 id> —— 往发牌堆随机位置洗入一张牌</summary>
+    /// <summary>add &lt;编码 id&gt; —— 往发牌堆随机位置洗入一张牌</summary>
     private static string CmdAddCard(string[] args)
     {
         if (!CardGameEntry.IsInCardScene) return "执行失败：当前不在卡牌场景";
@@ -43,7 +46,10 @@ public static class ConsoleCommandRegistry
         if (CardsManager.Instance.IsSettling) return "执行失败：正在结算收牌";
 
         string cardId = args.Length > 1 ? args[1] : string.Empty;
-        if (!CardsManager.Instance.WashInCard(cardId)) return $"添加失败：配表里没有这张牌（{cardId}）";
+        if (!CardsManager.Instance.WashInCard(cardId))
+        {
+            return $"添加失败：牌 id 不合法（{cardId}）—— 点数最多 {CardRankConst.MaxCount} 个（含主点数），原因见 Console";
+        }
 
         return $"已洗入发牌堆：{cardId}";
     }
