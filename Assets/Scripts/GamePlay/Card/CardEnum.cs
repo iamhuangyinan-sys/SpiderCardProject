@@ -54,3 +54,38 @@ public enum E_PlaceSkillEnum
     /// <summary>复制：放下后，自己变成这列自己下面紧邻的那张牌</summary>
     Copy = 2,
 }
+
+/// <summary>
+/// 卡牌 tip 类型 —— Id 就是配表 CardTipConfig 的主键（改这里要同步改表）
+/// 只管「牌面属性」；牌的状态类描述（沉底等）走 E_CardAttributeEnum + CardAttributeConfig
+/// </summary>
+public enum E_CardTipEnum
+{
+    /// <summary>多重花色：可用其中任意一种花色连接</summary>
+    MultiSuit = 101,
+
+    /// <summary>多重点数：可用其中任意一个点数连接</summary>
+    MultiRank = 102,
+
+    /// <summary>点数含 -1：万能放下，可以放在任意牌上</summary>
+    RankWild = 103,
+
+    /// <summary>点数含 -2：蜘蛛，作为任意点数连接，但花色要相同</summary>
+    RankIgnore = 104,
+
+    /// <summary>没有点数：不能与任何牌连接，只能单独拖动</summary>
+    NoRank = 105,
+}
+
+/// <summary>
+/// 卡牌属性 —— 数值就是配表 CardAttributeConfig 的主键（改这里要同步改表）
+/// 属性是「牌在牌桌上的状态」，不进 id 编码；一张牌可以同时有多个，列表为空 = 没有属性
+/// </summary>
+public enum E_CardAttributeEnum
+{
+    /// <summary>沉底：收入弃牌堆时按概率打上，下一次发出时以牌背插到该列堆底</summary>
+    Sunk = 10001,
+
+    /// <summary>毒：不能放入额外牌包</summary>
+    Poison = 10002,
+}

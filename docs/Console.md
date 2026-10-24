@@ -1,78 +1,88 @@
-# 控制台（调试工具）
+# 控制台命令
 
-编辑器模式下的运行时命令行，用于快速验证游戏逻辑。
+编辑器模式下的调试控制台，用于验证游戏逻辑。
 
-## 结构与流程
+## 命令
+
+| 命令 | 作用 |
+|---|---|
+| `skip` | 跳过当前关卡（走正常收牌结算，然后弹选关） |
+| `add <牌 id> [属性]` | 往发牌堆的随机位置洗入一张牌（属性可选） |
+
+两个命令都只在**卡牌场景、有进行中的对局、且不在结算收牌**时可用，否则会返回失败提示。
+
+## 牌 id 怎么写
+
+### 普通牌
 
 ```
-GameEntry.InitGame()  ──[#if UNITY_EDITOR]──▶  Show<ConsoleEntryPanel>()
-                                                     │ 点 btnConsoleEntry
-                                                     ▼
-                                        Hide(ConsoleEntryPanel)
-                                        Show<ConsolePanel>        ← 输入命令
-                                                     │ 点 btnClose
-                                                     ▼
-                                        Hide(ConsolePanel)
-                                        Show(ConsoleEntryPanel)
+N{花色}_{点数}
 ```
 
-- 两个面板都注册在 `E_UILayerEnum.Top`，预制体放在 `Resources/Prefab/UI/Console/`。
-- 仅编辑器模式（`#if UNITY_EDITOR`）在启动时显示入口；`UICanvas` 为 `DontDestroyOnLoad`，切场景后入口仍在。
+例：`N0_1`（红心 A）、`N02_0jk`（红心+黑桃 的 10/J/K）、`N0123_s`（万能蜘蛛）
 
-## 面板脚本
+### 特殊牌（配表里定义的牌）
 
-| 脚本 | 控件（UIBinder 前缀） | 作用 |
-|------|----------------------|------|
-| `ConsoleEntryPanel` | `btn_ConsoleEntry` | 点击 → 隐藏自己 + `Show<ConsolePanel>()` |
-| `ConsolePanel` | `ipt_Console` / `btn_Ok` / `btn_Close` | 输入命令行，确定或回车执行；关闭 → 隐藏自己 + `Show<ConsoleEntryPanel>()` |
-
-命令执行结果通过 `Debug.Log("[Console] > 输入\n输出")` 输出，未知命令为 `Debug.LogWarning`。
-
-## 命令系统
-
-`ConsoleCommandManager`（`Assets/Scripts/Console/`，`ManagerBase`）：
-
-```csharp
-// 注册
-ConsoleCommandManager.Instance.Register("level skip", args => "ok", "说明");
-
-// 执行（返回是否命中）
-ConsoleCommandManager.Instance.Execute("level skip", out string output);
+```
+S{花色}_{点数}_{配表 id}
 ```
 
-- 命令行按空格切分为「段」，段数一致且每段都匹配才算命中。
-- 每段支持 `*` 通配符（大小写不敏感）：`*` 整段任意、`lv*` 段内通配、`*a*` 包含匹配。
-- 回调签名 `string Handler(string[] args)`，`args` 是完整分段（含命令本身），返回值即输出文本。
+例：`S_m_0200001`（复制）、`S__0300001`（黑色）
 
-| 写法 | 匹配 |
-|------|------|
-| `level skip` | 精确匹配 `level skip` |
-| `card add *` | `card add 0100001`，回调里 `args[2]` 即 id |
-| `lv* skip` | `lv1 skip` / `lv2 skip` |
+花色或点数为空时，下划线照样写：`S__0300001` 就是「无花色 + 无点数 + 配表 0300001」。
 
-## 命令注册
+### 花色字符
 
-所有命令统一写在 `ConsoleCommandRegistry.RegisterAll()`（由 `ConsoleCommandManager.OnInit` 调用），新增命令加一行 `Register` 即可：
+| 字符 | 花色 |
+|---|---|
+| `0` | 红心 |
+| `1` | 方块 |
+| `2` | 黑桃 |
+| `3` | 梅花 |
 
-```csharp
-public static void RegisterAll()
-{
-    var cmd = ConsoleCommandManager.Instance;
+空 = 没有花色。
 
-    cmd.Register("level skip", CmdLevelSkip, "直接完成当前关卡");
+### 点数字符
 
-    // 示例：cmd.Register("card add *", CmdCardAdd, "向场上添加一张牌（* = 牌 id）");
-}
+| 字符 | 点数 |
+|---|---|
+| `1` ~ `9` | A ~ 9 |
+| `0` | 10 |
+| `j` / `q` / `k` | J / Q / K |
+| `s` | -2：无视点数（蜘蛛） |
+| `m` | -1：万能放下 |
+
+空 = 没有点数。
+
+### 写法说明
+
+- 多个花色 / 点数直接连写：`N02_0jk` = 花色{红心,黑桃} + 点数{10,J,K}。
+- 花色、点数的顺序随意，解析时会自动排序。
+- **点数最多 5 个（含主点数）**，普通牌、特殊牌都一样；超了会被拒绝并打警告。
+
+## 属性怎么写（`add` 的第二个参数，可选）
+
+属性跟在牌 id 后面、用空格隔开；多个属性用**分号**隔开，不写就是没有属性。
+
+```
+add N02_789 10002
+add N02_789 10001;10002
 ```
 
-## 已有命令
+| 值 | 属性 | 效果 |
+|---|---|---|
+| `10001` | 沉底 | 下一次发出时以牌背插到列堆底 |
+| `10002` | 毒 | 不能放入额外牌包 |
 
-| 命令 | 行为 |
-|------|------|
-| `level skip` | 直接完成当前关卡：调用 `CardGameModule.DebugCompleteLevel()`，走正常收牌结算并弹选关 |
+写了不存在的值（比如 `99999`）会直接拒绝。
 
-前置校验（不满足时直接返回失败文本）：
+## 示例
 
-- `CardGameEntry.IsInCardScene` —— 是否在卡牌场景
-- `CardsManager.IsPlaying` —— 是否正在一局对局中
-- `CardsManager.IsSettling` —— 是否正在结算收牌
+```
+skip
+add N0_1
+add N02_0jk
+add N0123_s
+add S_m_0200001
+add N02_789 10001;10002
+```

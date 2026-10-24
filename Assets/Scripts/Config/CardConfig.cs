@@ -6,7 +6,5 @@ public class CardConfig
     public string Id;
     public string Image;
     public int Price;
-    public string Name;
-    public string Description;
     public int PlaceSkill;
 }

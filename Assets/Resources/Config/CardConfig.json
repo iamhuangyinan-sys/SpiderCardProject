@@ -1,7 +1,7 @@
 ﻿{
   "items": [
-    {"Id": "S__0300001", "Image": "cardBlack", "Price": -70, "Name": "黑色", "Description": "不可以和任意牌连接", "PlaceSkill": 0},
-    {"Id": "S_m_0200001", "Image": "cardCopy", "Price": 150, "Name": "复制", "Description": "移动到任意牌上，将自己变成那张牌", "PlaceSkill": 2},
-    {"Id": "S_m_0200002", "Image": "cardRecycle", "Price": 80, "Name": "回收", "Description": "移动到任意牌上，将自己和那张牌放入弃牌堆", "PlaceSkill": 1}
+    {"Id": "S__0300001", "Image": "cardBlack", "Price": -70, "PlaceSkill": 0},
+    {"Id": "S_m_0200001", "Image": "cardCopy", "Price": 150, "PlaceSkill": 2},
+    {"Id": "S_m_0200002", "Image": "cardRecycle", "Price": 80, "PlaceSkill": 1}
   ]
 }

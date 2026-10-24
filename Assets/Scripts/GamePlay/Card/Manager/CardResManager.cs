@@ -9,6 +9,7 @@ using UnityEngine;
 ///   Image/{配表 Image}                  图案（唯一读配表的素材）
 ///   Suit/{hearts|clubs|spades|diamonds}  花色小图
 ///   Rank/{Red|Black}/{A..K|S}            点数小图
+///   Attribute/{配表 Icon}                属性小图
 /// </summary>
 public class CardResManager : ManagerBase<CardResManager>
 {
@@ -16,6 +17,7 @@ public class CardResManager : ManagerBase<CardResManager>
     private const string BG_DIR = CARD_DIR + "Bg/";
     private const string SUIT_DIR = CARD_DIR + "Suit/";
     private const string RANK_DIR = CARD_DIR + "Rank/";
+    private const string ATTRIBUTE_DIR = CARD_DIR + "Attribute/";
 
     /// <summary>sprite 缓存：完整资源路径 → sprite</summary>
     private readonly Dictionary<string, Sprite> _spriteCache = new();
@@ -56,6 +58,19 @@ public class CardResManager : ManagerBase<CardResManager>
     public Sprite GetRankSprite(int rank, bool isRed)
     {
         return LoadSprite($"{RANK_DIR}{(isRed ? "Red" : "Black")}/{GetRankName(rank)}");
+    }
+
+    /// <summary>属性小图（读配表 CardAttributeConfig.Icon → Attribute/ 下的文件名，不含扩展名）</summary>
+    public Sprite GetAttributeSprite(int attribute)
+    {
+        var cfg = ConfigHelper.Get<CardAttributeConfig>(attribute.ToString());
+        if (cfg == null)
+        {
+            Debug.LogWarning($"[CardResManager] 属性 {attribute} 缺少 CardAttributeConfig 配表行");
+            return null;
+        }
+
+        return string.IsNullOrEmpty(cfg.Icon) ? null : LoadSprite(ATTRIBUTE_DIR + cfg.Icon);
     }
 
     // ==================== 整张牌图案（自动推导） ====================

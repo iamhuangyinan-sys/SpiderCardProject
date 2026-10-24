@@ -13,8 +13,6 @@ public partial class HoverTipPanel
     [System.Serializable]
     public class CompsData : CompsDataBase
     {
-        public Image imgBg;
-        public TMP_Text txtTitle;
-        public TMP_Text txtContent;
+        public Image imgRoot;
     }
 }

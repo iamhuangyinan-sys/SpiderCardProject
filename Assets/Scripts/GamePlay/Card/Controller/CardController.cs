@@ -230,6 +230,12 @@ public class CardController : MonoBehaviour
                 CardsManager.Instance.MoveCards(_draggedCards, targetColumn);
                 moved = true;
             }
+            else if (targetPocket >= 0 && _draggedCards.Count == 1 &&
+                     _draggedCards[0].HasAttribute(E_CardAttributeEnum.Poison))
+            {
+                // 落在牌包上但被规则拒了：把原因说出来（文案先写死，后续接提示表）
+                TipHelper.Show("毒：不能放入额外牌包");
+            }
         }
 
         if (!moved)

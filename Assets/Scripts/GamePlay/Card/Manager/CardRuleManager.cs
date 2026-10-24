@@ -219,12 +219,16 @@ public class CardRuleManager : ManagerBase<CardRuleManager>
         return true;
     }
 
-    /// <summary>判断能否把某张牌移到指定牌包（单张即可，且该牌包为空）</summary>
+    /// <summary>判断能否把某张牌移到指定牌包（单张即可，且该牌包为空、且牌不带「毒」）</summary>
     public bool CanMoveToPocket(CardData card, int pocketIndex)
     {
         if (card == null) return false;
         var pockets = CardsStore.Instance.pockets;
         if (pocketIndex < 0 || pocketIndex >= pockets.Count) return false;
+
+        // 毒：不能放入额外牌包（全部「放入牌包」都走这里，所以只挡一次）
+        if (card.HasAttribute(E_CardAttributeEnum.Poison)) return false;
+
         return pockets[pocketIndex] == null;
     }
 

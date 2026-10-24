@@ -1,9 +1,11 @@
+using System.Collections.Generic;
 using Framework.UI;
 using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// 悬停提示框（通用触发式提示）—— 标题 + 正文，内容自适应尺寸、方向自适应摆放
+/// 悬停提示框（通用触发式提示）—— 由若干条 HoverTipItemModule（每条一个框）纵向堆叠，
+/// 内容自适应尺寸、方向自适应摆放
 ///
 /// 用法：业务层不要直接 Show，统一走 HoverTipHelper.Show(...) / Hide(owner)
 ///
@@ -11,26 +13,28 @@ using UnityEngine.UI;
 /// 目标所在层级不归它管，所以提示框能盖在所有列表/面板之上，也不会被 ScrollRect 的 Mask 裁。
 ///
 /// 预制体约定：
-///   img_Bg      框体（VerticalLayoutGroup + ContentSizeFitter 双向 PreferredSize）
-///   txt_Title   标题（单行，宽自适应）
-///   txt_Content 正文（ContentSizeFitter = 水平 Unconstrained + 垂直 PreferredSize，宽度由本类写入）
+///   img_Root   条目容器（VerticalLayoutGroup + ContentSizeFitter 双向 PreferredSize）
+///   条目在运行时按需实例化并挂到 img_Root 下（预制体见 HoverTipItemModule）
 /// </summary>
 public partial class HoverTipPanel : BasePanel
 {
-    /// <summary>正文单行最大宽度（内容区宽度，不含 img_Bg 的内边距）</summary>
-    [SerializeField] private float maxContentWidth = 420f;
+    /// <summary>单条描述的预制体（Inspector 里拖入 HoverTipItemModule.prefab）</summary>
+    [SerializeField] private HoverTipItemModule itemPrefab;
 
-    /// <summary>提示框与目标之间的基础间距（屏幕像素；每张牌还可通过 extraGap 再让开一点）</summary>
-    [SerializeField] private float gap = 6f;
+    /// <summary>提示框与目标之间的基础间距（屏幕像素；每个宿主还可通过 extraGap 再让开一点）</summary>
+    [SerializeField] private float gap = 12f;
 
-    /// <summary>正文的 RectTransform（限宽用：只改宽度，高度由它自己的 ContentSizeFitter 按换行自动撑）</summary>
-    private RectTransform _contentRect;
-
-    /// <summary>img_Bg 的 RectTransform（框体尺寸与摆放都以它为准）</summary>
-    private RectTransform _bgRect;
+    /// <summary>img_Root 的 RectTransform（框体尺寸与摆放都以它为准）</summary>
+    private RectTransform _rootRect;
 
     /// <summary>面板所在的 Canvas（缩放换算用，打开时缓存）</summary>
     private Canvas _canvas;
+
+    /// <summary>条目实例缓存（同一个面板反复显示，不反复 Instantiate）</summary>
+    private readonly List<HoverTipItemModule> _items = new();
+
+    /// <summary>单条接口的复用数组（避免每次调 ShowTip 都 new 一个列表）</summary>
+    private readonly HoverTipData[] _single = new HoverTipData[1];
 
     // ---- 跟随目标（列表滚动 / 目标移动时提示框不能留在原地） ----
 
@@ -58,8 +62,7 @@ public partial class HoverTipPanel : BasePanel
 
     protected override void OnOpen()
     {
-        _contentRect = comps.txtContent != null ? comps.txtContent.rectTransform : null;
-        _bgRect = comps.imgBg != null ? comps.imgBg.rectTransform : null;
+        _rootRect = comps.imgRoot != null ? comps.imgRoot.rectTransform : null;
         _canvas = GetComponentInParent<Canvas>();
     }
 
@@ -72,8 +75,13 @@ public partial class HoverTipPanel : BasePanel
 
     protected override void OnClose()
     {
-        _contentRect = null;
-        _bgRect = null;
+        for (int i = 0; i < _items.Count; i++)
+        {
+            if (_items[i] != null) Destroy(_items[i].gameObject);
+        }
+        _items.Clear();
+
+        _rootRect = null;
         _canvas = null;
         _target = null;
     }
@@ -95,41 +103,43 @@ public partial class HoverTipPanel : BasePanel
     {
         // 提示框只负责展示：整框对指针透明
         // （否则鼠标移进提示框会触发 host 的 OnPointerExit → 隐藏 → 又 Enter → 疯狂闪烁）
+        // CanvasGroup 是继承的，之后才实例化的条目也一并生效
         SetInteractable(false);
     }
 
     // ==================== 对外 ====================
 
     /// <summary>
-    /// 显示提示：设置内容 → 算出框体尺寸 → 按目标位置与方向摆放
+    /// 显示一组描述（每条一个框）：铺条目 → 算出框体尺寸 → 按目标位置与方向摆放
     /// </summary>
-    /// <param name="title">标题（可空）</param>
-    /// <param name="content">正文（可空；为空则整块隐藏，框只包住标题）</param>
+    /// <param name="tips">每条描述（空条目会被跳过）</param>
     /// <param name="target">提示要对齐的目标（一般传触发悬停的 item）</param>
     /// <param name="preferred">首选方向（放不下会自动换方向）</param>
     /// <param name="targetScale">目标最终会放大到多少倍（悬停放大时用；按放大后的尺寸定位，间距才不会被吃掉）</param>
     /// <param name="extraGap">额外让出的距离（像素）</param>
-    public void ShowTip(string title, string content, RectTransform target, E_TipDirection preferred,
+    public void ShowTips(IReadOnlyList<HoverTipData> tips, RectTransform target, E_TipDirection preferred,
         float targetScale = 1f, float extraGap = 0f)
     {
-        ApplyContent(title, content);
+        if (!ApplyTips(tips))
+        {
+            HideSelf();   // 没有可显示的内容 / 没配条目预制体：别留个空框
+            return;
+        }
 
         // 同帧把框体尺寸算准，摆放依赖它（否则会按上一帧尺寸摆：位置偏、字两边也会没留白）
         //
-        // 两个坑：
-        //   1. 必须从 img_Bg 开始重建。uGUI 的 PerformLayoutControl 碰到“自己身上没有任何布局组件”
-        //      的节点会整棵子树跳过，而面板根节点正好没有布局组件 —— 传根节点等于什么都没做。
-        //   2. 要连做两次。img_Bg 的 ChildControl 是关的，所以框体尺寸要看子物体当前的 sizeDelta，
-        //      而子物体的尺寸是它们自己的 ContentSizeFitter 在同一次布局里“稍后”才写进去的；
-        //      第一遍读到的还是上一轮旧值，第二遍才是新值。
-        if (_bgRect != null)
+        // 两个坑（沿用原实现）：
+        //   1. 必须从 img_Root 开始重建。uGUI 的 PerformLayoutControl 碰到“自己身上没有任何布局组件”
+        //      的节点会整棵子树跳过 —— 传面板根节点等于什么都没做。
+        //   2. 要连做两次。子物体（条目 / 框）的尺寸是它们自己的 ContentSizeFitter 在同一次布局里
+        //      “稍后”才写进去的；第一遍读到的还是上一轮旧值，第二遍才是新值。
+        if (_rootRect != null)
         {
-            LayoutRebuilder.ForceRebuildLayoutImmediate(_bgRect);
-            LayoutRebuilder.ForceRebuildLayoutImmediate(_bgRect);
+            LayoutRebuilder.ForceRebuildLayoutImmediate(_rootRect);
+            LayoutRebuilder.ForceRebuildLayoutImmediate(_rootRect);
         }
 
         // 此刻框体尺寸是准的，缓存下来：跟随的时候只重算位置，不再每帧问布局系统
-        // （直接问布局系统的话，LayoutUtility 内部会做 GetComponents，每帧几次没必要）
         RecalcTipSize();
 
         // 记下摆放参数：之后每帧都要按同一套参数重新摆（目标会滚动 / 移动 / 缩放）
@@ -141,55 +151,77 @@ public partial class HoverTipPanel : BasePanel
         Place(target, preferred, targetScale, extraGap);
     }
 
+    /// <summary>单条描述的旧接口（关卡按钮等不需要分条的提示用）</summary>
+    public void ShowTip(string title, string content, RectTransform target, E_TipDirection preferred,
+        float targetScale = 1f, float extraGap = 0f)
+    {
+        _single[0] = new HoverTipData(title, content);
+        ShowTips(_single, target, preferred, targetScale, extraGap);
+    }
+
     // ==================== 内部 ====================
 
-    /// <summary>写入标题 / 正文，并给正文一个不超过 maxContentWidth 的宽度（换行的关键）</summary>
-    private void ApplyContent(string title, string content)
+    /// <summary>
+    /// 把条目铺到 img_Root 下：按需复用/创建 → 逐条填内容 → 统一正文宽度（所有框等宽）。
+    /// 返回是否有内容真的显示出来了
+    /// </summary>
+    private bool ApplyTips(IReadOnlyList<HoverTipData> tips)
     {
-        // 标题可空（普通牌 / 普通关这种不需要标题，信息都写在描述里）：
-        // 为空时要把整块隐藏，不能只把文字清空 —— TMP 空文本的 preferredHeight 仍是一行高，
-        // 会在框顶留一条空白（布局组会跳过未激活的子物体，所以隐藏才是对的）
-        bool hasTitle = !string.IsNullOrEmpty(title);
-        comps.txtTitle.gameObject.SetActive(hasTitle);
+        int count = tips?.Count ?? 0;
+        if (count == 0 || _rootRect == null) return false;
 
-        if (hasTitle)
+        // 1. 条目实例不够才创建（多了的后面 SetActive(false)）
+        while (_items.Count < count)
         {
-            comps.txtTitle.text = title;
-            comps.txtTitle.ForceMeshUpdate();   // 立刻刷新标题的 preferredWidth（框体宽度依赖它）
+            if (itemPrefab == null)
+            {
+                Debug.LogWarning("[HoverTipPanel] 没有配置 itemPrefab，无法显示提示");
+                return false;
+            }
+
+            _items.Add(Instantiate(itemPrefab, _rootRect, false));
         }
 
-        bool hasContent = !string.IsNullOrEmpty(content);
-        comps.txtContent.gameObject.SetActive(hasContent);
+        // 2. 逐条填内容，记下最大的正文宽度（空条目跳过）
+        float maxWidth = 0f;
+        int shown = 0;
 
-        if (!hasContent) return;
+        for (int i = 0; i < _items.Count; i++)
+        {
+            bool used = i < count && tips[i].HasAny;
 
-        comps.txtContent.text = content;
+            _items[i].gameObject.SetActive(used);
+            if (!used) continue;
 
-        // 1. 宽度取「按 maxContentWidth 排布后实际需要的宽度」：
-        //      短文本 → 文字本身的宽度（框贴着字）
-        //      超长   → 封顶在 maxContentWidth，此时 TMP 会自动换行
-        float width = comps.txtContent.GetPreferredValues(content, maxContentWidth, 0f).x;
-        _contentRect.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, width);
+            float width = _items[i].SetTip(tips[i].Title, tips[i].Content, tips[i].Icon);
+            if (width > maxWidth) maxWidth = width;
 
-        // 2. 立刻让 TMP 按新宽度重排一次。
-        //    RectTransform 尺寸变化要等 Unity 派发 OnRectTransformDimensionsChange 才失效，
-        //    不强制刷新的话，紧接着读到的 preferredHeight 还是「上一个宽度」下的旧值，
-        //    框体高度就会算错 —— 表现为「提示框边缘到牌的距离忽大忽小地跳」
-        comps.txtContent.ForceMeshUpdate();
+            shown++;
+        }
+
+        if (shown == 0) return false;
+
+        // 3. 统一正文宽度 → 所有框等宽（短的正文也撑到最宽那条）
+        for (int i = 0; i < _items.Count; i++)
+        {
+            if (_items[i].gameObject.activeSelf) _items[i].SetContentWidth(maxWidth);
+        }
+
+        return true;
     }
 
     /// <summary>
     /// 按目标位置摆放：依次尝试候选方向，都放不下就按首选方向定位后夹回屏幕内
     ///
     /// 关键设计：**贴边用「轴心 + 定位点」而不是「中心点 + 框体尺寸」** ——
-    /// 把 img_Bg 的 pivot 设成贴着目标的那条边（向下显示 = 顶边），
+    /// 把 img_Root 的 pivot 设成贴着目标的那条边（向下显示 = 顶边），
     /// 定位点只由「目标边界 + gap」决定，与提示框自身尺寸无关。
     /// 这样即使框体尺寸晚一帧才被布局系统纠正，也只是朝远离目标的方向伸展，
     /// 与目标之间的间距永远不变（不会出现"距离乱跳"）。
     /// </summary>
     private void Place(RectTransform target, E_TipDirection preferred, float targetScale, float extraGap)
     {
-        if (target == null || _bgRect == null) return;
+        if (target == null || _rootRect == null) return;
 
         var canvas = _canvas != null ? _canvas : GetComponentInParent<Canvas>();
         if (canvas == null) return;
@@ -229,7 +261,7 @@ public partial class HoverTipPanel : BasePanel
     /// <summary>按当前框体重新求一次尺寸（只在显示时调，跟随过程中不变）</summary>
     private void RecalcTipSize()
     {
-        if (_bgRect == null)
+        if (_rootRect == null)
         {
             _tipSize = Vector2.zero;
             return;
@@ -240,8 +272,8 @@ public partial class HoverTipPanel : BasePanel
         // 直接问布局系统要，比读 RectTransform.rect 可靠
         // （布局刚重建时 rect 可能还没落到实处，而这里读的是布局计算值本身）
         _tipSize = new Vector2(
-            LayoutUtility.GetPreferredSize(_bgRect, 0),
-            LayoutUtility.GetPreferredSize(_bgRect, 1)) * scaleFactor;
+            LayoutUtility.GetPreferredSize(_rootRect, 0),
+            LayoutUtility.GetPreferredSize(_rootRect, 1)) * scaleFactor;
     }
 
     /// <summary>定位点 = 「提示框贴着目标的那条边的中点」应落在的屏幕坐标（只看目标边界 + gap）</summary>
@@ -292,7 +324,7 @@ public partial class HoverTipPanel : BasePanel
             Mathf.Clamp(anchor.y, size.y * pivot.y, Screen.height - size.y * (1f - pivot.y)));
     }
 
-    /// <summary>落地：设轴心 + 把定位点摆到指定屏幕坐标（img_Bg 就是可见框体，直接摆它）</summary>
+    /// <summary>落地：设轴心 + 把定位点摆到指定屏幕坐标（img_Root 就是可见框体，直接摆它）</summary>
     private void ApplyPlacement(E_TipDirection dir, Vector2 anchorScreen, Canvas canvas)
     {
         var canvasRect = canvas.transform as RectTransform;
@@ -302,8 +334,8 @@ public partial class HoverTipPanel : BasePanel
         if (!RectTransformUtility.ScreenPointToWorldPointInRectangle(canvasRect, anchorScreen, null, out var world))
             return;
 
-        _bgRect.pivot = ToPivot(dir);
-        _bgRect.position = world;
+        _rootRect.pivot = ToPivot(dir);
+        _rootRect.position = world;
     }
 
     /// <summary>取目标中心点的屏幕坐标（用世界角点，不受锚点 / 轴心 / 缩放影响）</summary>

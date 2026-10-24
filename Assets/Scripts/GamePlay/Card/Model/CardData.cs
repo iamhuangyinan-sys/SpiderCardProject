@@ -32,16 +32,39 @@ public class CardData
     public E_PlaceSkillEnum placeSkill;
 
     /// <summary>
-    /// 沉底标记：牌被收入弃牌堆时按概率打上，发出时以牌背插到该列堆底（而不是正面发到堆顶），
-    /// 防止玩家反复用同一批牌刷接龙次数。标记只服务于「发到堆底」这一次，发出后即清除。
+    /// 属性列表（枚举值就是配表 CardAttributeConfig 的主键）：
+    ///   空        = 没有任何属性
+    ///   可多个    = 一张牌可以同时带多个属性
+    /// 属性是牌在牌桌上的状态，不进 id 编码；沉底由弃牌堆按概率打上，发出后清除
     /// </summary>
-    public bool isSunk;
+    public List<E_CardAttributeEnum> attributes = new();
+
+    /// <summary>有没有某个属性</summary>
+    public bool HasAttribute(E_CardAttributeEnum attribute)
+    {
+        return attributes.Contains(attribute);
+    }
+
+    /// <summary>加 / 去一个属性（幂等：已经有了就不再添加）</summary>
+    public void SetAttribute(E_CardAttributeEnum attribute, bool on)
+    {
+        bool has = attributes.Contains(attribute);
+
+        if (on)
+        {
+            if (!has) attributes.Add(attribute);
+        }
+        else if (has)
+        {
+            attributes.Remove(attribute);
+        }
+    }
 
     /// <summary>
-    /// 整体复制另一张牌的属性（id / 花色 / 点数 / 落牌技能）。
+    /// 整体复制另一张牌的属性（id / 花色 / 点数 / 落牌技能 / 牌桌状态属性）。
     /// 可套娃：复制到复制牌，自己也同样获得复制技能。
-    /// 注意：isFaceUp / isSunk 是牌在牌桌上的状态，不属于牌的属性，不复制
-    /// 注意：花色 / 点数必须深拷贝 —— 否则复制牌和源牌共享同一个 List，改一个另一个跟着变
+    /// 注意：isFaceUp 是牌在牌桌上的朝向（表现状态），不复制；attributes 是牌的属性，要跟着源牌一起复制
+    /// 注意：花色 / 点数 / 属性必须深拷贝 —— 否则复制牌和源牌共享同一个 List，改一个另一个跟着变
     /// </summary>
     public void CopyFrom(CardData other)
     {
@@ -51,5 +74,6 @@ public class CardData
         suits = new List<int>(other.suits);
         ranks = new List<int>(other.ranks);
         placeSkill = other.placeSkill;
+        attributes = new List<E_CardAttributeEnum>(other.attributes);
     }
 }

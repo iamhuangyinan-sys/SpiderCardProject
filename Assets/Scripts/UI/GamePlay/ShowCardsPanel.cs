@@ -22,7 +22,7 @@ public partial class ShowCardsPanel : NormalPanel, ISceneInputBlockPanel
         if (panel != null) panel.SetCardIds(cardIds);
     }
 
-    /// <summary>打开面板并展示指定牌（发牌堆 / 弃牌堆等带沉底标记的场合）</summary>
+    /// <summary>打开面板并展示指定牌（发牌堆 / 弃牌堆等带属性的场合）</summary>
     public static void ShowCards(IReadOnlyList<CardData> cards)
     {
         var panel = UIManager.Instance.Show<ShowCardsPanel>();
@@ -63,14 +63,14 @@ public partial class ShowCardsPanel : NormalPanel, ISceneInputBlockPanel
         _onPick = null;
     }
 
-    /// <summary>设置要展示的牌并刷新（带沉底标记）</summary>
+    /// <summary>设置要展示的牌并刷新（带属性）</summary>
     public void SetCards(IReadOnlyList<CardData> cards)
     {
         _cards = cards;
         RefreshList();
     }
 
-    /// <summary>设置要展示的牌并刷新（只有牌 id，无沉底标记）</summary>
+    /// <summary>设置要展示的牌并刷新（只有牌 id，无属性）</summary>
     public void SetCardIds(IReadOnlyList<string> cardIds)
     {
         var list = new List<CardData>(cardIds != null ? cardIds.Count : 0);
@@ -93,7 +93,7 @@ public partial class ShowCardsPanel : NormalPanel, ISceneInputBlockPanel
             var cell = item as ShowCardItem;
             if (cell == null) return;
 
-            cell.Bind(_cards[index].id, _cards[index].isSunk);
+            cell.Bind(_cards[index].id, _cards[index].attributes);
 
             // 选牌模式：点一下就算选中；纯展示模式保持不可点
             if (_onPick != null) cell.SetClickable(() => OnPickCard(index));

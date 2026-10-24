@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Framework.UI;
 using UnityEngine;
 
@@ -40,6 +41,38 @@ public static class HoverTipHelper
         panel.ShowTip(title, content, target, preferred, targetScale, extraGap);
     }
 
+    /// <summary>显示一组描述（每条一个框）；没有可显示的内容时直接收起</summary>
+    /// <param name="owner">调用者（谁显示谁才能关）</param>
+    /// <param name="tips">每条描述（空条目会被跳过）</param>
+    public static void Show(object owner, IReadOnlyList<HoverTipData> tips, RectTransform target,
+        E_TipDirection preferred, float targetScale = 1f, float extraGap = 0f)
+    {
+        if (!HasAny(tips))
+        {
+            Hide(owner);
+            return;
+        }
+
+        var panel = UIManager.Instance.Show<HoverTipPanel>();
+        if (panel == null) return;
+
+        _owner = owner;
+        panel.ShowTips(tips, target, preferred, targetScale, extraGap);
+    }
+
+    /// <summary>列表里是否至少有一条有内容</summary>
+    private static bool HasAny(IReadOnlyList<HoverTipData> tips)
+    {
+        if (tips == null) return false;
+
+        for (int i = 0; i < tips.Count; i++)
+        {
+            if (tips[i].HasAny) return true;
+        }
+
+        return false;
+    }
+
     /// <summary>收起提示（只有当前持有者能关）</summary>
     public static void Hide(object owner)
     {
@@ -52,5 +85,31 @@ public static class HoverTipHelper
         {
             UIManager.Instance.Hide(panel);
         }
+    }
+}
+
+/// <summary>
+/// 一条悬停提示的内容 —— 每条渲染成一个 HoverTipItemModule 框（标题可空）。
+/// 描述从哪来（配表 / 数据属性推导）由业务层决定，这里只管"要显示什么"
+/// </summary>
+public struct HoverTipData
+{
+    /// <summary>标题（可空；为空时这条不显示标题字）</summary>
+    public string Title;
+
+    /// <summary>正文（可空）</summary>
+    public string Content;
+
+    /// <summary>标题行左侧的图标（null = 不显示；目前只有牌属性描述用）</summary>
+    public Sprite Icon;
+
+    /// <summary>标题 / 正文 / 图标至少有一个（全空 = 这条不用显示）</summary>
+    public bool HasAny => !string.IsNullOrEmpty(Title) || !string.IsNullOrEmpty(Content) || Icon != null;
+
+    public HoverTipData(string title, string content, Sprite icon = null)
+    {
+        Title = title;
+        Content = content;
+        Icon = icon;
     }
 }

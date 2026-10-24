@@ -223,17 +223,17 @@ public class CardsManager : ManagerBase<CardsManager>
     /// <summary>
     /// 把一张刚发出的牌放进指定列（发牌落位的唯一入口）：
     /// 普通牌正面朝上放堆顶（OnColumnAppend 增量追加）；
-    /// 沉底牌背面朝上插到堆底第 0 位（OnColumnPrepend 牌背飞入 + 其余牌下移）。
-    /// 沉底标记只服务于「发到堆底」这一次，发出后即清除。
+    /// 带沉底属性的牌背面朝上插到堆底第 0 位（OnColumnPrepend 牌背飞入 + 其余牌下移）。
+    /// 沉底属性只服务于「发到堆底」这一次，发出后即清除。
     /// </summary>
     private void PlaceDealtCard(int columnIndex, CardData card, bool faceUp)
     {
         var store = CardsStore.Instance;
         card.isFaceUp = faceUp;
 
-        if (card.isSunk)
+        if (card.HasAttribute(E_CardAttributeEnum.Sunk))
         {
-            card.isSunk = false;
+            card.SetAttribute(E_CardAttributeEnum.Sunk, false);
             card.isFaceUp = false;   // 沉底牌以牌背发出，埋进堆底（表面看不出是哪张）
             store.columns[columnIndex].Insert(0, card);
             EventManager.Instance.Dispatch<int>(E_EventEnum.OnColumnPrepend, columnIndex);
@@ -260,8 +260,8 @@ public class CardsManager : ManagerBase<CardsManager>
     {
         var store = CardsStore.Instance;
 
-        // 沉底标记：进弃牌堆就按概率 roll（每次入堆重新 roll，发出时生效、发完即清）
-        card.isSunk = _random.NextDouble() < SunkProbability;
+        // 沉底属性：进弃牌堆就按概率 roll（每次入堆重新 roll，发出时生效、发完即清）
+        card.SetAttribute(E_CardAttributeEnum.Sunk, _random.NextDouble() < SunkProbability);
 
         store.discardPile.Add(card);
 
@@ -696,8 +696,21 @@ public class CardsManager : ManagerBase<CardsManager>
 
     // ==================== 洗入发牌堆 ====================
 
-    /// <summary>待洗入发牌堆的牌 id 队列（连续调用时排队，逐张错开飞入）</summary>
-    private readonly Queue<string> _washInQueue = new();
+    /// <summary>一张待洗入发牌堆的牌（编码 id + 要打的属性）</summary>
+    private readonly struct WashInRequest
+    {
+        public readonly string cardId;
+        public readonly IReadOnlyList<E_CardAttributeEnum> attributes;
+
+        public WashInRequest(string cardId, IReadOnlyList<E_CardAttributeEnum> attributes)
+        {
+            this.cardId = cardId;
+            this.attributes = attributes;
+        }
+    }
+
+    /// <summary>待洗入发牌堆的牌队列（连续调用时排队，逐张错开飞入）</summary>
+    private readonly Queue<WashInRequest> _washInQueue = new();
 
     /// <summary>洗入协程是否在跑（保证同一时刻只有一个队列在出队）</summary>
     private bool _washingIn;
@@ -706,13 +719,15 @@ public class CardsManager : ManagerBase<CardsManager>
     /// 往发牌堆洗入一张牌（牌 id 为编码 id）：随机插进发牌堆任意位置，
     /// 并派发「中央生成一张正面牌 → 飞入发牌堆」动画。连续调用会排队，逐张错开飞入
     /// </summary>
+    /// <param name="cardId">编码 id</param>
+    /// <param name="attributes">额外打的属性（可空；控制台调试用）</param>
     /// <returns>牌 id 合法返回 true</returns>
-    public bool WashInCard(string cardId)
+    public bool WashInCard(string cardId, IReadOnlyList<E_CardAttributeEnum> attributes = null)
     {
         if (string.IsNullOrEmpty(cardId)) return false;
         if (CardFactory.Create(cardId) == null) return false;   // 编码不合法：拒绝
 
-        _washInQueue.Enqueue(cardId);
+        _washInQueue.Enqueue(new WashInRequest(cardId, attributes));
         if (!_washingIn) MonoManager.Instance.StartCoroutine(WashInRoutine());
 
         return true;
@@ -728,7 +743,7 @@ public class CardsManager : ManagerBase<CardsManager>
 
         foreach (var id in cardIds)
         {
-            if (!string.IsNullOrEmpty(id)) _washInQueue.Enqueue(id);
+            if (!string.IsNullOrEmpty(id)) _washInQueue.Enqueue(new WashInRequest(id, null));
         }
 
         if (!_washingIn) MonoManager.Instance.StartCoroutine(WashInRoutine());
@@ -744,15 +759,16 @@ public class CardsManager : ManagerBase<CardsManager>
         {
             if (IsSettling) break;
 
-            string cardId = _washInQueue.Dequeue();
+            var request = _washInQueue.Dequeue();
 
-            var card = CardFactory.Create(cardId);
+            var card = CardFactory.Create(request.cardId);
             if (card == null) continue;   // 编码不合法：跳过
 
+            ApplyAttributes(card, request.attributes);
             InsertIntoDrawPileRandom(card);
 
             EventManager.Instance.Dispatch<int>(E_EventEnum.OnDrawPileChanged, CardsStore.Instance.drawPile.Count);
-            EventManager.Instance.Dispatch<string>(E_EventEnum.OnCardWashIn, cardId);
+            EventManager.Instance.Dispatch<CardData>(E_EventEnum.OnCardWashIn, card);
 
             // 队列还有牌 → 到下一张该出场的时刻就走；队列空了 → 等到这张落地才收工
             // （等待期间若又有新牌入队，循环会继续，不会丢牌）
@@ -765,9 +781,19 @@ public class CardsManager : ManagerBase<CardsManager>
         _washingIn = false;
     }
 
-    /// <summary>把一张牌随机插进发牌堆（栈只能后进先出，整体摊开 → 插入 → 反向压回）</summary>
-    private void InsertIntoDrawPileRandom(CardData card)
+    /// <summary>给刚建好的牌补属性（控制台调试用；已有的不重复加）</summary>
+    private static void ApplyAttributes(CardData card, IReadOnlyList<E_CardAttributeEnum> attributes)
     {
+        if (attributes == null) return;
+
+        for (int i = 0; i < attributes.Count; i++)
+        {
+            card.SetAttribute(attributes[i], true);
+        }
+    }
+
+    /// <summary>把一张牌随机插进发牌堆（栈只能后进先出，整体摊开 → 插入 → 反向压回）</summary>
+    private void InsertIntoDrawPileRandom(CardData card)    {
         var pile = CardsStore.Instance.drawPile;
 
         // Stack 的枚举顺序是「栈顶 → 栈底」，插在 index 0 = 下次先发，插在最末 = 最后才发

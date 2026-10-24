@@ -99,7 +99,7 @@ public class CardViewManager : ManagerBase<CardViewManager>
         EventManager.Instance.AddListener<CardData>(E_EventEnum.OnCardChanged, OnCardChanged);
         EventManager.Instance.AddListener<CardData>(E_EventEnum.OnCardToDiscard, OnCardToDiscard);
         EventManager.Instance.AddListener(E_EventEnum.OnShuffleBack, OnShuffleBack);
-        EventManager.Instance.AddListener<string>(E_EventEnum.OnCardWashIn, OnCardWashIn);
+        EventManager.Instance.AddListener<CardData>(E_EventEnum.OnCardWashIn, OnCardWashIn);
         EventManager.Instance.AddListener(E_EventEnum.OnDiscardToDrawPile, OnDiscardToDrawPile);
         EventManager.Instance.AddListener<CardData>(E_EventEnum.OnCardToDrawPile, OnCardToDrawPile);
         EventManager.Instance.AddListener<int>(E_EventEnum.OnDrawPileChanged, OnDrawPileChanged);
@@ -124,7 +124,7 @@ public class CardViewManager : ManagerBase<CardViewManager>
         EventManager.Instance.RemoveListener<CardData>(E_EventEnum.OnCardChanged, OnCardChanged);
         EventManager.Instance.RemoveListener<CardData>(E_EventEnum.OnCardToDiscard, OnCardToDiscard);
         EventManager.Instance.RemoveListener(E_EventEnum.OnShuffleBack, OnShuffleBack);
-        EventManager.Instance.RemoveListener<string>(E_EventEnum.OnCardWashIn, OnCardWashIn);
+        EventManager.Instance.RemoveListener<CardData>(E_EventEnum.OnCardWashIn, OnCardWashIn);
         EventManager.Instance.RemoveListener(E_EventEnum.OnDiscardToDrawPile, OnDiscardToDrawPile);
         EventManager.Instance.RemoveListener<CardData>(E_EventEnum.OnCardToDrawPile, OnCardToDrawPile);
         EventManager.Instance.RemoveListener<int>(E_EventEnum.OnDrawPileChanged, OnDrawPileChanged);
@@ -228,7 +228,7 @@ public class CardViewManager : ManagerBase<CardViewManager>
     }
 
     /// <summary>洗入发牌堆：在 CardSpawnPos 生成一张正面牌，停留展示一下再飞到发牌堆，落地回收</summary>
-    private void OnCardWashIn(string cardId)
+    private void OnCardWashIn(CardData cardData)
     {
         var view = CardPoolManager.Instance.GetCard();
         if (view == null)
@@ -237,7 +237,8 @@ public class CardViewManager : ManagerBase<CardViewManager>
             return;
         }
 
-        view.ShowFace(cardId);
+        // 用 CardData 而不是裸 id：临时牌也要把属性（毒 / 沉底）画出来
+        view.ShowFace(cardData);
 
         var tween = CardAnimationHelper.WashInTo(view, GetCardSpawnPosition(), GetDrawPilePosition());
         PlayAndRecycle(tween, view);

@@ -14,5 +14,20 @@ public partial class CardModule
     public class CompsData : CompsDataBase
     {
         public Button btnCard;
+        public Image imgImg;
+        public Image imgSuit;
+        public Image imgSuit1;
+        public Image imgSuit2;
+        public Image imgSuit3;
+        public Image imgRank;
+        public Image imgRank1;
+        public Image imgRank2;
+        public Image imgRank3;
+        public Image imgRank4;
+        public Image imgAttribute1;
+        public Image imgAttribute2;
+        public Image imgAttribute3;
+        public Image imgAttribute4;
+        public Image imgAttribute5;
     }
 }
