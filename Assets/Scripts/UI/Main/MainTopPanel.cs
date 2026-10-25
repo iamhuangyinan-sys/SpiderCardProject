@@ -4,7 +4,7 @@ using UnityEngine;
 
 public partial class MainTopPanel : NormalPanel
 {
-    /// <summary>地图当前是否开着（btn_Map 用它做开 / 关切换）</summary>
+    /// <summary>地图当前是否开着（mod_Map 用它做开 / 关切换）</summary>
     private bool _mapOpened;
 
     protected override void OnOpen()
@@ -17,9 +17,9 @@ public partial class MainTopPanel : NormalPanel
         EventManager.Instance.AddListener(E_EventEnum.OnMapOpen, OnMapOpened);
         EventManager.Instance.AddListener(E_EventEnum.OnMapClose, OnMapClosed);
 
-        comps.btnCardBuild.onClick.AddListener(OnClickCardBuild);
-        comps.btnMenu.onClick.AddListener(OnClickMenu);
-        comps.btnMap.onClick.AddListener(OnClickMap);
+        comps.modCardBuild.OnClick += OnClickCardBuild;
+        comps.modMenu.OnClick += OnClickMenu;
+        comps.modMap.OnClick += OnClickMap;
 
         RefreshLevelInfo();
         RefreshCoinInfo();
@@ -49,9 +49,9 @@ public partial class MainTopPanel : NormalPanel
         EventManager.Instance.RemoveListener(E_EventEnum.OnMapOpen, OnMapOpened);
         EventManager.Instance.RemoveListener(E_EventEnum.OnMapClose, OnMapClosed);
 
-        comps.btnCardBuild.onClick.RemoveListener(OnClickCardBuild);
-        comps.btnMenu.onClick.RemoveListener(OnClickMenu);
-        comps.btnMap.onClick.RemoveListener(OnClickMap);
+        comps.modCardBuild.OnClick -= OnClickCardBuild;
+        comps.modMenu.OnClick -= OnClickMenu;
+        comps.modMap.OnClick -= OnClickMap;
     }
 
     /// <summary>查看当前牌组</summary>
@@ -86,7 +86,7 @@ public partial class MainTopPanel : NormalPanel
     /// <summary>地图按钮显隐（选关界面不显示 —— 那里本身就是地图）</summary>
     public void SetMapButtonVisible(bool visible)
     {
-        if (comps.btnMap != null) comps.btnMap.gameObject.SetActive(visible);
+        if (comps.modMap != null) comps.modMap.gameObject.SetActive(visible);
     }
 
     /// <summary>开始一局：显示接龙进度并刷新</summary>
@@ -122,12 +122,12 @@ public partial class MainTopPanel : NormalPanel
     /// <summary>刷新层数信息（显示当前层，只显示数字）</summary>
     private void RefreshLevelInfo()
     {
-        comps.txtLevelInfo.text = LevelStore.Instance.currentLayer.ToString();
+        comps.modLevelInfo.SetInfo(LevelStore.Instance.currentLayer.ToString());
     }
 
     /// <summary>刷新金币数量（只显示数字）</summary>
     private void RefreshCoinInfo()
     {
-        comps.txtCoinInfo.text = RunManager.Instance.Coin.ToString();
+        comps.modCoinInfo.SetInfo(RunManager.Instance.Coin.ToString());
     }
 }

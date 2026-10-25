@@ -39,6 +39,11 @@ namespace Framework.Singleton
             }
         }
 
+        /// <summary>
+        /// 当前实例（null = 还没创建 / 已经销毁）。清理流程用：不会自动创建，也不会像 Instance 那样在退出时刷警告
+        /// </summary>
+        public static T InstanceOrNull => _instance;
+
         protected virtual void Awake()
         {
             if (_instance == null)

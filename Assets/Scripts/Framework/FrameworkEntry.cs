@@ -91,7 +91,11 @@ namespace Framework
             ResManager.Instance.Dispose();
             PoolStore.Instance.Dispose();
             ResStore.Instance.Dispose();
-            MonoManager.Instance.Dispose();
+
+            // MonoManager 是唯一的 Mono 单例：退出播放 / 关游戏时 OnApplicationQuit 已经把它置空，
+            // 这里只能用 InstanceOrNull（Instance 会返回 null 并刷警告）；真正的清理在它自己的 OnDestroy
+            var mono = MonoManager.InstanceOrNull;
+            if (mono != null) mono.Dispose();
 
             Debug.Log("[Framework] 已销毁");
         }

@@ -14,10 +14,10 @@ public partial class MainTopPanel
     public class CompsData : CompsDataBase
     {
         public TMP_Text txtLevelProgress;
-        public Button btnMap;
-        public Button btnCardBuild;
-        public Button btnMenu;
-        public TMP_Text txtLevelInfo;
-        public TMP_Text txtCoinInfo;
+        public IconInfoModule modMap;
+        public IconInfoModule modCardBuild;
+        public IconInfoModule modMenu;
+        public IconInfoModule modLevelInfo;
+        public IconInfoModule modCoinInfo;
     }
 }

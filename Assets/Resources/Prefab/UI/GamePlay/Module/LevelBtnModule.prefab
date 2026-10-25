@@ -239,6 +239,11 @@ MonoBehaviour:
   raiseOnHover: 1
   raiseTarget: {fileID: 3363661481556616199}
   useUnscaledTime: 1
+  hoverOutline: 0
+  outlineColor: {r: 1, g: 0.43000004, b: 0.100000024, a: 0.9019608}
+  outlineDistance: {x: 4, y: 4}
+  outlineTarget: {fileID: 8868361552634656767}
+  outlineOwned: 0
 --- !u!1 &7729658028275280619
 GameObject:
   m_ObjectHideFlags: 0
