@@ -68,12 +68,18 @@ namespace Framework
             _sceneReady = true;
         }
 
+        protected override void OnInit()
+        {
+            CurrentScene = SceneManager.GetActiveScene().name;
+        }
+
         /// <summary>
         /// 异步加载场景（含过场景清理 + 黑屏过渡 + 加载回调）
         /// </summary>
         /// <param name="sceneName">目标场景名（需在 Build Settings 中注册）</param>
         /// <param name="onComplete">加载完成回调（遮罩淡出后触发）</param>
-        public void LoadScene(string sceneName, UnityAction onComplete = null)
+        /// <param name="fadeIn">是否先淡入到黑屏；启动切首个场景时传 false，直接压黑（此时没有需要遮挡的旧画面）</param>
+        public void LoadScene(string sceneName, UnityAction onComplete = null, bool fadeIn = true)
         {
             if (IsLoading)
             {
@@ -81,10 +87,10 @@ namespace Framework
                 return;
             }
 
-            MonoManager.Instance.StartCoroutine(DoLoadScene(sceneName, onComplete));
+            MonoManager.Instance.StartCoroutine(DoLoadScene(sceneName, onComplete, fadeIn));
         }
 
-        private IEnumerator DoLoadScene(string sceneName, UnityAction onComplete)
+        private IEnumerator DoLoadScene(string sceneName, UnityAction onComplete, bool fadeIn)
         {
             IsLoading = true;
             Progress = 0f;
@@ -92,8 +98,11 @@ namespace Framework
 
             Debug.Log($"[SceneController] 切换场景：{CurrentScene} → {sceneName}");
 
-            // ===== 1. 先淡入到全黑：画面全黑后再动场景，避免看到元素消失 =====
-            yield return UIManager.Instance.FadeInSceneMask(MaskFadeInDuration);
+            // ===== 1. 先到全黑：画面全黑后再动场景，避免看到元素消失 =====
+            if (fadeIn)
+                yield return UIManager.Instance.FadeInSceneMask(MaskFadeInDuration);
+            else
+                UIManager.Instance.SetSceneMaskBlack();
 
             // ===== 2. 加载前通知 + 切场景清理（此时已经看不到画面了）=====
             // 先把旧场景的 UI 全部隐藏：面板挂在 DontDestroyOnLoad 的 Canvas 上，

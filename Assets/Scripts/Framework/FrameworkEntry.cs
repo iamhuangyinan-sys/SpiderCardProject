@@ -9,21 +9,41 @@ using Framework.UI;
 namespace Framework
 {
     /// <summary>
-    /// 框架启动入口 —— 挂载到场景中的空 GameObject 上
-    /// 负责统一初始化所有 Store 和 Mgr（按依赖顺序）
+    /// 框架启动入口 —— 挂载在启动场景 Main 的空 GameObject 上
+    /// 负责统一初始化所有 Store 和 Mgr（按依赖顺序），
+    /// 初始化完成后（Start）切到主菜单场景 BeginPanelScene。
     ///
     /// 使用方式：
-    /// 1. 在场景中创建空 GameObject，命名为 [FrameworkEntry]
+    /// 1. 在启动场景中创建空 GameObject，命名为 [FrameworkEntry]
     /// 2. 挂载此脚本
     /// 3. 在 InitFramework() 中添加你的 Store / Mgr 初始化代码
+    ///
+    /// 注意：Main 只由应用启动进入，业务跳转不要指回 Main（否则会再触发一次初始化流程）；
+    /// 本对象 DontDestroyOnLoad，切到 BeginPanelScene 后依然常驻。
     /// </summary>
     public class FrameworkEntry : MonoBehaviour
     {
+        /// <summary>启动场景名（只负责初始化框架，业务不会跳回来）</summary>
+        private const string BootstrapSceneName = "Main";
+
+        /// <summary>启动场景加载完成后进入的第一个业务场景</summary>
+        private const string StartupSceneName = "BeginPanelScene";
+
         /// <summary>框架是否已初始化（防止多个场景重复挂载导致重复初始化）</summary>
         private static bool _initialized;
 
         /// <summary>本实例是否为主实例（重复实例不参与销毁清理）</summary>
         private bool _isPrimary;
+
+        /// <summary>
+        /// 关闭 Domain Reload 时静态字段会跨 Play 残留，这里统一重置，
+        /// 否则第二次 Play 会被误判为「重复实例」
+        /// </summary>
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetStaticState()
+        {
+            _initialized = false;
+        }
 
         private void Awake()
         {
@@ -41,6 +61,31 @@ namespace Framework
             DontDestroyOnLoad(gameObject);
             InitFramework();
         }
+
+        private void Start()
+        {
+            // 重复实例在 Awake 里已 Destroy(gameObject)，但销毁是在帧末执行，Start 仍可能被调用一次
+            if (!_isPrimary) return;
+
+            // 此时所有 Manager 已在 Awake 中初始化完毕（所有 Awake 早于 Start）
+            // 启动场景没有画面，直接压黑再切，避免看到启动场景一闪
+            SceneController.Instance.LoadScene(StartupSceneName, fadeIn: false);
+        }
+
+#if UNITY_EDITOR
+        /// <summary>编辑器里直接从业务场景 Play 时，先回启动场景把框架跑起来</summary>
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
+        private static void RedirectToBootstrapSceneInEditor()
+        {
+            if (_initialized) return;
+
+            var active = UnityEngine.SceneManagement.SceneManager.GetActiveScene();
+            if (active.name == BootstrapSceneName) return;
+
+            Debug.LogWarning($"[Framework] 直接从 {active.name} 进入 Play，先加载 {BootstrapSceneName} 初始化框架");
+            UnityEngine.SceneManagement.SceneManager.LoadScene(BootstrapSceneName);
+        }
+#endif
 
         private void InitFramework()
         {

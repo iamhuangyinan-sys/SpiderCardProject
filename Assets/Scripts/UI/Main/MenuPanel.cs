@@ -30,7 +30,7 @@ public partial class MenuPanel : NormalPanel, ISceneInputBlockPanel
     private void OnClickSaveReturn()
     {
         CardGameModule.Instance.SaveRun();
-        SceneController.Instance.LoadScene("Main", CloseSelf);
+        SceneController.Instance.LoadScene("BeginPanelScene", CloseSelf);
     }
 
     /// <summary>保存并退出游戏</summary>

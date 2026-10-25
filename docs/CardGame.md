@@ -271,12 +271,26 @@ classDiagram
 | OnCardToDrawPile | CardData | 结算收牌：单张牌本体飞回发牌堆（场上列 / 牌包的牌） |
 | OnCardsCollected | 无 | 结算收牌完成（关卡结束） |
 
+## 场景结构 / 启动流程
+
+```
+Main（启动场景，Build index 0）   只启动一次：FrameworkEntry（Awake 初始化框架 → Start 切主菜单）
+  └─ LoadScene(BeginPanelScene, fadeIn: false) → 直接压黑，看不到启动场景
+BeginPanelScene（主菜单）          GameEntry：打开 BeginPanel + 控制台入口
+CardGameScene（牌局）              CardGameEntry：CardGameModule.Init + 选关 / 打牌 UI
+```
+
+- `FrameworkEntry` 在 `Awake` 里完成全部 Store / Mgr 初始化，`Start` 里切到 `BeginPanelScene`（Unity 保证所有 `Awake` 早于 `Start`）。
+- 框架对象（`[FrameworkEntry]` / `[UICanvas]` / `[EventSystem]` / `[SceneMask]`）都 `DontDestroyOnLoad`，Main 卸载后依然存活；`Start` 只在主实例上跑一次。
+- `Main` 只能由应用启动进入：业务里任何 `LoadScene` 都不要指向 `Main`，否则 `FrameworkEntry` 会再 Awake 一次（重复实例会被销毁），主流程也会被重跑。
+- 编辑器里直接从 `BeginPanelScene` / `CardGameScene` 点 Play 时，`FrameworkEntry` 的 `RuntimeInitializeOnLoadMethod(AfterSceneLoad)` 会自动回 `Main` 走一遍框架初始化。
+
 ## 场景过渡（黑屏遮罩）
 
 `SceneController.LoadScene()` 内置黑屏过渡，避免看到场景 / UI 元素中途消失。遮罩是 `UIManager` 在 `Layer_System` 下建的全屏黑 `Image`（跨场景常驻），不用碰摄像机。
 
 ```
-① 遮罩淡入到全黑（等完成，期间 blocksRaycasts = true 挡点击）
+① 遮罩淡入到全黑（等完成，期间 blocksRaycasts = true 挡点击；fadeIn: false 时直接压黑）
 ② UIManager.HideAll() + OnBeforeLoad + PoolManager.ClearOnSceneChange
 ③ SceneManager.LoadSceneAsync（保持全黑）
 ④ 场景激活 → 等新场景「内容就绪」（NotifySceneReady，最多 3s 兜底）
@@ -293,8 +307,9 @@ classDiagram
 SceneController.Instance.NotifySceneReady();
 ```
 
-- `GameEntry`（Main）：`ShowAsync<BeginPanel>` 的回调里调
+- `GameEntry`（BeginPanelScene）：`ShowAsync<BeginPanel>` 的回调里调（面板命中缓存时回调同样会触发）
 - `CardGameEntry`（CardGameScene）：`Start` 末尾（此时选关 / 商店 / 打牌 UI 都已就位）
+- `Main` 没有内容要建，不用调；它发起切换后等待的是 `BeginPanelScene`
 
 不调的话会一直等到 3 秒超时才淡出（日志会打 warning）。
 
@@ -363,13 +378,13 @@ public class RunSaveData
 
 - `btnStart` = 开始新游戏 → `SaveManager.DeleteKey(RunData)` 删档后进 `CardGameScene`
 - `btnContinue` = 继续游戏 → 直接进 `CardGameScene`（**无存档时不显示该按钮**）
-- `Main` 场景的 `GameEntry.InitGame()` 会先 `UIManager.CloseAll()`，清掉从 `CardGameScene` 带回来的常驻面板
+- `BeginPanel` 切场景时只被 `UIManager.HideAll()` 隐藏（缓存保留），回主菜单时 `Show` 命中缓存只走 `OnShow` 刷新「继续游戏」按钮，不会重建面板
 
 ### 菜单面板
 
 `MainTopPanel.btnMenu`（受 `CardGameModule.CanCardInput` 限制，结算 / 动画中不给开）→ `MenuPanel`：
 
-- `btnSaveReturn`：`SaveRun()` → `SceneController.LoadScene("Main")`
+- `btnSaveReturn`：`SaveRun()` → `SceneController.LoadScene("BeginPanelScene")`（回主菜单场景，不回 `Main`）
 - `btnSaveQuit`：`SaveRun()` → 编辑器停 Play / 否则 `Application.Quit()`
 - `btnClose`：关闭面板
 

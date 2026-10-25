@@ -152,6 +152,16 @@ namespace Framework.UI
             yield return AnimationHelper.FadeRoutine(_sceneMask, 1f, duration);
         }
 
+        /// <summary>立即把遮罩置为全黑（无淡入）：启动切首个场景时用，避免看到启动场景一闪</summary>
+        public void SetSceneMaskBlack()
+        {
+            if (_sceneMask == null) return;
+
+            _sceneMask.gameObject.SetActive(true);
+            _sceneMask.blocksRaycasts = true;   // 过渡期间不许点
+            _sceneMask.alpha = 1f;
+        }
+
         /// <summary>遮罩淡出（协程），淡完自动隐藏并恢复点击</summary>
         public IEnumerator FadeOutSceneMask(float duration = 0.3f)
         {

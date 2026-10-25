@@ -12,6 +12,7 @@ GameObject:
   - component: {fileID: 1093658568926455635}
   - component: {fileID: 5290029792834822289}
   - component: {fileID: 296792359631053133}
+  - component: {fileID: 1125194755976236936}
   m_Layer: 0
   m_Name: btn_Close
   m_TagString: Untagged
@@ -78,7 +79,7 @@ MonoBehaviour:
     m_SelectedTrigger: Selected
     m_DisabledTrigger: Disabled
   m_Interactable: 1
-  m_TargetGraphic: {fileID: 0}
+  m_TargetGraphic: {fileID: 296792359631053133}
   m_OnClick:
     m_PersistentCalls:
       m_Calls: []
@@ -120,6 +121,31 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
+--- !u!114 &1125194755976236936
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 950021416528536518}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1271b70e11fab274f9605c3ec70cef75, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::HoverScaleBehaviour
+  target: {fileID: 0}
+  hoverScale: 1.2
+  duration: 0.1
+  ease: 6
+  autoTrigger: 1
+  raiseOnHover: 1
+  raiseTarget: {fileID: 0}
+  useUnscaledTime: 1
+  hoverOutline: 0
+  outlineColor: {r: 1, g: 0.84, b: 0.3, a: 1}
+  outlineDistance: {x: 2, y: 2}
+  outlineTarget: {fileID: 0}
+  outlineOwned: 0
 --- !u!1 &1767824909306962847
 GameObject:
   m_ObjectHideFlags: 0

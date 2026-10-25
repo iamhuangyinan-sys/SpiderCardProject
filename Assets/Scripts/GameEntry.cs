@@ -3,11 +3,10 @@ using Framework.UI;
 using UnityEngine;
 
 /// <summary>
-/// 游戏入口 —— 在框架初始化完成后执行游戏业务初始化
-/// 挂载到场景中的 GameObject 上（与 FrameworkEntry 同级）
+/// 主菜单场景入口 —— 挂载在 BeginPanelScene 的 GameObject 上
 ///
-/// Unity 生命周期保证：所有 Awake 先于 Start 执行，
-/// 因此 Start 时框架（FrameworkEntry.InitFramework）已初始化完毕。
+/// 框架（FrameworkEntry）在启动场景 Main 初始化完毕后常驻，
+/// 本场景每次进入只需要打开开始界面；返回主菜单时也会重新执行这里。
 /// </summary>
 public class GameEntry : MonoBehaviour
 {
