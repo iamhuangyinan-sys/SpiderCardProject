@@ -6,4 +6,5 @@ public class PlaceSkillConfig
     public string Id;
     public string Name;
     public string Description;
+    public string Image;
 }

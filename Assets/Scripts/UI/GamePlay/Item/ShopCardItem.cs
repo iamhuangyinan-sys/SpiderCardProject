@@ -40,7 +40,7 @@ public partial class ShopCardItem : BaseListItem
             return;
         }
 
-        comps.modCard.Bind(goods.cardId);
+        comps.modCard.Bind(goods.def);
 
         // 已售出 → 不可点击（模组会把按钮组件关掉）
         if (goods.sold)

@@ -13,8 +13,8 @@ public class RunSaveData
     /// <summary>本局金币</summary>
     public int coin;
 
-    /// <summary>本局牌组（牌 id 列表，同一 id 出现多次即多份）</summary>
-    public List<string> deck = new();
+    /// <summary>本局牌组（牌定义列表，同一张出现多次即多份）</summary>
+    public List<CardDef> deck = new();
 
     /// <summary>
     /// 玩家选择过的关卡 id（按选择顺序追加，含正在打的那一关）：

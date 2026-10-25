@@ -1,6 +1,6 @@
 ﻿{
   "items": [
-    {"Id": "1", "Name": "回收", "Description": "移动后，将自己和上面那张牌放入弃牌堆"},
-    {"Id": "2", "Name": "复制", "Description": "移动后，将自己变成上面那张牌"}
+    {"Id": "10001", "Name": "回收", "Description": "移动后，将自己和上面那张牌放入弃牌堆", "Image": "cardRecycle"},
+    {"Id": "10002", "Name": "复制", "Description": "移动后，将自己变成上面那张牌", "Image": "cardCopy"}
   ]
 }

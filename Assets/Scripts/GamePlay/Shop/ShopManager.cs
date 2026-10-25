@@ -5,37 +5,25 @@ using Framework.Mgr;
 /// <summary>
 /// 商店业务层 —— 刷新商品、购买、继续进入下一层
 ///
-/// 商品构成（共 8 件）：
-///   前 5 件：常驻特殊牌，价格取配表 Price 并随机上下波动 ±10%
-///   后 3 件：随机 01 开头普通牌，价格直接取配表 Price（不波动）
+/// 商品构成：常驻两张技能牌（复制 / 回收），价格先写死（TODO：价格规则后续再做）
 /// </summary>
 public class ShopManager : ManagerBase<ShopManager>
 {
     /// <summary>
-    /// 常驻特殊牌（顺序即商品顺序），填完整编码 id。
-    /// ⚠️ 价格规则还没做，随机普通牌池也是空的（普通牌已不在配表里）→ 目前商品很少
+    /// 常驻技能牌（顺序即商品顺序）：牌定义 + 价格。
+    /// TODO: 价格目前写死，后续接价格表
     /// </summary>
-    private static readonly string[] SpecialCardIds =
+    private static readonly (CardDef def, int price)[] SpecialGoods =
     {
-        "S_m_0200001",   // 复制
-        "S_m_0200002",   // 回收
+        (CardDef.Create(null, new[] { CardRankConst.Wild }, E_PlaceSkillEnum.Copy), 150),      // 复制
+        (CardDef.Create(null, new[] { CardRankConst.Wild }, E_PlaceSkillEnum.Recycle), 80),    // 回收
     };
-
-    /// <summary>随机普通牌（普通牌不在配表里 → 现阶段抽不到，等价格规则一起重做）</summary>
-    private const int NormalCount = 3;
-
-    /// <summary>特殊牌价格波动幅度（±10%）</summary>
-    private const float SpecialPriceFluctuation = 0.1f;
 
     /// <summary>本次商店的删牌上限（暂写死；后续可扩展成 LevelConfig 的字段）</summary>
     private const int DefaultDeleteLimit = 5;
 
     /// <summary>删牌单次费用（暂写死）</summary>
     private const int DefaultDeletePrice = 20;
-
-    private const string NormalPrefix = "01";
-
-    private readonly System.Random _random = new System.Random();
 
     /// <summary>本关商店的商品是否已备好（防止退出重进刷商品）</summary>
     private bool _goodsPrepared;
@@ -85,70 +73,22 @@ public class ShopManager : ManagerBase<ShopManager>
     // ==================== 刷新商品 ====================
 
     /// <summary>
-    /// 刷新商品：前 5 张常驻特殊牌（价格读配表并 ±10% 波动），
-    /// 后 3 张随机普通牌（价格直接用配表 Price）
+    /// 刷新商品：常驻技能牌（价格先写死，后续接价格表）
     /// </summary>
     private void RandomizeGoods()
     {
         var store = ShopStore.Instance;
         store.goods.Clear();
 
-        // 1. 常驻特殊牌：固定 5 张，顺序固定
-        foreach (var cardId in SpecialCardIds)
+        foreach (var (def, price) in SpecialGoods)
         {
-            var cfg = ConfigHelper.Get<CardConfig>(cardId);
-            if (cfg == null) continue;   // 配表里没有这张牌：跳过
+            if (!def.IsValid) continue;
 
             store.goods.Add(new ShopGoods
             {
-                cardId = cardId,
-                price = FluctuatePrice(cfg.Price),
+                def = def,
+                price = price,
             });
-        }
-
-        // 2. 随机普通牌：01 开头，价格不波动
-        AppendRandomNormalGoods(NormalCount);
-    }
-
-    /// <summary>价格在配表 Price 基础上随机上下波动 ±10%（四舍五入到整数）</summary>
-    private int FluctuatePrice(int basePrice)
-    {
-        float factor = 1f + ((float)_random.NextDouble() * 2f - 1f) * SpecialPriceFluctuation;
-        return (int)System.Math.Round(basePrice * factor);
-    }
-
-    /// <summary>按 Id 前缀随机挑 count 张普通牌加入商品列表（同批不重复；不足则有多少取多少）</summary>
-    private void AppendRandomNormalGoods(int count)
-    {
-        var candidates = new List<CardConfig>();
-        foreach (var cfg in ConfigHelper.GetAll<CardConfig>())
-        {
-            if (!string.IsNullOrEmpty(cfg.Id) && cfg.Id.StartsWith(NormalPrefix))
-            {
-                candidates.Add(cfg);
-            }
-        }
-
-        Shuffle(candidates);
-
-        int take = count < candidates.Count ? count : candidates.Count;
-        for (int i = 0; i < take; i++)
-        {
-            ShopStore.Instance.goods.Add(new ShopGoods
-            {
-                cardId = candidates[i].Id,
-                price = candidates[i].Price,   // 普通牌价格直接用配表值（当前是 0），不波动
-            });
-        }
-    }
-
-    /// <summary>Fisher-Yates 洗牌</summary>
-    private void Shuffle<T>(List<T> list)
-    {
-        for (int i = list.Count - 1; i > 0; i--)
-        {
-            int j = _random.Next(i + 1);
-            (list[i], list[j]) = (list[j], list[i]);
         }
     }
 
@@ -165,7 +105,7 @@ public class ShopManager : ManagerBase<ShopManager>
 
         // 扣金币 + 把该牌加入本局牌组
         RunManager.Instance.TrySpend(goods.price);
-        RunManager.Instance.AddCardToDeck(goods.cardId);
+        RunManager.Instance.AddCardToDeck(goods.def);
 
         goods.sold = true;
 
@@ -217,13 +157,13 @@ public class ShopManager : ManagerBase<ShopManager>
     /// 从牌组里删掉一张牌：扣一次次数 + 扣费用
     /// 牌不在牌组里就整个不动（不扣钱也不扣次数）
     /// </summary>
-    public bool TryDeleteCard(string cardId)
+    public bool TryDeleteCard(CardDef def)
     {
-        if (string.IsNullOrEmpty(cardId)) return false;
+        if (!def.IsValid) return false;
         if (!CanDelete) return false;
 
         // 先移除再扣钱：移除失败就什么都不动
-        if (!RunManager.Instance.RemoveCardFromDeck(cardId)) return false;
+        if (!RunManager.Instance.RemoveCardFromDeck(def)) return false;
 
         RunManager.Instance.TrySpend(DeletePrice);
         ShopStore.Instance.deleteCount++;
@@ -256,7 +196,7 @@ public class ShopManager : ManagerBase<ShopManager>
 
         foreach (var g in store.goods)
         {
-            data.shopGoods.Add(new ShopGoods { cardId = g.cardId, price = g.price, sold = g.sold });
+            data.shopGoods.Add(new ShopGoods { def = g.def, price = g.price, sold = g.sold });
         }
 
         // 删牌次数也要落盘：退出重进同一个商店要保持一样（次数不能洗回来）
@@ -274,7 +214,7 @@ public class ShopManager : ManagerBase<ShopManager>
 
         foreach (var g in data.shopGoods)
         {
-            store.goods.Add(new ShopGoods { cardId = g.cardId, price = g.price, sold = g.sold });
+            store.goods.Add(new ShopGoods { def = g.def, price = g.price, sold = g.sold });
         }
 
         _goodsPrepared = true;   // 已有商品 → 不再重新随机

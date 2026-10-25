@@ -25,6 +25,12 @@ public class CardViewManager : ManagerBase<CardViewManager>
     /// </summary>
     public const float FaceUpSpacing = 0.65f;
 
+    /// <summary>
+    /// 带属性的正面牌额外多让出的间隔（0.25 → 自然值 0.9）。
+    /// 属性图标行在牌面下半部，不多让一点会被下面那张牌盖住
+    /// </summary>
+    public const float FaceUpAttributeExtraSpacing = 0.25f;
+
     /// <summary>反面牌（牌背）的向下间隔（不参与压缩）</summary>
     private const float FaceDownSpacing = 0.3f;
 
@@ -37,7 +43,8 @@ public class CardViewManager : ManagerBase<CardViewManager>
     // ============ 列内自适应间距 ============
 
     /// <summary>
-    /// 每列当前实际用的「正面牌间距」（下标 = 列索引）。
+    /// 每列当前实际用的「正面牌间距」（下标 = 列索引）—— 这是普通正面牌的基准值，
+    /// 带属性的牌在此基础上再加 FaceUpAttributeExtraSpacing。
     /// 列的自然高度超出可用高度时只压它（反面间距不动），压到 FaceDownSpacing 为止；
     /// 还放不下就让它超出屏幕。
     /// </summary>
@@ -853,11 +860,29 @@ public class CardViewManager : ManagerBase<CardViewManager>
         float y = _startPos.y;
         for (int i = 1; i <= rowIndex; i++)
         {
-            float spacing = column[i - 1].isFaceUp ? faceUpSpacing : FaceDownSpacing;
-            y -= spacing;
+            y -= GetCardSpacing(column[i - 1], faceUpSpacing);
         }
 
         return new Vector3(x, y, _startPos.z);
+    }
+
+    /// <summary>
+    /// 一张牌下面该留多少间距（取决于这张牌自己）：
+    ///   牌背 → 固定 FaceDownSpacing；
+    ///   普通正面牌 → 本列压缩后的 faceUpSpacing；
+    ///   带属性的正面牌 → 再多让 FaceUpAttributeExtraSpacing（把属性图标行露出来）
+    /// </summary>
+    private static float GetCardSpacing(CardData card, float faceUpSpacing)
+    {
+        if (!card.isFaceUp) return FaceDownSpacing;
+
+        return HasAttribute(card) ? faceUpSpacing + FaceUpAttributeExtraSpacing : faceUpSpacing;
+    }
+
+    /// <summary>这张牌带属性吗（属性图标行会占掉牌面下半部，间距要多让）</summary>
+    private static bool HasAttribute(CardData card)
+    {
+        return card.attributes != null && card.attributes.Count > 0;
     }
 
     // ============ 列内自适应间距（防出屏） ============
@@ -894,21 +919,32 @@ public class CardViewManager : ManagerBase<CardViewManager>
         return true;
     }
 
-    /// <summary>算出这一列应该用的正面牌间距（下限 = FaceDownSpacing）</summary>
+    /// <summary>
+    /// 算出这一列应该用的正面牌间距（下限 = FaceDownSpacing）。
+    /// 带属性的正面牌固定多让 FaceUpAttributeExtraSpacing，压缩时这部分高度也要算进去：
+    ///   列高 H(s) = 普通正面间隔数 × s + 属性正面间隔数 × (s + extra) + 牌背部分
+    /// </summary>
     private static float CalcFaceUpSpacing(List<CardData> column, float available)
     {
         // 最后一张牌下面没有牌，不参与高度累加
         int faceUpGaps = 0;
+        int attributeGaps = 0;
         float faceDownHeight = 0f;
+
         for (int i = 0; i < column.Count - 1; i++)
         {
-            if (column[i].isFaceUp) faceUpGaps++;
-            else faceDownHeight += FaceDownSpacing;
+            var card = column[i];
+
+            if (!card.isFaceUp) faceDownHeight += FaceDownSpacing;
+            else if (HasAttribute(card)) attributeGaps++;
+            else faceUpGaps++;
         }
 
-        if (faceUpGaps == 0) return FaceUpSpacing;   // 全是牌背：压不压都一样
+        int totalFaceUpGaps = faceUpGaps + attributeGaps;
+        if (totalFaceUpGaps == 0) return FaceUpSpacing;   // 全是牌背：压不压都一样
 
-        float spacing = (available - faceDownHeight) / faceUpGaps;
+        float extraHeight = attributeGaps * FaceUpAttributeExtraSpacing;
+        float spacing = (available - faceDownHeight - extraHeight) / totalFaceUpGaps;
 
         return Mathf.Clamp(spacing, FaceDownSpacing, FaceUpSpacing);
     }
@@ -987,7 +1023,7 @@ public class CardViewManager : ManagerBase<CardViewManager>
         float span = 0f;
         for (int i = startRow; i < endRow; i++)
         {
-            span += column[i].isFaceUp ? faceUpSpacing : FaceDownSpacing;
+            span += GetCardSpacing(column[i], faceUpSpacing);
         }
 
         return span;

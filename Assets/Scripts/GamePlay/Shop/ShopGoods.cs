@@ -4,8 +4,8 @@
 [System.Serializable]
 public class ShopGoods
 {
-    /// <summary>牌 id（CardConfig.Id）</summary>
-    public string cardId;
+    /// <summary>商品的牌定义（花色 / 点数 / 技能 / 自带属性）</summary>
+    public CardDef def;
 
     /// <summary>价格</summary>
     public int price;

@@ -6,9 +6,10 @@ using UnityEngine;
 /// 2D 牌（CardModule / uGUI Image）共用同一套规则，两边只负责把结果画出来。
 ///
 /// 规则：
-///   图案   ：特殊牌读配表 Image，普通牌按「主花色 + 主点数」自动推导
-///   主花色 ：花色列表第一个（排序最前），其余进图标行
-///   主点数 ：点数列表第一个「可显示」的点数（跳过 -1），其余进图标行；红黑跟主花色
+///   图案   ：带落牌技能的牌读 PlaceSkillConfig.Image，否则按「主花色 + 主点数」自动推导
+///   花色   ：花色列表第一个（排序最前），其余进图标行；没有花色 → Suit/none 占位
+///   点数   ：点数列表第一个「可显示」的点数（跳过 -1），其余进图标行；红黑跟主花色；
+///            一个可显示点数都没有 → 有 -1 画 Rank/M，否则画 Rank/none
 ///
 /// 列对齐（多重牌压在别的牌上时切换主值）不在这里做 —— 那是 CardViewManager 的事，
 /// 对齐后的显示用列表照样传进来算就行。
@@ -39,25 +40,26 @@ public class CardFace
 
 public static class CardFaceHelper
 {
-    /// <summary>按牌 id 算（花色点数从 id 解析）</summary>
-    public static CardFace Build(string cardId)
+    /// <summary>按牌定义算（花色 / 点数取定义里的）</summary>
+    public static CardFace Build(CardDef def)
     {
-        if (string.IsNullOrEmpty(cardId)) return new CardFace();
+        if (!def.IsValid) return new CardFace();
 
-        CardIdCodec.TryParse(cardId, out var suits, out var ranks);
-        return Build(cardId, suits, ranks);
+        return Build(def, def.suits, def.ranks);
     }
 
     /// <summary>按显式花色 / 点数列表算（列对齐后的显示用列表也走这里）</summary>
-    public static CardFace Build(string cardId, IReadOnlyList<int> suits, IReadOnlyList<int> ranks)
+    public static CardFace Build(CardDef def, IReadOnlyList<int> suits, IReadOnlyList<int> ranks)
     {
         var face = new CardFace();
         var res = CardResManager.Instance;
 
-        face.Face = res.GetFaceSprite(cardId, suits, ranks);
+        face.Face = res.GetFaceSprite(def, suits, ranks);
+
+        int suitCount = suits?.Count ?? 0;
+        int rankCount = ranks?.Count ?? 0;
 
         // 花色：第一个当主花色，其余进图标行
-        int suitCount = suits?.Count ?? 0;
         if (suitCount > 0)
         {
             face.MainSuit = res.GetSuitSprite(suits[0]);
@@ -68,6 +70,12 @@ public static class CardFaceHelper
                 if (sprite != null) face.ExtraSuits.Add(sprite);   // 素材缺失就当没这个花色
             }
         }
+        else if (rankCount > 0)
+        {
+            // 无花色 → 画 Suit/none 占位。
+            // 但「无花色 + 无点数」的牌花色位留空：只在点数位画一个 none，避免两个 none 并排
+            face.MainSuit = res.GetNoSuitSprite();
+        }
 
         face.HasMultiSuit = suitCount > 1;
 
@@ -75,7 +83,6 @@ public static class CardFaceHelper
         bool isRed = IsRedSuit(suits);
         bool hasMainRank = false;
 
-        int rankCount = ranks?.Count ?? 0;
         for (int i = 0; i < rankCount; i++)
         {
             int rank = ranks[i];
@@ -95,11 +102,32 @@ public static class CardFaceHelper
             }
         }
 
+        // 一个可显示的点数都没有：牌面画「万能 M」或「无点数 none」占位
+        if (!hasMainRank)
+        {
+            face.MainRank = HasRank(ranks, CardRankConst.Wild)
+                ? res.GetWildRankSprite()
+                : res.GetNoRankSprite();
+        }
+
         return face;
     }
 
+    /// <summary>点数列表里有没有这个值</summary>
+    private static bool HasRank(IReadOnlyList<int> ranks, int value)
+    {
+        if (ranks == null) return false;
+
+        for (int i = 0; i < ranks.Count; i++)
+        {
+            if (ranks[i] == value) return true;
+        }
+
+        return false;
+    }
+
     /// <summary>点数用红套还是黑套：红心 / 方块是红，其余（含没有花色）是黑</summary>
-    private static bool IsRedSuit(IReadOnlyList<int> suits)
+    public static bool IsRedSuit(IReadOnlyList<int> suits)
     {
         if (suits == null || suits.Count == 0) return false;
 

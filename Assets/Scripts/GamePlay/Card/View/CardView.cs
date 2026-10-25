@@ -281,7 +281,7 @@ public class CardView : MonoBehaviour
         if (data.isFaceUp)
         {
             // 显示用列表优先（没喂过则用原始列表）
-            ApplyFace(data.id, _displaySuits ?? data.suits, _displayRanks ?? data.ranks, data.attributes);
+            ApplyFace(data.def, _displaySuits ?? data.suits, _displayRanks ?? data.ranks, data.attributes);
         }
         else ApplyBack();
     }
@@ -292,51 +292,37 @@ public class CardView : MonoBehaviour
         ApplyBack();
     }
 
-    /// <summary>直接显示指定牌的正面（临时牌用，无需绑定数据；没有属性信息）</summary>
-    public void ShowFace(string cardId)
-    {
-        if (string.IsNullOrEmpty(cardId)) return;
-
-        CardIdCodec.TryParse(cardId, out var suits, out var ranks);
-
-        _displaySuits = null;   // 临时牌没有列上下文，用原始列表
-        _displayRanks = null;
-        ApplyFace(cardId, suits, ranks, null);
-    }
-
     /// <summary>直接显示一张牌的正面（洗入发牌堆等临时牌用）—— 带上属性，毒 / 沉底图标也会画</summary>
     public void ShowFace(CardData card)
     {
         if (card == null) return;
 
-        ShowFace(card.id, card.attributes);
+        ShowFace(card.def, card.attributes);
     }
 
-    /// <summary>同上，但带着属性列表</summary>
-    public void ShowFace(string cardId, IReadOnlyList<E_CardAttributeEnum> attributes)
+    /// <summary>直接显示一个牌定义（临时牌用，无需绑定数据）</summary>
+    public void ShowFace(CardDef def, IReadOnlyList<E_CardAttributeEnum> attributes = null)
     {
-        if (string.IsNullOrEmpty(cardId)) return;
-
-        CardIdCodec.TryParse(cardId, out var suits, out var ranks);
+        if (!def.IsValid) return;
 
         _displaySuits = null;   // 临时牌没有列上下文，用原始列表
         _displayRanks = null;
-        ApplyFace(cardId, suits, ranks, attributes);
+        ApplyFace(def, def.suits, def.ranks, attributes);
     }
 
     /// <summary>
     /// 画正面。花色 / 点数一律用传进来的显示用列表（列对齐后的结果），
     /// 内容和 2D 的 CardModule 用同一套计算（CardFaceHelper），只是那边画到 uGUI Image 上
     /// </summary>
-    private void ApplyFace(string cardId, IReadOnlyList<int> suits, IReadOnlyList<int> ranks,
+    private void ApplyFace(CardDef def, IReadOnlyList<int> suits, IReadOnlyList<int> ranks,
         IReadOnlyList<E_CardAttributeEnum> attributes)
     {
-        var face = CardFaceHelper.Build(cardId, suits, ranks);
+        var face = CardFaceHelper.Build(def, suits, ranks);
 
         // 对齐后的图案素材不存在（画得少）则退回原始列表，不至于整张图都消失
         if (face.Face == null && IsConverged(suits, ranks))
         {
-            face = CardFaceHelper.Build(cardId, data.suits, data.ranks);
+            face = CardFaceHelper.Build(data.def, data.suits, data.ranks);
         }
 
         SetSprite(_bgRenderer, CardResManager.Instance.GetBgSprite(false));

@@ -27,10 +27,10 @@ public partial class ShowCardItem : BaseListItem
     /// <summary>牌面悬停变化 → 整个格子缩放</summary>
     private void OnCardHover(bool hovering) => _hoverScale?.SetHover(hovering);
 
-    /// <summary>按牌 id + 属性显示牌图（有 Sunk 属性会染黄）</summary>
-    public void Bind(string cardId, IReadOnlyList<E_CardAttributeEnum> attributes = null)
+    /// <summary>按牌定义 + 属性显示牌图（有 Sunk 属性会染黄）</summary>
+    public void Bind(CardDef def, IReadOnlyList<E_CardAttributeEnum> attributes = null)
     {
-        comps.modCard.Bind(cardId, attributes);
+        comps.modCard.Bind(def, attributes);
     }
 
     /// <summary>设置点击回调；传 null 表示不可点击（删牌选牌等场合用）</summary>

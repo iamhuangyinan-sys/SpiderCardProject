@@ -6,28 +6,28 @@ using Framework.Mgr;
 /// 一整局游戏（一大局）的资产逻辑 —— 金币 + 牌组
 ///
 /// 作用域：从进入 card 场景（开始新的一大局）到通关结束，重新开始则清零。
-/// TODO: 后续接入存档，支持中途退出后继续这一局
+/// 牌组里存的是「牌定义」CardDef（花色 / 点数 / 技能 / 自带属性），没有 id
 /// </summary>
 public class RunManager : ManagerBase<RunManager>
 {
     /// <summary>本局金币</summary>
     public int Coin => RunStore.Instance.coin;
 
-    /// <summary>本局牌组（牌 id 列表，同一 id 出现多次即多份）</summary>
-    public IReadOnlyList<string> Deck => RunStore.Instance.deck;
+    /// <summary>本局牌组（牌定义列表，同一张出现多次即多份）</summary>
+    public IReadOnlyList<CardDef> Deck => RunStore.Instance.deck;
 
     /// <summary>初始牌组每组点数份数</summary>
     private const int DefaultDeckCopies = 2;
 
 #if UNITY_EDITOR
-    /// <summary>【编辑器测试】额外塞进初始牌组的牌（编码 id）</summary>
-    private static readonly string[] TestExtraCardIds =
+    /// <summary>【编辑器测试】额外塞进初始牌组的牌</summary>
+    private static readonly CardDef[] TestExtraCardDefs =
     {
-        // "N0_s", "N2_s",              // 蜘蛛：红心 / 黑桃
-        // "N01_0jk",                   // 多重花色 + 多重点数
-        // "S__0300001",                // 黑色牌
-        // "S_m_0200001", "S_m_0200001",  // 复制 ×2
-        // "S_m_0200002", "S_m_0200002",  // 回收 ×2
+        // CardDef.Create(new[] { 0 }, new[] { CardRankConst.Ignore }),                       // 蜘蛛：红心
+        // CardDef.Create(new[] { 0, 1 }, new[] { 10, 11, 12 }),                              // 多重花色 + 多重点数
+        // CardDef.Create(null, null),                                                       // 无花色无点数
+        // CardDef.Create(null, new[] { CardRankConst.Wild }, E_PlaceSkillEnum.Copy),          // 复制
+        // CardDef.Create(null, new[] { CardRankConst.Wild }, E_PlaceSkillEnum.Recycle),       // 回收
     };
 #endif
 
@@ -84,23 +84,23 @@ public class RunManager : ManagerBase<RunManager>
     // ==================== 牌组 ====================
 
     /// <summary>把一张牌加入本局牌组（商店购买等）</summary>
-    public void AddCardToDeck(string cardId)
+    public void AddCardToDeck(CardDef def)
     {
-        if (string.IsNullOrEmpty(cardId)) return;
+        if (!def.IsValid) return;
 
-        RunStore.Instance.deck.Add(cardId);
+        RunStore.Instance.deck.Add(def.Clone());
     }
 
     /// <summary>
-    /// 从本局牌组里移除一张牌（商店删牌等）
+    /// 从本局牌组里移除一张牌（商店删牌等）：按内容匹配
     /// 同一张牌有多份时只移除第一份；牌不在牌组里返回 false
     /// </summary>
-    public bool RemoveCardFromDeck(string cardId)
+    public bool RemoveCardFromDeck(CardDef def)
     {
-        if (string.IsNullOrEmpty(cardId)) return false;
+        if (!def.IsValid) return false;
 
         var deck = RunStore.Instance.deck;
-        int index = deck.IndexOf(cardId);
+        int index = deck.IndexOf(def);
         if (index < 0) return false;
 
         deck.RemoveAt(index);
@@ -108,7 +108,7 @@ public class RunManager : ManagerBase<RunManager>
         return true;
     }
 
-    /// <summary>构建初始牌组：红桃 A-K + 黑桃 A-K，各两份（普通牌按花色点数生成编码 id，不查配表）</summary>
+    /// <summary>构建初始牌组：红桃 A-K + 黑桃 A-K，各两份</summary>
     private void BuildDefaultDeck()
     {
         var deck = RunStore.Instance.deck;
@@ -117,25 +117,25 @@ public class RunManager : ManagerBase<RunManager>
         AddDefaultDeckCards(deck, E_CardSuitEnum.Hearts);
         AddDefaultDeckCards(deck, E_CardSuitEnum.Spades);
 
-        // 【编辑器测试】额外塞几张（编码 id），出包不生效
+        // 【编辑器测试】额外塞几张，出包不生效
 #if UNITY_EDITOR
-        foreach (var id in TestExtraCardIds)
+        foreach (var def in TestExtraCardDefs)
         {
-            deck.Add(id);
+            deck.Add(def.Clone());
         }
 #endif
     }
 
     /// <summary>把一个花色的 A-K 各塞 DefaultDeckCopies 份</summary>
-    private static void AddDefaultDeckCards(List<string> deck, E_CardSuitEnum suit)
+    private static void AddDefaultDeckCards(List<CardDef> deck, E_CardSuitEnum suit)
     {
         for (int rank = 1; rank <= 13; rank++)
         {
-            string id = CardIdCodec.Encode((int)suit, rank);
+            var def = CardDef.Create((int)suit, rank);
 
             for (int i = 0; i < DefaultDeckCopies; i++)
             {
-                deck.Add(id);
+                deck.Add(def.Clone());
             }
         }
     }

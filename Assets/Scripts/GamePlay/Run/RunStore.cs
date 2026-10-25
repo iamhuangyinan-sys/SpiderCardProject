@@ -12,8 +12,8 @@ public class RunStore : StoreBase<RunStore>
     /// <summary>本局金币</summary>
     public int coin;
 
-    /// <summary>本局牌组（牌 id 列表，同一 id 出现多次即多份）</summary>
-    public readonly List<string> deck = new();
+    /// <summary>本局牌组（牌定义列表，同一张出现多次即多份）</summary>
+    public readonly List<CardDef> deck = new();
 
     protected override void OnInit()
     {

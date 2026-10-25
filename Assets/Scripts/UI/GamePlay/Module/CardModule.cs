@@ -40,8 +40,8 @@ public partial class CardModule : BaseModule, IPointerEnterHandler, IPointerExit
     /// <summary>提示框额外让出的距离（像素，默认 0；个别牌想再远一点就在预制体上调）</summary>
     [SerializeField] private float tipExtraGap = 0f;
 
-    /// <summary>当前绑定的牌 id（空 = 未绑定）</summary>
-    public string CardId { get; private set; }
+    /// <summary>当前绑定的牌定义（IsValid = false 表示未绑定）</summary>
+    public CardDef Def { get; private set; }
 
     /// <summary>悬停状态变化（true = 进入 / false = 离开）—— 宿主用来做整体缩放等表现</summary>
     public Action<bool> OnHoverChanged;
@@ -84,15 +84,16 @@ public partial class CardModule : BaseModule, IPointerEnterHandler, IPointerExit
 
     // ==================== 对外 ====================
 
-    /// <summary>绑定一张牌：记录 id / 属性 + 刷新牌面</summary>
-    /// <param name="cardId">牌 id（编码 id）</param>
-    /// <param name="attributes">牌的属性（null / 空 = 没有属性；会拷贝一份，外部改动不影响这里）</param>
-    public void Bind(string cardId, IReadOnlyList<E_CardAttributeEnum> attributes = null)
+    /// <summary>绑定一张牌：记录牌定义 / 属性 + 刷新牌面</summary>
+    /// <param name="def">牌定义（花色 / 点数 / 技能 / 自带属性）</param>
+    /// <param name="attributes">额外的状态属性（null / 空 = 没有；会拷贝一份）</param>
+    public void Bind(CardDef def, IReadOnlyList<E_CardAttributeEnum> attributes = null)
     {
-        CardId = cardId;
+        Def = def;
 
         _attributes.Clear();
-        if (attributes != null) _attributes.AddRange(attributes);
+        AddAttributes(def.attributes);   // 牌自带属性
+        AddAttributes(attributes);       // 外部传入的状态属性
 
         RefreshFace();
     }
@@ -100,7 +101,7 @@ public partial class CardModule : BaseModule, IPointerEnterHandler, IPointerExit
     /// <summary>清空显示与点击（item 回收时调）</summary>
     public void Clear()
     {
-        CardId = null;
+        Def = default;
         _attributes.Clear();
         SetClickable(null);
         RefreshFace();
@@ -161,7 +162,7 @@ public partial class CardModule : BaseModule, IPointerEnterHandler, IPointerExit
     private void ShowTip()
     {
         // 描述由牌的属性推导（可能多条；没有可说的属性时 helper 会直接收起）
-        var tips = CardTipHelper.Build(CardId, _attributes);
+        var tips = CardTipHelper.Build(Def, _attributes);
 
         // 对齐目标用「可见牌面」：模组根节点的 rect 不一定等于牌的实际大小
         var target = comps.btnCard != null && comps.btnCard.image != null
@@ -177,13 +178,13 @@ public partial class CardModule : BaseModule, IPointerEnterHandler, IPointerExit
     // ==================== 内部 ====================
 
     /// <summary>
-    /// 按当前 CardId / 属性刷新牌面（无牌时全部清空）。
+    /// 按当前牌定义 / 属性刷新牌面（没有牌时全部清空）。
     /// 内容和 3D 牌同一套计算（CardFaceHelper），只是画到 uGUI Image 上；
     /// 底板 btn_Card 保持预制体里的牌底，代码不碰
     /// </summary>
     private void RefreshFace()
     {
-        var face = string.IsNullOrEmpty(CardId) ? null : CardFaceHelper.Build(CardId);
+        var face = Def.IsValid ? CardFaceHelper.Build(Def) : null;
 
         SetImage(comps.imgImg, face?.Face);
         SetImage(comps.imgSuit, face?.MainSuit);
@@ -236,6 +237,17 @@ public partial class CardModule : BaseModule, IPointerEnterHandler, IPointerExit
     private bool HasAttribute(E_CardAttributeEnum attribute)
     {
         return _attributes.Contains(attribute);
+    }
+
+    /// <summary>追加属性（重复的不重复加）</summary>
+    private void AddAttributes(IReadOnlyList<E_CardAttributeEnum> attributes)
+    {
+        if (attributes == null) return;
+
+        for (int i = 0; i < attributes.Count; i++)
+        {
+            if (!_attributes.Contains(attributes[i])) _attributes.Add(attributes[i]);
+        }
     }
 
     /// <summary>设图并按有无图开关节点（图标槽位在 LayoutGroup 里，必须用 SetActive 占/不占位）</summary>

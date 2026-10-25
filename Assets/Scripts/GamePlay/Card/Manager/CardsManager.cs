@@ -88,9 +88,9 @@ public class CardsManager : ManagerBase<CardsManager>
     {
         var deck = new List<CardData>();
 
-        foreach (var cardId in RunManager.Instance.Deck)
+        foreach (var def in RunManager.Instance.Deck)
         {
-            var card = CardFactory.Create(cardId);
+            var card = CardFactory.Create(def);
             if (card == null) continue;
 
             deck.Add(card);
@@ -645,67 +645,64 @@ public class CardsManager : ManagerBase<CardsManager>
     // ==================== 开局事件 ====================
 
     /// <summary>
-    /// 开局事件：万能蜘蛛（4 花色 + 无视点数）。
-    /// 它是普通牌（不查配表），编码 id 为 N0123_s —— 效果等价于「可以连接任意点数花色牌」，
-    /// 但它没有专属整图素材（多花色推不出图案），场上会显示成花色小图 + 多重花色文本
+    /// 开局事件：万能蜘蛛（4 花色 + 无视点数）—— 效果等价于「可以连接任意点数花色牌」，
+    /// 但没有专属整图素材（多花色推不出图案），场上显示成花色小图 + 多重花色 tip
     /// </summary>
-    private static readonly string EventSpiderCardId =
-        CardIdCodec.Encode(new[] { 0, 1, 2, 3 }, new[] { CardRankConst.Ignore });
+    private static readonly CardDef EventSpiderDef =
+        CardDef.Create(new[] { 0, 1, 2, 3 }, new[] { CardRankConst.Ignore });
 
-    /// <summary>开局事件：黑色牌编码 id（特殊牌）</summary>
-    private const string EventBlackCardId = "S__0300001";
+    /// <summary>开局事件：黑色牌 = 无花色无点数的普通牌</summary>
+    private static readonly CardDef EventBlackDef = CardDef.Create(null, null);
 
     /// <summary>开局事件流程：洗入事件牌（等整段动画播完）→ 发牌</summary>
     private IEnumerator StartWithLevelEventRoutine(E_LevelEventEnum levelEvent)
     {
-        yield return WashInAndWait(BuildLevelEventCardIds(levelEvent));
+        yield return WashInAndWait(BuildLevelEventDefs(levelEvent));
 
         Deal();
     }
 
     /// <summary>
-    /// 开局事件要洗入的牌 id（先写死，后续可改成事件配表：事件 → 牌 id 列表）
+    /// 开局事件要洗入的牌（先写死，后续可改成事件配表：事件 → 牌定义列表）
     /// </summary>
-    private List<string> BuildLevelEventCardIds(E_LevelEventEnum levelEvent)
+    private List<CardDef> BuildLevelEventDefs(E_LevelEventEnum levelEvent)
     {
-        var ids = new List<string>();
+        var defs = new List<CardDef>();
 
         switch (levelEvent)
         {
             case E_LevelEventEnum.AddSpider:
-                ids.Add(EventSpiderCardId);
+                defs.Add(EventSpiderDef);
                 break;
 
             case E_LevelEventEnum.AddRandom:
                 // 两张可以抽到同一张（各自独立随机），只出梅花，和初始牌组混花色 → 加难度
-                ids.Add(RandomClubCardId());
-                ids.Add(RandomClubCardId());
-                ids.Add(EventBlackCardId);
+                defs.Add(RandomClubDef());
+                defs.Add(RandomClubDef());
+                defs.Add(EventBlackDef);
                 break;
         }
 
-        return ids;
+        return defs;
     }
 
-    /// <summary>随机取一张梅花 A-K 的编码 id（普通牌，不查配表）</summary>
-    private string RandomClubCardId()
+    /// <summary>随机取一张梅花 A-K 的牌定义</summary>
+    private CardDef RandomClubDef()
     {
         int rank = _random.Next(1, 14);   // 1-13 = A-K
-        return CardIdCodec.Encode((int)E_CardSuitEnum.Clubs, rank);
+        return CardDef.Create((int)E_CardSuitEnum.Clubs, rank);
     }
 
     // ==================== 洗入发牌堆 ====================
 
-    /// <summary>一张待洗入发牌堆的牌（编码 id + 要打的属性）</summary>
+    /// <summary>一条待洗入发牌堆的记录（牌定义；属性已经在定义里）</summary>
     private readonly struct WashInRequest
     {
-        public readonly string cardId;
-        public readonly IReadOnlyList<E_CardAttributeEnum> attributes;
+        public readonly CardDef def;
 
-        public WashInRequest(string cardId, IReadOnlyList<E_CardAttributeEnum> attributes)
+        public WashInRequest(CardDef def)
         {
-            this.cardId = cardId;
-            this.attributes = attributes;
+            this.def = def;
         }
     }
 
@@ -716,18 +713,16 @@ public class CardsManager : ManagerBase<CardsManager>
     private bool _washingIn;
 
     /// <summary>
-    /// 往发牌堆洗入一张牌（牌 id 为编码 id）：随机插进发牌堆任意位置，
+    /// 往发牌堆洗入一张牌：随机插进发牌堆任意位置，
     /// 并派发「中央生成一张正面牌 → 飞入发牌堆」动画。连续调用会排队，逐张错开飞入
     /// </summary>
-    /// <param name="cardId">编码 id</param>
-    /// <param name="attributes">额外打的属性（可空；控制台调试用）</param>
-    /// <returns>牌 id 合法返回 true</returns>
-    public bool WashInCard(string cardId, IReadOnlyList<E_CardAttributeEnum> attributes = null)
+    /// <param name="def">牌定义（花色 / 点数 / 技能 / 自带属性）</param>
+    /// <returns>定义合法返回 true</returns>
+    public bool WashInCard(CardDef def)
     {
-        if (string.IsNullOrEmpty(cardId)) return false;
-        if (CardFactory.Create(cardId) == null) return false;   // 编码不合法：拒绝
+        if (!def.IsValid) return false;
 
-        _washInQueue.Enqueue(new WashInRequest(cardId, attributes));
+        _washInQueue.Enqueue(new WashInRequest(def));
         if (!_washingIn) MonoManager.Instance.StartCoroutine(WashInRoutine());
 
         return true;
@@ -737,13 +732,13 @@ public class CardsManager : ManagerBase<CardsManager>
     /// 洗入若干张牌并等待整段动画播完（关卡开局事件用）。
     /// 与控制台 add 共用同一个队列，所以两者不会在生成点重叠
     /// </summary>
-    public IEnumerator WashInAndWait(IReadOnlyList<string> cardIds)
+    public IEnumerator WashInAndWait(IReadOnlyList<CardDef> defs)
     {
-        if (cardIds == null || cardIds.Count == 0) yield break;
+        if (defs == null || defs.Count == 0) yield break;
 
-        foreach (var id in cardIds)
+        foreach (var def in defs)
         {
-            if (!string.IsNullOrEmpty(id)) _washInQueue.Enqueue(new WashInRequest(id, null));
+            if (def.IsValid) _washInQueue.Enqueue(new WashInRequest(def));
         }
 
         if (!_washingIn) MonoManager.Instance.StartCoroutine(WashInRoutine());
@@ -761,10 +756,9 @@ public class CardsManager : ManagerBase<CardsManager>
 
             var request = _washInQueue.Dequeue();
 
-            var card = CardFactory.Create(request.cardId);
-            if (card == null) continue;   // 编码不合法：跳过
+            var card = CardFactory.Create(request.def);
+            if (card == null) continue;   // 定义不合法：跳过
 
-            ApplyAttributes(card, request.attributes);
             InsertIntoDrawPileRandom(card);
 
             EventManager.Instance.Dispatch<int>(E_EventEnum.OnDrawPileChanged, CardsStore.Instance.drawPile.Count);
@@ -779,17 +773,6 @@ public class CardsManager : ManagerBase<CardsManager>
 
         _washInQueue.Clear();
         _washingIn = false;
-    }
-
-    /// <summary>给刚建好的牌补属性（控制台调试用；已有的不重复加）</summary>
-    private static void ApplyAttributes(CardData card, IReadOnlyList<E_CardAttributeEnum> attributes)
-    {
-        if (attributes == null) return;
-
-        for (int i = 0; i < attributes.Count; i++)
-        {
-            card.SetAttribute(attributes[i], true);
-        }
     }
 
     /// <summary>把一张牌随机插进发牌堆（栈只能后进先出，整体摊开 → 插入 → 反向压回）</summary>

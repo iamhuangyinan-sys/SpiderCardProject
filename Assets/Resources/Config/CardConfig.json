@@ -1,7 +1,0 @@
-﻿{
-  "items": [
-    {"Id": "S__0300001", "Image": "cardBlack", "Price": -70, "PlaceSkill": 0},
-    {"Id": "S_m_0200001", "Image": "cardCopy", "Price": 150, "PlaceSkill": 2},
-    {"Id": "S_m_0200002", "Image": "cardRecycle", "Price": 80, "PlaceSkill": 1}
-  ]
-}

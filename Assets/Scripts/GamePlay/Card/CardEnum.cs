@@ -4,9 +4,9 @@
 /// </summary>
 
 /// <summary>
-/// 花色枚举 —— 数值同时就是编码 id 里的花色字符（0 红心 / 1 方块 / 2 黑桃 / 3 梅花），
+/// 花色枚举 —— 数值同时就是牌定义里花色的大小顺序（0 红心 / 1 方块 / 2 黑桃 / 3 梅花），
 /// 也是「多重花色时第一个当主花色」的优先顺序。
-/// 改数值等于改 id 里字符的含义，别随便动
+/// 改数值等于改顺序与图案推导，别随便动
 /// </summary>
 public enum E_CardSuitEnum
 {
@@ -37,22 +37,26 @@ public static class CardRankConst
 
     /// <summary>
     /// 多重「点数」的数量上限（含主点数）—— 逻辑规定，不是表现层限制，**普通牌和特殊牌都一样**。
-    /// 超过的牌 id 不合法：CardIdCodec 编码 / 解析时会警告并拒绝
+    /// 超过的牌定义不合法：CardDef 构造 / 控制台解析时会警告并拒绝
     /// </summary>
     public const int MaxCount = 5;
 }
 
-/// <summary>落牌技能枚举 —— 牌放下后触发的特殊能力（配表 PlaceSkill）</summary>
+/// <summary>
+/// 落牌技能枚举 —— 牌放下后触发的特殊能力。
+/// 数值就是配表 PlaceSkillConfig 的主键（改这里要同步改表）：
+/// 带技能的牌 = 以前的「特殊牌」，整图读 PlaceSkillConfig.Image
+/// </summary>
 public enum E_PlaceSkillEnum
 {
     /// <summary>无</summary>
     None = 0,
 
     /// <summary>回收：放下后，自己和自己下面紧邻的 1 张牌一起进弃牌堆</summary>
-    Recycle = 1,
+    Recycle = 10001,
 
     /// <summary>复制：放下后，自己变成这列自己下面紧邻的那张牌</summary>
-    Copy = 2,
+    Copy = 10002,
 }
 
 /// <summary>
@@ -75,6 +79,9 @@ public enum E_CardTipEnum
 
     /// <summary>没有点数：不能与任何牌连接，只能单独拖动</summary>
     NoRank = 105,
+
+    /// <summary>没有花色：跟谁都不是同花，不参与花色判断</summary>
+    NoSuit = 106,
 }
 
 /// <summary>

@@ -96,6 +96,6 @@ public partial class ShopPanel : NormalPanel
             return;
         }
 
-        ShowCardsPanel.PickCard(RunManager.Instance.Deck, id => shop.TryDeleteCard(id));
+        ShowCardsPanel.PickCard(RunManager.Instance.Deck, def => shop.TryDeleteCard(def));
     }
 }

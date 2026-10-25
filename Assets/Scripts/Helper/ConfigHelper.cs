@@ -5,9 +5,9 @@ using UnityEngine;
 /// 配表读取助手 —— 纯静态，运行时加载 Resources/Config/*.json
 ///
 /// 使用方式：
-///   ConfigHelper.LoadAll();                             // 游戏启动时调用一次
-///   var card = ConfigHelper.Get<CardConfig>("0100001");  // 按 Id（string）查
-///   var allCards = ConfigHelper.GetAll<CardConfig>();    // 拿全部
+///   ConfigHelper.LoadAll();                                    // 游戏启动时调用一次
+///   var skill = ConfigHelper.Get<PlaceSkillConfig>("10001");    // 按 Id（string）查
+///   var allSkills = ConfigHelper.GetAll<PlaceSkillConfig>();    // 拿全部
 /// </summary>
 public static class ConfigHelper
 {

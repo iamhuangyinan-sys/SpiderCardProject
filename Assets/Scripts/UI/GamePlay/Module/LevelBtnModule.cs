@@ -166,9 +166,9 @@ public partial class LevelBtnModule : BaseModule
     }
 
     /// <summary>
-    /// 开局事件描述（暂写死，与 CardsManager.BuildLevelEventCardIds 一一对应）
-    ///   AddSpider：洗入 1 张万能蜘蛛（N0123_s，可连接任意点数花色牌）
-    ///   AddRandom：洗入 2 张随机梅花 A-K → 再加 1 张黑色牌（S__0300001）
+    /// 开局事件描述（暂写死，与 CardsManager.BuildLevelEventDefs 一一对应）
+    ///   AddSpider：洗入 1 张万能蜘蛛（可连接任意点数花色牌）
+    ///   AddRandom：洗入 2 张随机梅花 A-K → 再加 1 张无花色无点数的牌
     /// </summary>
     private static string GetEventDesc(int levelEvent)
     {

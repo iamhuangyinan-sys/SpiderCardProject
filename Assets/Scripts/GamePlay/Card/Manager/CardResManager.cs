@@ -54,11 +54,20 @@ public class CardResManager : ManagerBase<CardResManager>
         return string.IsNullOrEmpty(name) ? null : LoadSprite(SUIT_DIR + name);
     }
 
+    /// <summary>无花色的占位图（Suit/none）—— 没有花色的牌画这个</summary>
+    public Sprite GetNoSuitSprite() => LoadSprite(SUIT_DIR + "none");
+
     /// <summary>点数小图（Rank/{Red|Black}/{A..K|S}）</summary>
     public Sprite GetRankSprite(int rank, bool isRed)
     {
         return LoadSprite($"{RANK_DIR}{(isRed ? "Red" : "Black")}/{GetRankName(rank)}");
     }
+
+    /// <summary>万能放下（-1）的点数图（Rank/M，不分红黑）</summary>
+    public Sprite GetWildRankSprite() => LoadSprite(RANK_DIR + "M");
+
+    /// <summary>无点数的占位图（Rank/none，不分红黑）</summary>
+    public Sprite GetNoRankSprite() => LoadSprite(RANK_DIR + "none");
 
     /// <summary>属性小图（读配表 CardAttributeConfig.Icon → Attribute/ 下的文件名，不含扩展名）</summary>
     public Sprite GetAttributeSprite(int attribute)
@@ -77,28 +86,35 @@ public class CardResManager : ManagerBase<CardResManager>
 
     /// <summary>
     /// 取一张牌正面的图案：
-    ///   特殊牌 → 配表 Image
-    ///   普通牌（配表没有 / Image 为空）→ 按「主花色 + 主点数」自动推导（cardHeartsA / cardHeartsSpider…）
-    ///   推不出来（没有花色 / 没有可显示的点数）→ null（不显示图案）
+    ///   带落牌技能（以前的特殊牌）→ PlaceSkillConfig.Image
+    ///   否则（含技能没配图）→ 按「主花色 + 主点数」自动推导（cardHeartsA / cardHeartsSpider…）
+    ///   都推不出来（没有花色 / 没有可显示的点数）→ null（不显示图案）
     ///
     /// 传进来的列表就是「显示用」列表：多重花色 / 多重点数也推得出来（取排在最前的那一个当主花色主点数），
     /// 被收敛过的牌传收敛后的列表 → 图案跟着一起换
     /// </summary>
-    public Sprite GetFaceSprite(string encodedId, IReadOnlyList<int> suits, IReadOnlyList<int> ranks)
+    public Sprite GetFaceSprite(CardDef def, IReadOnlyList<int> suits, IReadOnlyList<int> ranks)
     {
-        var cfg = GetCardConfig(encodedId);
-        string imageName = cfg != null ? cfg.Image : null;
+        string imageName = GetSkillImage(def);
 
         if (string.IsNullOrEmpty(imageName)) imageName = GetFaceImageName(suits, ranks);
 
         return string.IsNullOrEmpty(imageName) ? null : GetCardImage(imageName);
     }
 
-    /// <summary>只给编码 id 时取图案（列表里的牌用）</summary>
-    public Sprite GetFaceSprite(string encodedId)
+    /// <summary>只给牌定义时取图案（列表 / 预览用）</summary>
+    public Sprite GetFaceSprite(CardDef def)
     {
-        CardIdCodec.TryParse(encodedId, out var suits, out var ranks);
-        return GetFaceSprite(encodedId, suits, ranks);
+        return def.IsValid ? GetFaceSprite(def, def.suits, def.ranks) : null;
+    }
+
+    /// <summary>带落牌技能的牌 → PlaceSkillConfig.Image（没技能 / 没配图返回 null）</summary>
+    private static string GetSkillImage(CardDef def)
+    {
+        if (!def.IsValid || !def.HasSkill) return null;
+
+        var cfg = ConfigHelper.Get<PlaceSkillConfig>(((int)def.placeSkill).ToString());
+        return cfg != null ? cfg.Image : null;
     }
 
     /// <summary>
@@ -184,12 +200,6 @@ public class CardResManager : ManagerBase<CardResManager>
             case CardRankConst.Ignore: return "S";
             default: return rank.ToString();
         }
-    }
-
-    /// <summary>按 id 查配表</summary>
-    public CardConfig GetCardConfig(string id)
-    {
-        return ConfigHelper.Get<CardConfig>(id);
     }
 
     private Sprite LoadSprite(string resPath)
