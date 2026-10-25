@@ -13,8 +13,8 @@ public partial class BeginPanel
     [System.Serializable]
     public class CompsData : CompsDataBase
     {
-        public Button btnStart;
         public Button btnContinue;
+        public Button btnStart;
         public Button btnSetting;
         public Button btnQuit;
     }

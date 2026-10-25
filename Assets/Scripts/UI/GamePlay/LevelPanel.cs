@@ -233,8 +233,9 @@ public partial class LevelPanel : NormalPanel, ISceneInputBlockPanel
         RefreshPlayerArrow();
         RefreshLineColors();
 
-        // 查看模式 / 正在进关的停留期：RefreshState 会把 interactable 复位，这里盖回去
-        if (_viewOnly || _entering) SetModulesInteractable(false);
+        // 查看模式 / 正在进关的停留期：RefreshState 会把 interactable 复位，这里盖回去；
+        // 其它情况也要显式恢复一次 —— 模组是池化复用的，_clickBlocked 可能还停在上一次的 true
+        SetModulesInteractable(!(_viewOnly || _entering));
     }
 
     /// <summary>
@@ -347,12 +348,16 @@ public partial class LevelPanel : NormalPanel, ISceneInputBlockPanel
         if (IsOpen) SetModulesInteractable(true);
     }
 
-    /// <summary>屏蔽 / 恢复所有关卡按钮的点击</summary>
+    /// <summary>
+    /// 屏蔽 / 恢复所有关卡按钮的点击（进关停留 / 查看模式用）。
+    /// 只挡点击，不直接改 interactable —— 否则按钮会按 Button 的 disabledColor 变灰，
+    /// 选中的关卡看起来像「被锁住」（亮/灰仍由 LevelBtnModule.RefreshState 按状态决定）
+    /// </summary>
     private void SetModulesInteractable(bool value)
     {
         foreach (var m in _modules)
         {
-            if (m != null && m.comps.btnLevel != null) m.comps.btnLevel.interactable = value;
+            if (m != null) m.SetClickBlocked(!value);
         }
     }
 }

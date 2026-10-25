@@ -176,6 +176,12 @@ public class CardsManager : ManagerBase<CardsManager>
     /// <summary>从发牌堆给每列顶部逐张发一张牌（翻开），发牌堆数量逐张减少</summary>
     public void DealFromDrawPile()
     {
+        if (CardsStore.Instance.drawPile.Count == 0)
+        {
+            TipHelper.Show("发牌堆没有牌");
+            return;
+        }
+
         if (!CardRuleManager.Instance.CanDeal())
         {
             // 有空列时不能发牌（文案先写死，后续接提示表 / 语言表时改 TipHelper）

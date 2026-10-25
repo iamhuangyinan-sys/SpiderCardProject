@@ -73,6 +73,10 @@ public class LevelStore : StoreBase<LevelStore>
     /// <summary>某关卡是否已解锁</summary>
     public bool IsUnlocked(string levelId) => unlockedIds.Contains(levelId);
 
+    /// <summary>某关卡玩家是否选择过（走过的关卡：已通关，或正在打的那一关）</summary>
+    public bool HasChosen(string levelId) =>
+        !string.IsNullOrEmpty(levelId) && chosenLevelIds.Contains(levelId);
+
     /// <summary>通知数据变更（UI 刷新）</summary>
     public void Refresh() => NotifyDataChanged();
 }

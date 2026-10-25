@@ -233,6 +233,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::HoverScaleBehaviour
   target: {fileID: 0}
   hoverScale: 1.3
+  allowBreathing: 1
+  breatheMinScale: 0.9
+  breatheMaxScale: 1.2
+  breatheDuration: 1
   duration: 0.1
   ease: 6
   autoTrigger: 1

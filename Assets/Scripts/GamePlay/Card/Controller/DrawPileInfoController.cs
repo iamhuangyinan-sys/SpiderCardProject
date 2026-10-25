@@ -26,9 +26,12 @@ public class DrawPileInfoController : MonoBehaviour
         if (!Physics.Raycast(ray, out var hit) || hit.collider != _collider) return;
 
         var cards = CardsManager.Instance.GetDrawPileCards();
-        if (cards.Count > 0)
+        if (cards.Count == 0)
         {
-            ShowCardsPanel.ShowCards(cards);
+            TipHelper.Show("发牌堆没有牌");
+            return;
         }
+
+        ShowCardsPanel.ShowCards(cards);
     }
 }

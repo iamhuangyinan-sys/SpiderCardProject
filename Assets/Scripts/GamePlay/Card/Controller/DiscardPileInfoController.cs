@@ -26,9 +26,12 @@ public class DiscardPileInfoController : MonoBehaviour
         if (!Physics.Raycast(ray, out var hit) || hit.collider != _collider) return;
 
         var cards = CardsManager.Instance.GetDiscardPileCards();
-        if (cards.Count > 0)
+        if (cards.Count == 0)
         {
-            ShowCardsPanel.ShowCards(cards);
+            TipHelper.Show("弃牌堆没有牌");
+            return;
         }
+
+        ShowCardsPanel.ShowCards(cards);
     }
 }

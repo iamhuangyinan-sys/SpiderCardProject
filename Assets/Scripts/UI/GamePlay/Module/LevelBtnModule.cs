@@ -26,6 +26,12 @@ public partial class LevelBtnModule : BaseModule
     private TextMeshProUGUI _txtType;
     private Image _imgIcon;
 
+    /// <summary>预制体上配的 Button 禁用色 —— 未解锁关卡沿用它</summary>
+    private Color _lockedColor;
+
+    /// <summary>进关停留期间屏蔽点击（只挡点击，外观仍按解锁 / 走过的状态）</summary>
+    private bool _clickBlocked;
+
     /// <summary>悬停缩放（挂在 btn_Level 上）；没有就退化成不缩放、提示框按 1 倍算</summary>
     private HoverScaleBehaviour _hoverScale;
 
@@ -34,6 +40,9 @@ public partial class LevelBtnModule : BaseModule
         comps.btnLevel.onClick.AddListener(OnClick);
         _txtType = comps.btnLevel.GetComponentInChildren<TextMeshProUGUI>();
         _imgIcon = comps.btnLevel.image;
+
+        // 记住预制体上的禁用色：未解锁关卡用它，走过的关卡改用正常色（亮但不可点）
+        _lockedColor = comps.btnLevel.colors.disabledColor;
 
         _hoverScale = GetComponentInChildren<HoverScaleBehaviour>(true);
         if (_hoverScale != null) _hoverScale.OnHoverChanged = OnHoverChanged;
@@ -59,6 +68,9 @@ public partial class LevelBtnModule : BaseModule
     {
         _cfg = cfg;
 
+        // 模组是池化复用的：上一次进关时留下的「屏蔽点击」不能带过来
+        _clickBlocked = false;
+
         HideTip();   // 复用时先收掉上一个关卡的提示
 
         RefreshIcon();
@@ -76,17 +88,49 @@ public partial class LevelBtnModule : BaseModule
     /// <summary>当前绑定的关卡 id（未绑定时为 null）</summary>
     public string LevelId => _cfg != null ? _cfg.Id : null;
 
-    /// <summary>刷新显示：类型 + 锁定状态</summary>
+    /// <summary>
+    /// 屏蔽 / 恢复点击：进关停留期间用。
+    /// 只改「能不能点」，**不影响亮/灰**（选中的关卡不会因为不可点而变灰）
+    /// </summary>
+    public void SetClickBlocked(bool blocked)
+    {
+        if (_clickBlocked == blocked) return;
+
+        _clickBlocked = blocked;
+        RefreshState();
+    }
+
+    /// <summary>
+    /// 刷新显示：类型文本 + 亮/灰 + 可点状态。
+    /// 三种状态：
+    ///   走过的关卡（chosenLevelIds 里）→ 亮，但不可点（就是已经打过的关）
+    ///   可选的关卡（unlockedIds 里） → 亮，且可点（进关停留期间临时不可点）
+    ///   未解锁                     → 灰，不可点
+    /// </summary>
     public void RefreshState()
     {
         if (_cfg == null) return;
 
-        bool unlocked = LevelStore.Instance.IsUnlocked(_cfg.Id);
-        comps.btnLevel.interactable = unlocked;
+        bool clickable = LevelStore.Instance.IsUnlocked(_cfg.Id);
+        bool visited = LevelStore.Instance.HasChosen(_cfg.Id);
+
+        // 亮 = 可选 或 走过；只有未解锁才是灰
+        bool bright = clickable || visited;
+
+        comps.btnLevel.interactable = clickable && !_clickBlocked;
+
+        // Button 在 interactable = false 时会强制把图标染成 disabledColor：
+        // 亮着的关卡把它换成正常色，就做到了「亮着但（暂时）点不动」
+        var colors = comps.btnLevel.colors;
+        colors.disabledColor = bright ? colors.normalColor : _lockedColor;
+        comps.btnLevel.colors = colors;
+
+        // 只有真正可点的关卡才呼吸；进关停留期间停掉
+        _hoverScale?.SetBreathing(clickable && !_clickBlocked);
 
         if (_txtType != null)
         {
-            _txtType.text = unlocked ? GetTypeName(_cfg.LevelType) : "锁定";
+            _txtType.text = bright ? GetTypeName(_cfg.LevelType) : "锁定";
         }
     }
 

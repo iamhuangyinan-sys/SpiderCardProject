@@ -42,6 +42,22 @@ public class HoverScaleBehaviour : MonoBehaviour, IPointerEnterHandler, IPointer
     /// <summary>悬停时的放大倍数（每个预制体各调各的）</summary>
     [SerializeField] private float hoverScale = 1.12f;
 
+    [Header("呼吸（提示可点）")]
+    /// <summary>
+    /// 是否允许呼吸（默认关）。没勾的预制体永远不会呼吸 —— 其它挂本组件的地方（牌格 / 商店格子等）不受影响，
+    /// 需要的地方（目前只有关卡按钮）自己在预制体上勾上
+    /// </summary>
+    [SerializeField] private bool allowBreathing = false;
+
+    /// <summary>空闲呼吸的最小倍数（相对基座缩放）</summary>
+    [SerializeField] private float breatheMinScale = 0.9f;
+
+    /// <summary>空闲呼吸的最大倍数（相对基座缩放）—— 别超过 hoverScale，否则分不清“呼吸”和“悬停”</summary>
+    [SerializeField] private float breatheMaxScale = 1.2f;
+
+    /// <summary>呼吸单程时长（秒）—— 一个来回是它的 2 倍</summary>
+    [SerializeField] private float breatheDuration = 1f;
+
     /// <summary>缩放时长（秒）</summary>
     [SerializeField] private float duration = 0.12f;
 
@@ -89,6 +105,11 @@ public class HoverScaleBehaviour : MonoBehaviour, IPointerEnterHandler, IPointer
     /// <summary>当前是否处于悬停放大状态</summary>
     public bool IsHovering { get; private set; }
 
+    /// <summary>当前是否处于呼吸状态（宿主设过一次后一直保留，失活/复显后自动接上）</summary>
+    public bool IsBreathing => _breathing;
+
+    private bool _breathing;
+
     /// <summary>悬停状态变化（true = 进入 / false = 离开）—— 宿主用来做提示框之类的联动</summary>
     public Action<bool> OnHoverChanged;
 
@@ -119,8 +140,66 @@ public class HoverScaleBehaviour : MonoBehaviour, IPointerEnterHandler, IPointer
         var to = on ? _baseScale * hoverScale : _baseScale;
         _scaleTween = AnimationHelper.ScaleTo(_rect, to, duration, ease).SetUpdate(useUnscaledTime);
 
-        // 缩回去的过程里还要继续盖着邻居，所以等补间播完再还同级顺序
-        if (!on) _scaleTween.OnComplete(RestoreSibling);
+        // 缩回去的过程里还要继续盖着邻居，所以等补间播完再还同级顺序；
+        // 播完之后如果还处于呼吸模式，接着呼吸
+        if (!on)
+        {
+            _scaleTween.OnComplete(() =>
+            {
+                RestoreSibling();
+                if (_breathing) StartBreathe();
+            });
+        }
+    }
+
+    /// <summary>
+    /// 空闲呼吸（在 [breatheMinScale, breatheMaxScale] 之间无限往返）—— 用来提示「这个还能点」。
+    /// 悬停优先：悬停期间不呼吸，悬停结束后自动接上。走过 / 未解锁的关卡传 false 即可。
+    /// </summary>
+    public void SetBreathing(bool on)
+    {
+        if (!allowBreathing) on = false;   // 没打开开关的预制体一律不呼吸
+
+        if (_breathing == on) return;
+        _breathing = on;
+
+        if (_rect == null) return;
+        if (IsHovering) return;   // 悬停中：只记标志，等 SetHover(false) 播完再启动
+
+        if (on) StartBreathe();
+        else
+        {
+            KillTween();
+            _scaleTween = AnimationHelper.ScaleTo(_rect, _baseScale, duration, ease).SetUpdate(useUnscaledTime);
+        }
+    }
+
+    /// <summary>从当前缩放平滑走到峰值，然后开始在 [min, max] 之间无限往返</summary>
+    private void StartBreathe()
+    {
+        if (!allowBreathing) return;
+
+        KillTween();
+
+        float maxFactor = Mathf.Max(breatheMinScale, breatheMaxScale);
+        float minFactor = Mathf.Min(breatheMinScale, breatheMaxScale);
+
+        Vector3 max = _baseScale * maxFactor;
+        Vector3 min = _baseScale * minFactor;
+
+        // 第一程：当前值 → 峰值（避免直接跳到峰值那一下的突亮）
+        _scaleTween = AnimationHelper.ScaleTo(_rect, max, breatheDuration, Ease.InOutSine)
+            .SetUpdate(useUnscaledTime)
+            .OnComplete(() =>
+            {
+                if (!_breathing || IsHovering) return;
+
+                // 峰值 ↔ 谷值，无限往返
+                _scaleTween = _rect.DOScale(min, breatheDuration)
+                    .SetEase(Ease.InOutSine)
+                    .SetLoops(-1, LoopType.Yoyo)
+                    .SetUpdate(useUnscaledTime);
+            });
     }
 
     // ==================== 指针 ====================
@@ -143,6 +222,12 @@ public class HoverScaleBehaviour : MonoBehaviour, IPointerEnterHandler, IPointer
         _baseScale = _rect.localScale;
 
         PrepareOutline();
+    }
+
+    /// <summary>重新显示（面板再打开 / 池化取出）后，如果还处于呼吸模式就接上</summary>
+    private void OnEnable()
+    {
+        if (allowBreathing && _breathing && _rect != null && !IsHovering) StartBreathe();
     }
 
     /// <summary>被失活（池化回收 / 面板关闭）时立刻复位，不留缩放残留和层级残留</summary>
