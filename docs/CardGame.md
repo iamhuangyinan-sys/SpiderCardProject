@@ -261,7 +261,8 @@ classDiagram
 | OnDrawPileChanged | int 数量 | 发牌堆剩余数量 |
 | OnDiscardPileChanged | int 数量 | 弃牌堆数量 |
 | OnPocketChanged | int 牌包索引 | 牌包变化 |
-| OnCardChanged | CardData | 单张牌变化（如翻牌） |
+| OnCardChanged | CardData | 单张牌变化（牌背 → 正面，播翻牌动画） |
+| OnCardFaceChanged | CardData | 单张牌换面（复制技能：牌本来就是正面，直接换图不翻牌） |
 | OnCardToDiscard | CardData | 单张牌回收到弃牌堆 |
 | OnShuffleBack | 无 | 弃牌堆洗回发牌堆动画 |
 | OnStraightCountChanged | 无 | 接龙次数变化（进度刷新） |
@@ -481,15 +482,22 @@ CheckAndDiscard(col)
 | Manager | `GamePlay/Shop/ShopManager.cs` |
 | UI | `UI/GamePlay/ShopPanel.cs` + `UI/GamePlay/Item/ShopCardItem.cs` |
 
-### 商品刷新（`ShopManager.OpenShop`）
+### 商品刷新（`ShopManager.RandomizeGoods`）
 
-| 位置 | 来源 | 数量 | 单价 |
-|------|------|------|------|
-| 前 2 件 | `CardConfig.Id` 以 `02` 开头的特殊牌 | 2 | 100 |
-| 后 4 件 | `CardConfig.Id` 以 `01` 开头的普通牌 | 4 | 0 |
+商品全部来自配表 `CardPreSetConfig`（`Id / Type / Rank / Suit / PlaceSkill / Attribute / Price`），
+**单价一律取表里的 `Price`**，`Type` 见 `E_CardPreSetTypeEnum`（0 负面 / 1 技能 / 2 蜘蛛 / 3 多重点数花色）。
 
-- 按前缀分组后各自洗牌取前 N，同批不重复；候选不足时有多少取多少。
-- 每次打开 `ShopPanel` 都重新随机（`OnOpen` 里调 `OpenShop`）。
+| 顺序 | 来源 | 数量 |
+|------|------|------|
+| 1~2 | 固定：`Id = 110001`（回收） | 2 |
+| 3 | `Type = 1`（技能类，**含回收**）随机 | 1 |
+| 4~5 | `Type = 2`（蜘蛛类）随机 | 2 |
+| 6~9 | `Type = 3`（多重点数 / 花色）随机 | 4 |
+
+- 每次抽取都是**独立随机、允许重复**（所以可能出现 3 张回收）。
+- 负面牌（`Type = 0`）不进商店。
+- 配表里某类型为空 / 某行非法（属性、落牌技能不是已定义枚举）时会跳过并打警告，不影响其它商品。
+- 商品只在「本次商店还没备好」时生成一次：退出重进 / 续档都沿用同一批（`_goodsPrepared` + 存档里的 `shopGoods`）。
 
 ### 流程
 
@@ -497,14 +505,14 @@ CheckAndDiscard(col)
 选关点商店关
   → LevelManager.SelectLevel：LevelType==Shop → 记 selectedLevelId → Dispatch(OnShopOpen)
   → CardGameEntry：Hide(LevelPanel) + Show<ShopPanel>
-  → ShopPanel.OnOpen：OpenShop() 随机商品 → Dispatch(OnShopChanged) → 列表刷新
+  → ShopPanel.OnOpen：EnterShop() → RandomizeGoods() → Dispatch(OnShopChanged)
   → 点 btnContinue → ShopManager.ContinueNextLevel()
         CompleteLevel(selectedLevelId)   // 解锁下一批 + 层号推进 + Dispatch(OnLevelComplete)
         Dispatch(OnShopClosed)
   → CardGameEntry：Hide(ShopPanel) + Show<LevelPanel>()
 ```
 
-- `ShopCardItem.Bind(index, goods)`：`btnCard.image.sprite = CardResManager.GetCardImage(cfg.Image)`，价格写到 `txtCoin`。
+- `ShopCardItem.Bind(index, goods)`：`comps.modCard.Bind(goods.def)` 画牌面（自带属性会自动出图标 / tip），价格写到 `txtCoin`。
 - `ShopPanel.RefreshList`：已售出的商品（`goods.sold`）**不进列表**，所以格子数 = 未售出商品数。
 - 点击 `btnCard` → `ShopManager.TryBuy(index)`：扣金币 + 加牌入牌组 + 置 `goods.sold = true`；
   格子本体缩小飞向顶栏牌组按钮后销毁，列表不重建（其它格子不动）。

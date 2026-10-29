@@ -1,27 +1,33 @@
 using System.Collections.Generic;
 using Framework.Event;
 using Framework.Mgr;
+using UnityEngine;
 
 /// <summary>
 /// 商店业务层 —— 刷新商品、购买、继续进入下一层
 ///
-/// 商品构成：先写死 10 件（复制 / 回收 各 5 份），方便测试多商品的列表表现。
-/// TODO: 后续改成按规则刷新商品（牌池 / 权重 / 数量由关卡配置决定），价格也接价格表
+/// 商品构成（读配表 CardPreSetConfig，价格也以表里的 Price 为准）：
+///   回收牌 ×2（固定） + 技能类随机 1 + 蜘蛛类随机 2 + 多重类随机 4
+/// 同一件牌可以重复出现（每次独立随机）；负面牌（Type = Negative）不进商店
 /// </summary>
 public class ShopManager : ManagerBase<ShopManager>
 {
-    /// <summary>
-    /// 写死的常驻技能牌（顺序即商品顺序）：牌定义 + 价格。
-    /// TODO: 价格目前写死，后续接价格表
-    /// </summary>
-    private static readonly (CardDef def, int price)[] SpecialGoods =
-    {
-        (CardDef.Create(null, new[] { CardRankConst.Wild }, E_PlaceSkillEnum.Copy), 150),      // 复制
-        (CardDef.Create(null, new[] { CardRankConst.Wild }, E_PlaceSkillEnum.Recycle), 80),    // 回收
-    };
+    /// <summary>固定上架的预设 Id：回收牌</summary>
+    private const string FixedGoodsId = "110001";
 
-    /// <summary>每种写死商品要上几份（先写死，方便测试多商品布局）</summary>
-    private const int SpecialGoodsCopies = 5;
+    /// <summary>固定上架的份数</summary>
+    private const int FixedGoodsCount = 2;
+
+    /// <summary>
+    /// 随机上架计划（顺序即商品顺序）：类型 → 抽几张。
+    /// 技能类里也包含回收牌，所以可能和固定的两张重复，这是预期行为
+    /// </summary>
+    private static readonly (E_CardPreSetTypeEnum type, int count)[] RandomGoodsPlan =
+    {
+        (E_CardPreSetTypeEnum.Skill, 1),
+        (E_CardPreSetTypeEnum.Spider, 2),
+        (E_CardPreSetTypeEnum.Multi, 4),
+    };
 
     /// <summary>本次商店的删牌上限（暂写死；后续可扩展成 LevelConfig 的字段）</summary>
     private const int DefaultDeleteLimit = 5;
@@ -77,25 +83,35 @@ public class ShopManager : ManagerBase<ShopManager>
     // ==================== 刷新商品 ====================
 
     /// <summary>
-    /// 刷新商品：目前写死（每种技能牌上 SpecialGoodsCopies 份）。
-    /// TODO: 后续改成按规则刷新牌到商店 —— 普通牌池 + 权重随机、数量 / 价格由关卡配置决定
+    /// 刷新商品：固定回收 ×2 + 按 RandomGoodsPlan 从各类型预设里随机抽取。
+    /// 只在「本次商店还没备好商品」时调用一次（退出重进 / 续档都不重刷）
     /// </summary>
     private void RandomizeGoods()
     {
         var store = ShopStore.Instance;
         store.goods.Clear();
 
-        foreach (var (def, price) in SpecialGoods)
+        // 固定上架：回收牌
+        if (CardPreSetHelper.TryGetDef(FixedGoodsId, out var fixedDef, out int fixedPrice))
         {
-            if (!def.IsValid) continue;
-
-            for (int i = 0; i < SpecialGoodsCopies; i++)
+            for (int i = 0; i < FixedGoodsCount; i++)
             {
-                store.goods.Add(new ShopGoods
+                store.goods.Add(new ShopGoods { def = fixedDef.Clone(), price = fixedPrice });
+            }
+        }
+
+        // 随机上架：逐类抽取（允许重复）
+        foreach (var (type, count) in RandomGoodsPlan)
+        {
+            foreach (var cfg in CardPreSetHelper.PickRandom(type, count))
+            {
+                if (!CardPreSetHelper.TryToDef(cfg, out var def, out string error))
                 {
-                    def = def.Clone(),     // 每件各持一份，避免改一件影响其它件
-                    price = price,
-                });
+                    Debug.LogWarning($"[ShopManager] 预设 {cfg.Id} 无效：{error}");
+                    continue;
+                }
+
+                store.goods.Add(new ShopGoods { def = def, price = cfg.Price });
             }
         }
     }

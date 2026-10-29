@@ -18,7 +18,8 @@
         OnDrawPileChanged,   // 参数：int（发牌堆剩余数量）
         OnDiscardPileChanged, // 参数：int（弃牌堆数量）
         OnPocketChanged,     // 参数：int（牌包索引）
-        OnCardChanged,       // 参数：CardData（单张牌变化，如翻牌）
+        OnCardChanged,       // 参数：CardData（单张牌变化，如翻牌：牌背 → 正面要播翻牌动画）
+        OnCardFaceChanged,   // 参数：CardData（单张牌换面，如复制技能：牌本来就是正面，直接换图不翻牌）
         OnCardToDiscard,     // 参数：CardData（单张牌回收，播放飞到弃牌堆动画）
         OnShuffleBack,       // 无参数：弃牌堆洗回发牌堆动画
         OnCardWashIn,        // 参数：CardData（洗入发牌堆：中央生成一张牌飞向发牌堆，带属性的牌也要显示属性）

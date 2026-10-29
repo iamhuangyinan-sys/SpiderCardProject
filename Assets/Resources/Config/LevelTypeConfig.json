@@ -2,6 +2,7 @@
   "items": [
     {"Id": "0", "IconImage": "Card"},
     {"Id": "1", "IconImage": "Shop"},
-    {"Id": "2", "IconImage": "Boss"}
+    {"Id": "2", "IconImage": "Boss"},
+    {"Id": "3", "IconImage": "Elite"}
   ]
 }

@@ -1,0 +1,31 @@
+﻿{
+  "items": [
+    {"Id": "110001", "Type": 1, "Rank": [-1], "Suit": [], "PlaceSkill": 10001, "Attribute": [], "Price": 40},
+    {"Id": "110002", "Type": 1, "Rank": [-1], "Suit": [], "PlaceSkill": 10002, "Attribute": [], "Price": 180},
+    {"Id": "710001", "Type": 0, "Rank": [], "Suit": [], "Attribute": [], "PlaceSkill": 0, "Price": 0},
+    {"Id": "710002", "Type": 0, "Rank": [], "Suit": [], "Attribute": [10002], "PlaceSkill": 0, "Price": 0},
+    {"Id": "210001", "Type": 2, "Rank": [-2], "Suit": [0], "Attribute": [], "Price": 150, "PlaceSkill": 0},
+    {"Id": "210002", "Type": 2, "Rank": [-2], "Suit": [1], "Attribute": [], "Price": 150, "PlaceSkill": 0},
+    {"Id": "210003", "Type": 2, "Rank": [-2], "Suit": [2], "Attribute": [], "Price": 150, "PlaceSkill": 0},
+    {"Id": "210004", "Type": 2, "Rank": [-2], "Suit": [3], "Attribute": [], "Price": 150, "PlaceSkill": 0},
+    {"Id": "210005", "Type": 2, "Rank": [-2], "Suit": [0, 1], "Attribute": [], "Price": 250, "PlaceSkill": 0},
+    {"Id": "210006", "Type": 2, "Rank": [-2], "Suit": [2, 3], "Attribute": [], "Price": 250, "PlaceSkill": 0},
+    {"Id": "210007", "Type": 2, "Rank": [-2], "Suit": [0, 1, 2, 3], "Attribute": [], "Price": 350, "PlaceSkill": 0},
+    {"Id": "220011", "Type": 3, "Rank": [11, 12, 13], "Suit": [0], "Attribute": [], "Price": 60, "PlaceSkill": 0},
+    {"Id": "220012", "Type": 3, "Rank": [11, 12, 13], "Suit": [1], "Attribute": [], "Price": 60, "PlaceSkill": 0},
+    {"Id": "220013", "Type": 3, "Rank": [11, 12, 13], "Suit": [2], "Attribute": [], "Price": 60, "PlaceSkill": 0},
+    {"Id": "220014", "Type": 3, "Rank": [11, 12, 13], "Suit": [3], "Attribute": [], "Price": 60, "PlaceSkill": 0},
+    {"Id": "220021", "Type": 3, "Rank": [1, 2, 3, 4], "Suit": [0], "Attribute": [], "Price": 80, "PlaceSkill": 0},
+    {"Id": "220022", "Type": 3, "Rank": [1, 2, 3, 4], "Suit": [1], "Attribute": [], "Price": 80, "PlaceSkill": 0},
+    {"Id": "220023", "Type": 3, "Rank": [1, 2, 3, 4], "Suit": [2], "Attribute": [], "Price": 80, "PlaceSkill": 0},
+    {"Id": "220024", "Type": 3, "Rank": [1, 2, 3, 4], "Suit": [3], "Attribute": [], "Price": 80, "PlaceSkill": 0},
+    {"Id": "220031", "Type": 3, "Rank": [5, 6, 7], "Suit": [0], "Attribute": [], "Price": 60, "PlaceSkill": 0},
+    {"Id": "220032", "Type": 3, "Rank": [5, 6, 7], "Suit": [1], "Attribute": [], "Price": 60, "PlaceSkill": 0},
+    {"Id": "220033", "Type": 3, "Rank": [5, 6, 7], "Suit": [2], "Attribute": [], "Price": 60, "PlaceSkill": 0},
+    {"Id": "220034", "Type": 3, "Rank": [5, 6, 7], "Suit": [3], "Attribute": [], "Price": 60, "PlaceSkill": 0},
+    {"Id": "220041", "Type": 3, "Rank": [8, 9, 10], "Suit": [0], "Attribute": [], "Price": 60, "PlaceSkill": 0},
+    {"Id": "220042", "Type": 3, "Rank": [8, 9, 10], "Suit": [1], "Attribute": [], "Price": 60, "PlaceSkill": 0},
+    {"Id": "220043", "Type": 3, "Rank": [8, 9, 10], "Suit": [2], "Attribute": [], "Price": 60, "PlaceSkill": 0},
+    {"Id": "220044", "Type": 3, "Rank": [8, 9, 10], "Suit": [3], "Attribute": [], "Price": 60, "PlaceSkill": 0}
+  ]
+}

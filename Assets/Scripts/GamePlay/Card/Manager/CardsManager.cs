@@ -433,8 +433,8 @@ public class CardsManager : ManagerBase<CardsManager>
 
         anchor.CopyFrom(column[idx - 1]);
 
-        // 单张刷新：表现层播翻牌动画，翻到中途 Refresh() 按新 id 换上新的牌面
-        EventManager.Instance.Dispatch<CardData>(E_EventEnum.OnCardChanged, anchor);
+        // 单张换面：牌子本来就是正面，直接换成新牌面（不播翻牌动画）
+        EventManager.Instance.Dispatch<CardData>(E_EventEnum.OnCardFaceChanged, anchor);
 
         // 复制来的牌可能是万能牌，这列可能刚好凑成顺子
         CheckAndDiscard(columnIndex);

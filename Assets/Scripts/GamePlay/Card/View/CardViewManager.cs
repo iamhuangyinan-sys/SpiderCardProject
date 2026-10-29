@@ -104,6 +104,7 @@ public class CardViewManager : ManagerBase<CardViewManager>
         EventManager.Instance.AddListener<int>(E_EventEnum.OnColumnAppend, OnColumnAppend);
         EventManager.Instance.AddListener<int>(E_EventEnum.OnColumnPrepend, OnColumnPrepend);
         EventManager.Instance.AddListener<CardData>(E_EventEnum.OnCardChanged, OnCardChanged);
+        EventManager.Instance.AddListener<CardData>(E_EventEnum.OnCardFaceChanged, OnCardFaceChanged);
         EventManager.Instance.AddListener<CardData>(E_EventEnum.OnCardToDiscard, OnCardToDiscard);
         EventManager.Instance.AddListener(E_EventEnum.OnShuffleBack, OnShuffleBack);
         EventManager.Instance.AddListener<CardData>(E_EventEnum.OnCardWashIn, OnCardWashIn);
@@ -129,6 +130,7 @@ public class CardViewManager : ManagerBase<CardViewManager>
         EventManager.Instance.RemoveListener<int>(E_EventEnum.OnColumnAppend, OnColumnAppend);
         EventManager.Instance.RemoveListener<int>(E_EventEnum.OnColumnPrepend, OnColumnPrepend);
         EventManager.Instance.RemoveListener<CardData>(E_EventEnum.OnCardChanged, OnCardChanged);
+        EventManager.Instance.RemoveListener<CardData>(E_EventEnum.OnCardFaceChanged, OnCardFaceChanged);
         EventManager.Instance.RemoveListener<CardData>(E_EventEnum.OnCardToDiscard, OnCardToDiscard);
         EventManager.Instance.RemoveListener(E_EventEnum.OnShuffleBack, OnShuffleBack);
         EventManager.Instance.RemoveListener<CardData>(E_EventEnum.OnCardWashIn, OnCardWashIn);
@@ -186,7 +188,7 @@ public class CardViewManager : ManagerBase<CardViewManager>
         PrependCardToColumn(columnIndex);
     }
 
-    /// <summary>单张牌变化（翻牌）：播放翻牌动画</summary>
+    /// <summary>单张牌变化（牌背 → 正面）：播放翻牌动画</summary>
     private void OnCardChanged(CardData cardData)
     {
         if (!_viewDict.TryGetValue(cardData, out var view)) return;
@@ -195,8 +197,28 @@ public class CardViewManager : ManagerBase<CardViewManager>
         int finalOrder = GetNormalSortingOrder(cardData, view);
         CardAnimationHelper.FlipUp(view, finalOrder);
 
-        // 牌背 → 正面会改变间距构成（列会变高），重算本列间距；
-        // 只有它下面的牌会移位（它自己的位置只取决于上面的间隔）
+        RefreshColumnAfterCardChanged(view, cardData);
+    }
+
+    /// <summary>
+    /// 单张牌换面（复制技能）：牌本来就是正面，直接换成新牌面，不播翻牌动画
+    /// </summary>
+    private void OnCardFaceChanged(CardData cardData)
+    {
+        if (!_viewDict.TryGetValue(cardData, out var view)) return;
+
+        view.Refresh();   // 先按新牌定义立刻重画（不等整列重解析那一帧）
+
+        RefreshColumnAfterCardChanged(view, cardData);
+    }
+
+    /// <summary>
+    /// 单张牌的内容 / 朝向变了之后：重算本列间距 → 受影响的牌归位 → 整列重解析显示值。
+    /// 牌背 → 正面会改变间距构成（列会变高），所以间距要重算；
+    /// 只有它下面的牌会移位（它自己的位置只取决于上面的间隔）
+    /// </summary>
+    private void RefreshColumnAfterCardChanged(CardView view, CardData cardData)
+    {
         if (view.columnIndex < 0) return;
 
         var store = CardsStore.Instance;

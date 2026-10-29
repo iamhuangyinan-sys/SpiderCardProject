@@ -100,3 +100,22 @@ public enum E_CardAttributeEnum
     /// <summary>毒：不能放入额外牌包</summary>
     Poison = 10002,
 }
+
+/// <summary>
+/// 牌预设的类型 —— 数值就是配表 CardPreSetConfig.Type，用来分组抽牌（如商店按类型随机）
+/// </summary>
+public enum E_CardPreSetTypeEnum
+{
+    /// <summary>负面牌（不在商店售卖）</summary>
+    Negative = 0,
+
+    /// <summary>技能类（回收 / 复制等带落牌技能的牌）</summary>
+    Skill = 1,
+
+    /// <summary>蜘蛛类（无视点数，靠花色连接）</summary>
+    Spider = 2,
+
+    /// <summary>多重点数 / 花色类</summary>
+    Multi = 3,
+}
+
