@@ -215,25 +215,19 @@ public partial class LevelBtnModule : BaseModule
         string evt = GetEventDesc(cfg.LevelEvent);
         if (!string.IsNullOrEmpty(evt))
         {
-            sb.Append('\n').Append("开局事件：").Append(evt);
+            sb.Append('\n').Append(evt);
         }
 
         return sb.ToString();
     }
 
-    /// <summary>
-    /// 开局事件描述（暂写死，与 CardsManager.BuildLevelEventDefs 一一对应）
-    ///   AddSpider：洗入 1 张万能蜘蛛（可连接任意点数花色牌）
-    ///   AddRandom：洗入 2 张随机梅花 A-K → 再加 1 张无花色无点数的牌
-    /// </summary>
+    /// <summary>开局事件描述（读配表 LevelEventConfig.Description；0 = 没有开局事件）</summary>
     private static string GetEventDesc(int levelEvent)
     {
-        switch ((E_LevelEventEnum)levelEvent)
-        {
-            case E_LevelEventEnum.AddSpider: return "洗入 1 张万能蜘蛛";
-            case E_LevelEventEnum.AddRandom: return "洗入 2 张随机梅花牌 + 1 张黑色牌";
-            default: return string.Empty;
-        }
+        if (levelEvent == 0) return string.Empty;
+
+        var cfg = ConfigHelper.Get<LevelEventConfig>(levelEvent.ToString());
+        return cfg != null ? cfg.Description : string.Empty;
     }
 
     private void OnClick()

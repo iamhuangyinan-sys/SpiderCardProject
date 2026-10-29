@@ -472,6 +472,31 @@ CheckAndDiscard(col)
   - `GetIcon(int / E_LevelTypeEnum)`：同步返回 `Sprite`（`ResManager.Load` 命中缓存；若预热尚未完成，ResManager 内部会自动转同步）。
 - UI 使用：`LevelBtnModule` 在 `Bind` 时 `_imgIcon.sprite = LevelResManager.Instance.GetIcon(cfg.LevelType)`。
 
+## 开局事件
+
+`LevelConfig.LevelEvent`（int）= 配表 `LevelEventConfig.Id`，**0 = 没有开局事件**。
+
+`LevelEventConfig.xlsx`（`Config/Excel/`）→ `Assets/Scripts/Config/LevelEventConfig.cs` + `Assets/Resources/Config/LevelEventConfig.json`
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| Id | string | 事件 id，`LevelConfig.LevelEvent` 引用 |
+| Description | string | 选关卡片上的「开局事件：xxx」，UI 直接读 |
+
+表里**只放身份 + 文案**，行为与参数全在代码：
+
+- `LevelEventRegistry`（`GamePlay/Level/`）：`Id → IEnumerator` 的注册表，`EnsureRegistered()` 里登记各事件
+- 约定：handler 只做「发牌之前」的额外流程（洗入牌 / 改状态 / 播演出…），**不自己调 `Deal()`**；
+  `CardsManager.StartWithLevelEventRoutine` 跑完 handler 后统一发牌
+- 新增事件：写一个 handler + `Register(事件 Id, handler)`，再在表里加一行（配表与代码的 Id 必须一致，缺了一边会 `LogWarning` 并当无事件处理）
+
+现有事件：
+
+| Id | Description | 行为 |
+|----|-------------|------|
+| 11001 | 开始时往发牌堆中洗入一张万能蜘蛛牌 | `CardDef.Create({0,1,2,3}, {Ignore})` ×1 |
+| 11002 | 开始时往发牌堆中洗入 3 张随机花色点数牌 + 一张空白牌 | 随机花色(0-3)+点数(A-K) ×3 + 空白牌（无花色无点数）×1 |
+
 ## 商店
 
 商店关（`LevelType == Shop`）进入时不开局，改为弹 `ShopPanel`。

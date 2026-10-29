@@ -68,15 +68,15 @@ public class CardsManager : ManagerBase<CardsManager>
         EventManager.Instance.Dispatch<int>(E_EventEnum.OnDrawPileChanged, store.drawPile.Count);
         EventManager.Instance.Dispatch<int>(E_EventEnum.OnDiscardPileChanged, store.discardPile.Count);
 
-        // 5. 开局事件：先把事件牌洗入（等整段动画播完），再发牌
-        var levelEvent = LevelManager.Instance.GetSelectedLevelEvent();
-        if (levelEvent == E_LevelEventEnum.None)
+        // 5. 开局事件：有事件就先跑事件流程（具体做什么由 LevelEventRegistry 决定），跑完统一发牌
+        var levelEventRoutine = LevelEventRegistry.Get(LevelManager.Instance.GetSelectedLevelEvent());
+        if (levelEventRoutine == null)
         {
             Deal();                 // 6. 发牌
         }
         else
         {
-            MonoManager.Instance.StartCoroutine(StartWithLevelEventRoutine(levelEvent));
+            MonoManager.Instance.StartCoroutine(StartWithLevelEventRoutine(levelEventRoutine));
         }
 
         // 通知进度刷新（x / y）
@@ -671,52 +671,14 @@ public class CardsManager : ManagerBase<CardsManager>
     // ==================== 开局事件 ====================
 
     /// <summary>
-    /// 开局事件：万能蜘蛛（4 花色 + 无视点数）—— 效果等价于「可以连接任意点数花色牌」，
-    /// 但没有专属整图素材（多花色推不出图案），场上显示成花色小图 + 多重花色 tip
+    /// 开局事件流程：先跑事件自己的流程（洗入牌 / 改状态 / 播演出…，由
+    /// <see cref="LevelEventRegistry"/> 里注册的 handler 决定），跑完统一发牌
     /// </summary>
-    private static readonly CardDef EventSpiderDef =
-        CardDef.Create(new[] { 0, 1, 2, 3 }, new[] { CardRankConst.Ignore });
-
-    /// <summary>开局事件：黑色牌 = 无花色无点数的普通牌</summary>
-    private static readonly CardDef EventBlackDef = CardDef.Create(null, null);
-
-    /// <summary>开局事件流程：洗入事件牌（等整段动画播完）→ 发牌</summary>
-    private IEnumerator StartWithLevelEventRoutine(E_LevelEventEnum levelEvent)
+    private IEnumerator StartWithLevelEventRoutine(LevelEventRegistry.LevelEventRoutine routine)
     {
-        yield return WashInAndWait(BuildLevelEventDefs(levelEvent));
+        yield return routine();
 
         Deal();
-    }
-
-    /// <summary>
-    /// 开局事件要洗入的牌（先写死，后续可改成事件配表：事件 → 牌定义列表）
-    /// </summary>
-    private List<CardDef> BuildLevelEventDefs(E_LevelEventEnum levelEvent)
-    {
-        var defs = new List<CardDef>();
-
-        switch (levelEvent)
-        {
-            case E_LevelEventEnum.AddSpider:
-                defs.Add(EventSpiderDef);
-                break;
-
-            case E_LevelEventEnum.AddRandom:
-                // 两张可以抽到同一张（各自独立随机），只出梅花，和初始牌组混花色 → 加难度
-                defs.Add(RandomClubDef());
-                defs.Add(RandomClubDef());
-                defs.Add(EventBlackDef);
-                break;
-        }
-
-        return defs;
-    }
-
-    /// <summary>随机取一张梅花 A-K 的牌定义</summary>
-    private CardDef RandomClubDef()
-    {
-        int rank = _random.Next(1, 14);   // 1-13 = A-K
-        return CardDef.Create((int)E_CardSuitEnum.Clubs, rank);
     }
 
     // ==================== 洗入发牌堆 ====================

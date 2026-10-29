@@ -129,13 +129,13 @@ public class LevelManager : ManagerBase<LevelManager>
         return cfg.NeedStraightNum;
     }
 
-    /// <summary>选中关卡的开局事件（未选关或无此关卡返回 None）</summary>
-    public E_LevelEventEnum GetSelectedLevelEvent()
+    /// <summary>选中关卡的开局事件 Id（配表 LevelEventConfig 主键；0 = 没有开局事件）</summary>
+    public int GetSelectedLevelEvent()
     {
         var store = LevelStore.Instance;
-        if (string.IsNullOrEmpty(store.selectedLevelId)) return E_LevelEventEnum.None;
-        if (!store.allLevels.TryGetValue(store.selectedLevelId, out var cfg)) return E_LevelEventEnum.None;
-        return (E_LevelEventEnum)cfg.LevelEvent;
+        if (string.IsNullOrEmpty(store.selectedLevelId)) return 0;
+        if (!store.allLevels.TryGetValue(store.selectedLevelId, out var cfg)) return 0;
+        return cfg.LevelEvent;
     }
 
     /// <summary>选择关卡：商店关开商店，普通 / BOSS 关开始一局新游戏</summary>
