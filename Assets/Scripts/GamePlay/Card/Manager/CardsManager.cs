@@ -628,8 +628,7 @@ public class CardsManager : ManagerBase<CardsManager>
     }
 
     /// <summary>从牌包把牌移到目标列</summary>
-    public void MoveFromPocket(int pocketIndex, int targetColumnIndex)
-    {
+    public void MoveFromPocket(int pocketIndex, int targetColumnIndex)    {
         var store = CardsStore.Instance;
         if (!CardRuleManager.Instance.CanMoveFromPocket(pocketIndex, targetColumnIndex)) return;
 
@@ -646,6 +645,27 @@ public class CardsManager : ManagerBase<CardsManager>
         {
             TryApplyPlaceSkill(targetColumnIndex);
         }
+    }
+
+    /// <summary>
+    /// 牌包之间移动 / 交换（全项目唯一入口）：
+    ///   目标是空位 → 把牌移过去；目标有牌 → 两张互换位置。
+    /// 牌面（主花色 / 主点数）保持原样，由 CardViewManager.RefreshPocket 接手
+    /// </summary>
+    public void SwapPockets(int fromIndex, int toIndex)
+    {
+        if (!CardRuleManager.Instance.CanMoveBetweenPockets(fromIndex, toIndex)) return;
+
+        var pockets = CardsStore.Instance.pockets;
+
+        // 空位就是一个 null，互换写法同时覆盖「移过去」和「交换」
+        var moving = pockets[fromIndex];
+        pockets[fromIndex] = pockets[toIndex];
+        pockets[toIndex] = moving;
+
+        // 两个位置都变了（交换时源/目标都有牌）→ 两边都刷
+        EventManager.Instance.Dispatch<int>(E_EventEnum.OnPocketChanged, fromIndex);
+        EventManager.Instance.Dispatch<int>(E_EventEnum.OnPocketChanged, toIndex);
     }
 
     // ==================== 开局事件 ====================

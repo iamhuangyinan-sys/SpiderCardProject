@@ -7,6 +7,9 @@ public partial class MainTopPanel : NormalPanel
     /// <summary>地图当前是否开着（mod_Map 用它做开 / 关切换）</summary>
     private bool _mapOpened;
 
+    /// <summary>顶栏牌组按钮（买牌飞行的落点）</summary>
+    public RectTransform CardBuildAnchor => (RectTransform)comps.modCardBuild.transform;
+
     protected override void OnOpen()
     {
         EventManager.Instance.AddListener(E_EventEnum.OnStraightCountChanged, RefreshProgress);

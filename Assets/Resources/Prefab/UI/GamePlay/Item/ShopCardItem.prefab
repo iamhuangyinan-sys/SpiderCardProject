@@ -77,6 +77,10 @@ MonoBehaviour:
     fieldName: modCard
     typeName: CardModule
     component: {fileID: 8262992997265045064}
+  - prefix: img
+    fieldName: imgPrice
+    typeName: 
+    component: {fileID: 720798814179320619}
   - prefix: txt
     fieldName: txtCoin
     typeName: 
@@ -95,11 +99,21 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::HoverScaleBehaviour
   target: {fileID: 7168337159909757579}
   hoverScale: 1.3
+  allowBreathing: 0
+  breatheMinScale: 0.9
+  breatheMaxScale: 1.2
+  breatheDuration: 1
   duration: 0.1
   ease: 6
   autoTrigger: 0
   raiseOnHover: 1
+  raiseTarget: {fileID: 0}
   useUnscaledTime: 1
+  hoverOutline: 0
+  outlineColor: {r: 1, g: 0.84, b: 0.3, a: 1}
+  outlineDistance: {x: 2, y: 2}
+  outlineTarget: {fileID: 0}
+  outlineOwned: 0
 --- !u!1 &1903413066918951781
 GameObject:
   m_ObjectHideFlags: 0
@@ -359,8 +373,10 @@ GameObject:
   - component: {fileID: 3090639263025766698}
   - component: {fileID: 22876507410534869}
   - component: {fileID: 8523675424104674290}
+  - component: {fileID: 2811272844279084138}
+  - component: {fileID: 720798814179320619}
   m_Layer: 5
-  m_Name: layout
+  m_Name: img_Price
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -427,6 +443,44 @@ MonoBehaviour:
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.ContentSizeFitter
   m_HorizontalFit: 2
   m_VerticalFit: 0
+--- !u!222 &2811272844279084138
+CanvasRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4421370719038622354}
+  m_CullTransparentMesh: 1
+--- !u!114 &720798814179320619
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4421370719038622354}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
+  m_Material: {fileID: 0}
+  m_Color: {r: 1, g: 1, b: 1, a: 0}
+  m_RaycastTarget: 1
+  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
+  m_Maskable: 1
+  m_OnCullStateChanged:
+    m_PersistentCalls:
+      m_Calls: []
+  m_Sprite: {fileID: 0}
+  m_Type: 0
+  m_PreserveAspect: 0
+  m_FillCenter: 1
+  m_FillMethod: 4
+  m_FillAmount: 1
+  m_FillClockwise: 1
+  m_FillOrigin: 0
+  m_UseSpriteMesh: 0
+  m_PixelsPerUnitMultiplier: 1
 --- !u!1 &6719127632583948656
 GameObject:
   m_ObjectHideFlags: 0
@@ -589,6 +643,38 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 2255075616943035536, guid: cd7aac210d6362545b7dff31f6a8e722, type: 3}
       propertyPath: tipShowDelay
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3611393296269049654, guid: cd7aac210d6362545b7dff31f6a8e722, type: 3}
+      propertyPath: m_AnchorMax.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3611393296269049654, guid: cd7aac210d6362545b7dff31f6a8e722, type: 3}
+      propertyPath: m_AnchorMin.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3611393296269049654, guid: cd7aac210d6362545b7dff31f6a8e722, type: 3}
+      propertyPath: m_AnchoredPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3611393296269049654, guid: cd7aac210d6362545b7dff31f6a8e722, type: 3}
+      propertyPath: m_AnchoredPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5282990728645581405, guid: cd7aac210d6362545b7dff31f6a8e722, type: 3}
+      propertyPath: m_AnchorMax.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5282990728645581405, guid: cd7aac210d6362545b7dff31f6a8e722, type: 3}
+      propertyPath: m_AnchorMin.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5282990728645581405, guid: cd7aac210d6362545b7dff31f6a8e722, type: 3}
+      propertyPath: m_AnchoredPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5282990728645581405, guid: cd7aac210d6362545b7dff31f6a8e722, type: 3}
+      propertyPath: m_AnchoredPosition.y
       value: 0
       objectReference: {fileID: 0}
     m_RemovedComponents: []

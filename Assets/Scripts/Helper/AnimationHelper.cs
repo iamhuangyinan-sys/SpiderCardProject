@@ -14,6 +14,9 @@ public static class AnimationHelper
     /// <summary>UI 面板淡入 / 淡出默认时长</summary>
     public const float PanelFadeDuration = 0.2f;
 
+    /// <summary>飞走消失时，淡出占用飞行时长的比例（只在最后这一小段淡）</summary>
+    public const float FadeTailRatio = 0.1f;
+
     /// <summary>从 from 瞬移，再飞到 to（发牌、移动等用）</summary>
     public static Tween FlyTo(Transform trans, Vector3 from, Vector3 to, float duration, Ease ease = Ease.OutQuad)
     {
@@ -31,6 +34,41 @@ public static class AnimationHelper
     public static Tween ScaleTo(Transform trans, Vector3 target, float duration, Ease ease = Ease.OutBack)
     {
         return trans.DOScale(target, duration).SetEase(ease);
+    }
+
+    /// <summary>
+    /// 元素飞向某个世界坐标并消失：一边缩小一边飞，末段淡出（飞完由调用方销毁）。
+    /// 会先把 rect 挂到 newParent 下并保持世界位置 —— 用来脱离滚动列表的布局 / 遮罩，
+    /// 否则飞出去的部分会被视口裁掉。
+    /// </summary>
+    /// <param name="rect">要飞的元素</param>
+    /// <param name="targetWorldPos">落点（世界坐标，一般传目标 transform.position）</param>
+    /// <param name="newParent">飞行期间挂载的父节点（传画布根节点；null = 保持原父节点）</param>
+    /// <param name="duration">飞行时长</param>
+    /// <param name="endScale">结束时相对当前缩放的比例</param>
+    public static Tween FlyAndVanish(RectTransform rect, Vector3 targetWorldPos, Transform newParent,
+        float duration = 0.4f, float endScale = 0.3f, Ease ease = Ease.InQuad)
+    {
+        if (rect == null) return null;
+
+        if (newParent != null && rect.parent != newParent)
+        {
+            rect.SetParent(newParent, true);   // 保持世界位置，脱离原布局
+            rect.SetAsLastSibling();
+        }
+
+        var group = rect.GetComponent<CanvasGroup>();
+        if (group == null) group = rect.gameObject.AddComponent<CanvasGroup>();
+
+        // 只挡射线，不能动 interactable —— Selectable 发现父级 CanvasGroup 不可交互会立刻切到
+        // Disabled 状态，按钮的 DisabledColor 会把整个元素染灰（牌瞬间变灰就是这个原因）
+        group.blocksRaycasts = false;
+
+        Sequence seq = DOTween.Sequence();
+        seq.Join(rect.DOMove(targetWorldPos, duration).SetEase(ease));
+        seq.Join(rect.DOScale(rect.localScale * endScale, duration).SetEase(ease));
+        seq.Join(group.DOFade(0f, duration * FadeTailRatio).SetDelay(duration * (1f - FadeTailRatio)));
+        return seq;
     }
 
     /// <summary>

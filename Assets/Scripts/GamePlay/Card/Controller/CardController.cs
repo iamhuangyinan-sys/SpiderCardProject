@@ -209,8 +209,18 @@ public class CardController : MonoBehaviour
 
         if (_dragFromPocket)
         {
-            // 从牌包拖出：只能落到列
-            if (targetColumn >= 0 && CardRuleManager.Instance.CanMoveFromPocket(_dragPocketIndex, targetColumn))
+            // 从牌包拖出：优先落到别的牌包（空位 = 移过去 / 有牌 = 交换），其次落到列
+            if (targetPocket == _dragPocketIndex)
+            {
+                // 拖回原牌包：什么都不做（牌包和列在屏幕上会重叠，落到下面那列会很莫名其妙）
+            }
+            else if (targetPocket >= 0 &&
+                CardRuleManager.Instance.CanMoveBetweenPockets(_dragPocketIndex, targetPocket))
+            {
+                CardsManager.Instance.SwapPockets(_dragPocketIndex, targetPocket);
+                moved = true;
+            }
+            else if (targetColumn >= 0 && CardRuleManager.Instance.CanMoveFromPocket(_dragPocketIndex, targetColumn))
             {
                 CardsManager.Instance.MoveFromPocket(_dragPocketIndex, targetColumn);
                 moved = true;

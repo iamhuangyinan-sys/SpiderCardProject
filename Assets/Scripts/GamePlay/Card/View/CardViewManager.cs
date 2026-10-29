@@ -457,6 +457,10 @@ public class CardViewManager : ManagerBase<CardViewManager>
     /// 刷新某列的显示：从列顶往下走一遍，每张多重花色 / 多重点数的牌跟**上面那张牌的实际值**
     /// 对齐（花色同花、点数正好小 1），逐个喂给 CardView。
     /// 任何列结构变化后都调一次：重建列 / 增量追加 / 沉底插入 / 翻牌
+    ///
+    /// 列顶（没有对齐对象，或上面是牌背）**不重置成原始排序**：沿用这张牌上一次的显示值。
+    /// 否则一张多重点数的牌一拖到空列，主点数就会“跳”成最小的那个（很自然但不对）。
+    /// 没显示过的牌（displaySuits 为空）才退回原始列表
     /// </summary>
     private void RefreshDisplay(int columnIndex)
     {
@@ -472,22 +476,38 @@ public class CardViewManager : ManagerBase<CardViewManager>
         for (int row = 0; row < column.Count; row++)
         {
             var card = column[row];
-            var view = GetView(card);
-            if (view == null) continue;
 
             // 牌背：看不到，也不参与对齐（它下面的牌不受它约束）
             if (!card.isFaceUp)
             {
-                view.SetDisplay(null, null);
+                card.displaySuits = null;
+                card.displayRanks = null;
+                GetView(card)?.SetDisplay(null, null);
+
                 aboveSuits = null;
                 aboveRank = null;
                 continue;
             }
 
-            var suits = CardDisplayHelper.PromoteSuit(card.suits, aboveSuits);
-            var ranks = CardDisplayHelper.PromoteRank(card.ranks, aboveRank);
+            IReadOnlyList<int> suits;
+            IReadOnlyList<int> ranks;
 
-            view.SetDisplay(suits, ranks);
+            if (aboveSuits == null && aboveRank == null)
+            {
+                // 列顶 / 上面是牌背：没有对齐对象 → 保持上一次的显示值，不重置成原始排序
+                suits = card.displaySuits ?? card.suits;
+                ranks = card.displayRanks ?? card.ranks;
+            }
+            else
+            {
+                suits = CardDisplayHelper.PromoteSuit(card.suits, aboveSuits);
+                ranks = CardDisplayHelper.PromoteRank(card.ranks, aboveRank);
+            }
+
+            card.displaySuits = suits;
+            card.displayRanks = ranks;
+
+            GetView(card)?.SetDisplay(suits, ranks);
 
             // 继续往下传：花色按显示列表（对齐后的那个已经在最前）、点数按实际值
             aboveSuits = suits;

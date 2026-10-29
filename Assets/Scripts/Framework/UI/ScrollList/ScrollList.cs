@@ -143,7 +143,26 @@ namespace Framework.UI
                 }
             }
         }
+        /// <summary>
+        /// 把某个 item 从列表里摘掉（不回收进池）：item 被调用方拿走 / 销毁时用。
+        /// 摘掉后列表就不再记录它（滚动、刷新都不会再碰它）；
+        /// 那个格子暂时留空，等下次 Refresh / 滚到该位置时重新渲染补上。
+        /// </summary>
+        public void ReleaseItem(BaseListItem item)
+        {
+            if (item == null) return;
 
+            for (int i = 0; i < _slots.Count; i++)
+            {
+                if (_slots[i].item != item) continue;
+
+                _slots.RemoveAt(i);
+                break;
+            }
+
+            item.IsInUse = false;
+            item.OwnerPool = null;
+        }
         // ==================== 虚拟滚动核心 ====================
 
         private void HandleScroll(bool force)

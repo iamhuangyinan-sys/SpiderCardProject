@@ -33,6 +33,16 @@ public class CardData
     /// <summary>落牌技能（转发牌定义）</summary>
     public E_PlaceSkillEnum placeSkill => def.placeSkill;
 
+    /// <summary>
+    /// 最近一次解析出来的「显示用」花色（列对齐的结果；null = 还没算过，用原始列表）。
+    /// 放在数据上而不是 View 上：View 会被回收重建，但牌跑一趟（拖到空列 / 进牌包再回来）
+    /// 不应该变脸 —— 列顶没有对齐对象时就用这个保持原样
+    /// </summary>
+    public IReadOnlyList<int> displaySuits;
+
+    /// <summary>最近一次解析出来的「显示用」点数（同 displaySuits）</summary>
+    public IReadOnlyList<int> displayRanks;
+
     /// <summary>有没有某个属性</summary>
     public bool HasAttribute(E_CardAttributeEnum attribute)
     {
@@ -66,5 +76,9 @@ public class CardData
 
         def = other.def.Clone();
         attributes = new List<E_CardAttributeEnum>(other.attributes);
+
+        // 牌面换了（花色 / 点数 / 技能都变），旧的显示用值是上一张牌的，作废重算
+        displaySuits = null;
+        displayRanks = null;
     }
 }

@@ -23,6 +23,11 @@ public static class ConsoleCommandRegistry
         //   例：add 0123_123 / add _m_10002 / add 0123_s_10002_10002
         cmd.Register("add *", CmdAddCard, "往发牌堆洗入一张牌（* = 花色_点数[_技能[_属性]]，如 0123_123）");
 
+        // ===== 资源 =====
+
+        // coin <数量> —— 增加金币（调试用，商店里也能加）
+        cmd.Register("coin *", CmdAddCoin, "增加金币（* = 数量，如 coin 60）");
+
         // ===== 示例（后续按需开启）=====
         // cmd.Register("card add *", CmdCardAdd, "向场上添加一张牌（* = 牌 id）");
         // cmd.Register("help", args => string.Join("\n", ConsoleCommandManager.Instance.GetHelp()), "查看所有命令");
@@ -59,5 +64,22 @@ public static class ConsoleCommandRegistry
         }
 
         return $"已洗入发牌堆：{CardDefCodec.ToText(def)}";
+    }
+
+    /// <summary>coin &lt;数量&gt; —— 增加金币</summary>
+    private static string CmdAddCoin(string[] args)
+    {
+        // 金币是整局资源：选关 / 商店里也要能加，所以只查场景，不查是否在打牌
+        if (!CardGameEntry.IsInCardScene) return "执行失败：当前不在卡牌场景";
+
+        string text = args.Length > 1 ? args[1] : string.Empty;
+
+        if (!int.TryParse(text, out int amount) || amount <= 0)
+        {
+            return $"执行失败：金币数量必须是正整数（{text}）";
+        }
+
+        RunManager.Instance.AddCoin(amount);
+        return $"已增加金币：{amount}（当前 {RunManager.Instance.Coin}）";
     }
 }

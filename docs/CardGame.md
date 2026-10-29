@@ -505,8 +505,9 @@ CheckAndDiscard(col)
 ```
 
 - `ShopCardItem.Bind(index, goods)`：`btnCard.image.sprite = CardResManager.GetCardImage(cfg.Image)`，价格写到 `txtCoin`。
-- 点击 `btnCard` → `ShopManager.TryBuy(index)`：当前只把 `goods.sold = true` 并刷新列表（按钮置灰、文案变"已售出"）。
-  **待接**：金币校验（`TODO`）、购买后加入玩家牌组（`TODO`）。
+- `ShopPanel.RefreshList`：已售出的商品（`goods.sold`）**不进列表**，所以格子数 = 未售出商品数。
+- 点击 `btnCard` → `ShopManager.TryBuy(index)`：扣金币 + 加牌入牌组 + 置 `goods.sold = true`；
+  格子本体缩小飞向顶栏牌组按钮后销毁，列表不重建（其它格子不动）。
 - 事件：`OnShopOpen` / `OnShopChanged` / `OnShopClosed`。
 
 ## 一大局资产（金币 / 牌组）

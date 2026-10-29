@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Framework.Event;
 using Framework.UI;
 
@@ -6,6 +7,9 @@ using Framework.UI;
 /// </summary>
 public partial class ShopPanel : NormalPanel
 {
+    /// <summary>列表里各格对应 ShopStore.goods 的下标（已售出的不进列表）</summary>
+    private readonly List<int> _visibleGoods = new();
+
     /// <summary>打开飞入 / 关闭飞出</summary>
     protected override bool FlyInOnOpen => true;
     protected override bool FlyOutOnClose => true;
@@ -15,7 +19,8 @@ public partial class ShopPanel : NormalPanel
         comps.btnContinue.onClick.AddListener(OnClickContinue);
         comps.btnDeleteCard.onClick.AddListener(OnClickDeleteCard);
 
-        EventManager.Instance.AddListener(E_EventEnum.OnShopChanged, RefreshList);
+        // 列表不挂 OnShopChanged：买牌时格子要自己飞走，重建列表会把它回收掉
+        // （商品只会在进商店时变，重新打开面板时 OnOpen / OnShow 会重排）
         EventManager.Instance.AddListener(E_EventEnum.OnShopChanged, RefreshDelete);
         EventManager.Instance.AddListener(E_EventEnum.OnCoinChanged, RefreshDelete);
 
@@ -36,21 +41,31 @@ public partial class ShopPanel : NormalPanel
         comps.btnContinue.onClick.RemoveListener(OnClickContinue);
         comps.btnDeleteCard.onClick.RemoveListener(OnClickDeleteCard);
 
-        EventManager.Instance.RemoveListener(E_EventEnum.OnShopChanged, RefreshList);
         EventManager.Instance.RemoveListener(E_EventEnum.OnShopChanged, RefreshDelete);
         EventManager.Instance.RemoveListener(E_EventEnum.OnCoinChanged, RefreshDelete);
     }
 
-    /// <summary>刷新商品列表</summary>
+    /// <summary>刷新商品列表（已售出的商品不再占格子）</summary>
     private void RefreshList()
     {
+        _visibleGoods.Clear();
+
+        var goods = ShopStore.Instance.goods;
+        for (int i = 0; i < goods.Count; i++)
+        {
+            if (!goods[i].sold) _visibleGoods.Add(i);
+        }
+
         comps.listShopCard.OnItemRender = (index, item) =>
         {
             var cell = item as ShopCardItem;
-            if (cell != null) cell.Bind(index, ShopStore.Instance.Get(index));
+            if (cell == null || index < 0 || index >= _visibleGoods.Count) return;
+
+            int goodsIndex = _visibleGoods[index];
+            cell.Bind(goodsIndex, ShopStore.Instance.Get(goodsIndex));
         };
 
-        comps.listShopCard.ItemCount = ShopStore.Instance.goods.Count;
+        comps.listShopCard.ItemCount = _visibleGoods.Count;
     }
 
     /// <summary>继续：完成商店关，回选关</summary>

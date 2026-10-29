@@ -14,6 +14,7 @@ public partial class ShopCardItem
     public class CompsData : CompsDataBase
     {
         public CardModule modCard;
+        public Image imgPrice;
         public TMP_Text txtCoin;
     }
 }

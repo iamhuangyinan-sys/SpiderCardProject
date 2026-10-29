@@ -61,27 +61,31 @@ public enum E_PlaceSkillEnum
 
 /// <summary>
 /// 卡牌 tip 类型 —— Id 就是配表 CardTipConfig 的主键（改这里要同步改表）
-/// 只管「牌面属性」；牌的状态类描述（沉底等）走 E_CardAttributeEnum + CardAttributeConfig
+/// 1xx = 点数相关，2xx = 花色相关；牌的状态类描述（沉底 / 毒）走 E_CardAttributeEnum + CardAttributeConfig
 /// </summary>
 public enum E_CardTipEnum
 {
-    /// <summary>多重花色：可用其中任意一种花色连接</summary>
-    MultiSuit = 101,
+    // ===== 点数（1xx）=====
 
     /// <summary>多重点数：可用其中任意一个点数连接</summary>
-    MultiRank = 102,
+    MultiRank = 101,
 
     /// <summary>点数含 -1：万能放下，可以放在任意牌上</summary>
-    RankWild = 103,
+    RankWild = 102,
 
     /// <summary>点数含 -2：蜘蛛，作为任意点数连接，但花色要相同</summary>
-    RankIgnore = 104,
+    RankIgnore = 103,
 
     /// <summary>没有点数：不能与任何牌连接，只能单独拖动</summary>
-    NoRank = 105,
+    NoRank = 104,
+
+    // ===== 花色（2xx）=====
+
+    /// <summary>多重花色：可用其中任意一种花色连接</summary>
+    MultiSuit = 201,
 
     /// <summary>没有花色：跟谁都不是同花，不参与花色判断</summary>
-    NoSuit = 106,
+    NoSuit = 202,
 }
 
 /// <summary>

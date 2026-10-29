@@ -8,10 +8,10 @@ using UnityEngine;
 ///   判断属性是否成立 → 按顺序查表 → 包成 HoverTipData
 /// 表里查不到的条目直接跳过（删一行 = 关掉那条 tip）。
 ///
-/// 顺序：落牌技能 → 牌属性（沉底等）→ 多重花色 → 无花色 → 多重点数 → 万能放下 → 蜘蛛（无视点数）→ 没有点数
-///
-/// 其中「无花色 / 万能放下 / 蜘蛛 / 没有点数」四条会带上图标，图标直接复用牌面上画的那个
-/// （都走 CardResManager，同一张 sprite，不另外配图）
+/// 顺序（与配表 Id 分段一致）：
+///   点数（1xx）→ 花色（2xx）→ 落牌技能 → 属性
+/// 其中「任意放下 / 蜘蛛 / 无点数 / 无花色」四条带图标，图标直接复用牌面上画的那个
+/// （都走 CardResManager，不另外配图）
 /// </summary>
 public static class CardTipHelper
 {
@@ -29,38 +29,45 @@ public static class CardTipHelper
         var res = CardResManager.Instance;
         bool isRed = CardFaceHelper.IsRedSuit(suits);
 
-        // 1. 落牌技能（带技能的牌 = 以前的特殊牌，技能描述读 PlaceSkillConfig）
-        if (def.HasSkill) AddSkillTip(tips, (int)def.placeSkill);
+        // ===== 1. 点数（配表 1xx）=====
 
-        // 2. 牌属性（沉底等）—— 按列表顺序，文案读 CardAttributeConfig
-        AddAttributeTips(tips, attributes);
-
-        // 3. 多重花色
-        if (suits != null && suits.Count > 1) AddTip(tips, E_CardTipEnum.MultiSuit);
-
-        // 4. 没有花色（跟谁都不是同花，不参与花色判断）
-        if (suits == null || suits.Count == 0) AddTip(tips, E_CardTipEnum.NoSuit, res.GetNoSuitSprite());
-
-        // 5. 多重点数（-1 不是可显示点数，去掉后还有多个才算）
+        // 多重点数（-1 不是可显示点数，去掉后还有多个才算）
         if (CountVisibleRanks(ranks) > 1) AddTip(tips, E_CardTipEnum.MultiRank);
 
-        // 6. -1：万能放下
+        // -1：万能放下
         if (HasRank(ranks, CardRankConst.Wild))
         {
             AddTip(tips, E_CardTipEnum.RankWild, res.GetWildRankSprite());
         }
 
-        // 7. -2：无视点数（蜘蛛），连接时只看花色
+        // -2：无视点数（蜘蛛），连接时只看花色
         if (HasRank(ranks, CardRankConst.Ignore))
         {
             AddTip(tips, E_CardTipEnum.RankIgnore, res.GetRankSprite(CardRankConst.Ignore, isRed));
         }
 
-        // 8. 没有点数
+        // 没有点数
         if (ranks == null || ranks.Count == 0)
         {
             AddTip(tips, E_CardTipEnum.NoRank, res.GetNoRankSprite());
         }
+
+        // ===== 2. 花色（配表 2xx）=====
+
+        // 多重花色
+        if (suits != null && suits.Count > 1) AddTip(tips, E_CardTipEnum.MultiSuit);
+
+        // 没有花色（跟谁都不是同花，不参与花色判断）
+        if (suits == null || suits.Count == 0)
+        {
+            AddTip(tips, E_CardTipEnum.NoSuit, res.GetNoSuitSprite());
+        }
+
+        // ===== 3. 落牌技能（带技能的牌 = 以前的特殊牌，文案读 PlaceSkillConfig）=====
+        if (def.HasSkill) AddSkillTip(tips, (int)def.placeSkill);
+
+        // ===== 4. 牌状态（沉底 / 毒等，文案读 CardAttributeConfig）=====
+        AddAttributeTips(tips, attributes);
 
         return tips;
     }

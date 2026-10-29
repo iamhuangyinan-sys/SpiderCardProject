@@ -32,6 +32,9 @@ public partial class LevelBtnModule : BaseModule
     /// <summary>进关停留期间屏蔽点击（只挡点击，外观仍按解锁 / 走过的状态）</summary>
     private bool _clickBlocked;
 
+    /// <summary>屏蔽期间是否把「可选但没走过」的关卡一并置灰（地图查看模式用）</summary>
+    private bool _greyOutWhenBlocked;
+
     /// <summary>悬停缩放（挂在 btn_Level 上）；没有就退化成不缩放、提示框按 1 倍算</summary>
     private HoverScaleBehaviour _hoverScale;
 
@@ -70,6 +73,7 @@ public partial class LevelBtnModule : BaseModule
 
         // 模组是池化复用的：上一次进关时留下的「屏蔽点击」不能带过来
         _clickBlocked = false;
+        _greyOutWhenBlocked = false;
 
         HideTip();   // 复用时先收掉上一个关卡的提示
 
@@ -89,23 +93,29 @@ public partial class LevelBtnModule : BaseModule
     public string LevelId => _cfg != null ? _cfg.Id : null;
 
     /// <summary>
-    /// 屏蔽 / 恢复点击：进关停留期间用。
-    /// 只改「能不能点」，**不影响亮/灰**（选中的关卡不会因为不可点而变灰）
+    /// 屏蔽 / 恢复点击：进关停留、地图查看模式用。
+    /// 只改「能不能点」，**不影响亮/灰**；
+    /// greyOutWhenBlocked = true 时，被屏蔽期间「可选但没走过」的关卡也一并置灰
+    /// （地图是关卡进行中打开的，其它可选关卡这时候本来就不能选，应该看起来是灰的）。
     /// </summary>
-    public void SetClickBlocked(bool blocked)
+    /// <param name="blocked">是否屏蔽点击</param>
+    /// <param name="greyOutWhenBlocked">屏蔽期间是否把可选关卡置灰</param>
+    public void SetClickBlocked(bool blocked, bool greyOutWhenBlocked = false)
     {
-        if (_clickBlocked == blocked) return;
+        if (_clickBlocked == blocked && _greyOutWhenBlocked == greyOutWhenBlocked) return;
 
         _clickBlocked = blocked;
+        _greyOutWhenBlocked = greyOutWhenBlocked;
         RefreshState();
     }
 
     /// <summary>
     /// 刷新显示：类型文本 + 亮/灰 + 可点状态。
-    /// 三种状态：
-    ///   走过的关卡（chosenLevelIds 里）→ 亮，但不可点（就是已经打过的关）
-    ///   可选的关卡（unlockedIds 里） → 亮，且可点（进关停留期间临时不可点）
-    ///   未解锁                     → 灰，不可点
+    /// 四种情况：
+    ///   走过的关卡（chosenLevelIds 里）→ 永远亮（包括正在打的那一关）
+    ///   可选的关卡（unlockedIds 里） → 亮 + 可点 + 呼吸；进关停留时不可点但保持亮
+    ///   可选的关卡 + 地图查看中    → 置灰（这时不能选，也不呼吸）
+    ///   未解锁                     → 灰 + 文本「锁定」
     /// </summary>
     public void RefreshState()
     {
@@ -114,8 +124,9 @@ public partial class LevelBtnModule : BaseModule
         bool clickable = LevelStore.Instance.IsUnlocked(_cfg.Id);
         bool visited = LevelStore.Instance.HasChosen(_cfg.Id);
 
-        // 亮 = 可选 或 走过；只有未解锁才是灰
-        bool bright = clickable || visited;
+        // 被屏蔽 + 要求置灰（地图查看）时，可选但没走过的关卡也当灰的
+        bool dimmed = _clickBlocked && _greyOutWhenBlocked;
+        bool bright = visited || (clickable && !dimmed);
 
         comps.btnLevel.interactable = clickable && !_clickBlocked;
 
@@ -130,7 +141,8 @@ public partial class LevelBtnModule : BaseModule
 
         if (_txtType != null)
         {
-            _txtType.text = bright ? GetTypeName(_cfg.LevelType) : "锁定";
+            // 文本按数据状态走：被地图置灰的关卡仍然显示类型名（它不是「锁定」）
+            _txtType.text = clickable || visited ? GetTypeName(_cfg.LevelType) : "锁定";
         }
     }
 

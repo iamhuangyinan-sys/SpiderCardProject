@@ -233,13 +233,27 @@ public class CardRuleManager : ManagerBase<CardRuleManager>
     }
 
     /// <summary>判断能否从牌包把牌移到目标列（复用单张牌移到列的规则）</summary>
-    public bool CanMoveFromPocket(int pocketIndex, int targetColumnIndex)
-    {
+    public bool CanMoveFromPocket(int pocketIndex, int targetColumnIndex)    {
         var store = CardsStore.Instance;
         if (pocketIndex < 0 || pocketIndex >= store.pockets.Count) return false;
         var card = store.pockets[pocketIndex];
         if (card == null) return false;
         return CanMove(new List<CardData> { card }, targetColumnIndex);
+    }
+
+    /// <summary>
+    /// 判断能否在两个牌包之间移动 / 交换：
+    ///   源牌包必须有牌；目标可以是空位（= 移过去），也可以有牌（= 两张交换）；不能是同一个
+    /// </summary>
+    public bool CanMoveBetweenPockets(int fromIndex, int toIndex)
+    {
+        var pockets = CardsStore.Instance.pockets;
+
+        if (fromIndex < 0 || fromIndex >= pockets.Count) return false;
+        if (toIndex < 0 || toIndex >= pockets.Count) return false;
+        if (fromIndex == toIndex) return false;
+
+        return pockets[fromIndex] != null;
     }
 
     /// <summary>查找某张牌所在的牌包索引（找不到返回 -1）</summary>

@@ -233,9 +233,25 @@ public partial class LevelPanel : NormalPanel, ISceneInputBlockPanel
         RefreshPlayerArrow();
         RefreshLineColors();
 
-        // 查看模式 / 正在进关的停留期：RefreshState 会把 interactable 复位，这里盖回去；
-        // 其它情况也要显式恢复一次 —— 模组是池化复用的，_clickBlocked 可能还停在上一次的 true
-        SetModulesInteractable(!(_viewOnly || _entering));
+        // 点击状态统一在这里落定：进关停留只挡点击，地图查看还要把其它可选关卡置灰
+        ApplyModuleClickState();
+    }
+
+    /// <summary>
+    /// 把「能不能点 / 要不要置灰」落定到所有关卡模组：
+    ///   _entering：挡点击，外观保持不变（不然点击瞬间一片变灰）
+    ///   _viewOnly：挡点击 + 可选但没走过的关卡置灰（地图是关卡进行中打开的，其它关卡本来就选不了）
+    /// 每次都两边都设，不靠「只在屏蔽时调」—— 模组是池化复用的，状态可能还停在上一次的 true
+    /// </summary>
+    private void ApplyModuleClickState()
+    {
+        bool blocked = _viewOnly || _entering;
+        bool greyOut = _viewOnly;
+
+        foreach (var m in _modules)
+        {
+            if (m != null) m.SetClickBlocked(blocked, greyOut);
+        }
     }
 
     /// <summary>
@@ -312,7 +328,7 @@ public partial class LevelPanel : NormalPanel, ISceneInputBlockPanel
         _previewPlayerId = cfg.Id;
         RefreshPlayerArrow();
 
-        SetModulesInteractable(false);      // 停留期间不许再点（下次 OnShow 会按解锁状态重设）
+        ApplyModuleClickState();      // 停留期间不许再点（下次 OnShow 会按解锁状态重设）
         _enterRoutine = MonoManager.Instance.StartCoroutine(EnterLevelRoutine(cfg.Id));
     }
 
@@ -345,19 +361,6 @@ public partial class LevelPanel : NormalPanel, ISceneInputBlockPanel
         _entering = false;
 
         // 没真的进关（比如非打牌关直接 return）→ 恢复点击，避免面板卡死
-        if (IsOpen) SetModulesInteractable(true);
-    }
-
-    /// <summary>
-    /// 屏蔽 / 恢复所有关卡按钮的点击（进关停留 / 查看模式用）。
-    /// 只挡点击，不直接改 interactable —— 否则按钮会按 Button 的 disabledColor 变灰，
-    /// 选中的关卡看起来像「被锁住」（亮/灰仍由 LevelBtnModule.RefreshState 按状态决定）
-    /// </summary>
-    private void SetModulesInteractable(bool value)
-    {
-        foreach (var m in _modules)
-        {
-            if (m != null) m.SetClickBlocked(!value);
-        }
+        if (IsOpen) ApplyModuleClickState();
     }
 }

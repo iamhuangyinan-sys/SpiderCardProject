@@ -5,12 +5,13 @@ using Framework.Mgr;
 /// <summary>
 /// 商店业务层 —— 刷新商品、购买、继续进入下一层
 ///
-/// 商品构成：常驻两张技能牌（复制 / 回收），价格先写死（TODO：价格规则后续再做）
+/// 商品构成：先写死 10 件（复制 / 回收 各 5 份），方便测试多商品的列表表现。
+/// TODO: 后续改成按规则刷新商品（牌池 / 权重 / 数量由关卡配置决定），价格也接价格表
 /// </summary>
 public class ShopManager : ManagerBase<ShopManager>
 {
     /// <summary>
-    /// 常驻技能牌（顺序即商品顺序）：牌定义 + 价格。
+    /// 写死的常驻技能牌（顺序即商品顺序）：牌定义 + 价格。
     /// TODO: 价格目前写死，后续接价格表
     /// </summary>
     private static readonly (CardDef def, int price)[] SpecialGoods =
@@ -18,6 +19,9 @@ public class ShopManager : ManagerBase<ShopManager>
         (CardDef.Create(null, new[] { CardRankConst.Wild }, E_PlaceSkillEnum.Copy), 150),      // 复制
         (CardDef.Create(null, new[] { CardRankConst.Wild }, E_PlaceSkillEnum.Recycle), 80),    // 回收
     };
+
+    /// <summary>每种写死商品要上几份（先写死，方便测试多商品布局）</summary>
+    private const int SpecialGoodsCopies = 5;
 
     /// <summary>本次商店的删牌上限（暂写死；后续可扩展成 LevelConfig 的字段）</summary>
     private const int DefaultDeleteLimit = 5;
@@ -73,7 +77,8 @@ public class ShopManager : ManagerBase<ShopManager>
     // ==================== 刷新商品 ====================
 
     /// <summary>
-    /// 刷新商品：常驻技能牌（价格先写死，后续接价格表）
+    /// 刷新商品：目前写死（每种技能牌上 SpecialGoodsCopies 份）。
+    /// TODO: 后续改成按规则刷新牌到商店 —— 普通牌池 + 权重随机、数量 / 价格由关卡配置决定
     /// </summary>
     private void RandomizeGoods()
     {
@@ -84,11 +89,14 @@ public class ShopManager : ManagerBase<ShopManager>
         {
             if (!def.IsValid) continue;
 
-            store.goods.Add(new ShopGoods
+            for (int i = 0; i < SpecialGoodsCopies; i++)
             {
-                def = def,
-                price = price,
-            });
+                store.goods.Add(new ShopGoods
+                {
+                    def = def.Clone(),     // 每件各持一份，避免改一件影响其它件
+                    price = price,
+                });
+            }
         }
     }
 

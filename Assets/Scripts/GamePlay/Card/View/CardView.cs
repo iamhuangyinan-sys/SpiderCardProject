@@ -280,8 +280,12 @@ public class CardView : MonoBehaviour
 
         if (data.isFaceUp)
         {
-            // 显示用列表优先（没喂过则用原始列表）
-            ApplyFace(data.def, _displaySuits ?? data.suits, _displayRanks ?? data.ranks, data.attributes);
+            // 显示用列表优先（View 自己记的 > 数据上记的 > 原始列表）：
+            // View 被回收重建时数据上的 display 还在，牌面不会突然变脸
+            ApplyFace(data.def,
+                _displaySuits ?? data.displaySuits ?? data.suits,
+                _displayRanks ?? data.displayRanks ?? data.ranks,
+                data.attributes);
         }
         else ApplyBack();
     }
