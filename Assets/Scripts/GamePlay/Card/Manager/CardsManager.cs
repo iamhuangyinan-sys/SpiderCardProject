@@ -16,13 +16,8 @@ public class CardsManager : ManagerBase<CardsManager>
     /// <summary>沉底概率：牌收入弃牌堆时被打上沉底标记的概率（后续可移入配表）</summary>
     private const float SunkProbability = 0.8f;
 
-    /// <summary>开局发牌：前 ShortDealColumnCount 列各短发 ShortDealCount 张，其余列各发 LongDealCount 张（后续可移入配表）</summary>
-    private const int ShortDealColumnCount = 5;
-    private const int ShortDealCount = 2;
-    private const int LongDealCount = 5;
-
     /// <summary>测试模式：跳过洗牌直接发牌（仅编辑器下生效）</summary>
-    public bool isTestMode = true;
+    public bool isTestMode = false;
 
     /// <summary>是否正在结算收牌（收牌期间锁输入、不再触发新的回收/洗回）</summary>
     public bool IsSettling { get; private set; }
@@ -132,11 +127,10 @@ public class CardsManager : ManagerBase<CardsManager>
 
         // 逐张发牌：每列轮流一张，前几列少发、其余列多发；某列发满时及时翻该列顶牌
         int columnCount = store.columns.Count;
-        var quota = new int[columnCount];
+        var quota = LevelManager.Instance.GetInitialDeal(columnCount, store.drawPile.Count);
         int maxQuota = 0;
         for (int col = 0; col < columnCount; col++)
         {
-            quota[col] = col < ShortDealColumnCount ? ShortDealCount : LongDealCount;
             if (quota[col] > maxQuota) maxQuota = quota[col];
         }
 

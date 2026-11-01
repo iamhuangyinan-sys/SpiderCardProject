@@ -22,5 +22,6 @@ public partial class BeginBuildPanel
         public Button btnDifRight;
         public TMP_Text txtDif;
         public Button btnContinue;
+        public TMP_InputField iptSeed;
     }
 }

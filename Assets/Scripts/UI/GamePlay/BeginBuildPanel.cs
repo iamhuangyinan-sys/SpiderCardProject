@@ -10,7 +10,7 @@ public partial class BeginBuildPanel : NormalPanel, ISceneInputBlockPanel
     protected override bool FlyOutOnClose => true;
 
     private const string ItemPath = "Prefab/UI/GamePlay/Module/BeginBuildItemModule";
-    public Func<string, bool> OnConfirm;
+    public Func<string, int?, bool> OnConfirm;
     private List<BeginBuildConfig> builds;
     private readonly List<BeginBuildItemModule> items = new();
     private GameObject itemPrefab;
@@ -30,7 +30,12 @@ public partial class BeginBuildPanel : NormalPanel, ISceneInputBlockPanel
         RefreshBuild();
     }
 
-    protected override void OnShow() => RefreshBuild();
+    protected override void OnShow()
+    {
+        confirming = false;
+        comps.iptSeed.text = string.Empty;
+        RefreshBuild();
+    }
     protected override void OnHide() { }
 
     protected override void OnClose()
@@ -90,10 +95,23 @@ public partial class BeginBuildPanel : NormalPanel, ISceneInputBlockPanel
     private void OnContinue()
     {
         if (confirming || preview == null || OnConfirm == null) return;
+        string seedText = comps.iptSeed.text.Trim();
+        int? seed = null;
+        if (seedText.Length > 0)
+        {
+            if (!int.TryParse(seedText, System.Globalization.NumberStyles.AllowLeadingSign,
+                System.Globalization.CultureInfo.InvariantCulture, out int parsedSeed))
+            {
+                comps.iptSeed.text = string.Empty;
+                TipHelper.Show("种子错误");
+                return;
+            }
+            seed = parsedSeed;
+        }
         confirming = true;
         comps.btnContinue.interactable = false;
         // 回调成功时场景入口会隐藏本面板并播放退出动画。
-        if (OnConfirm(builds[selectedIndex].Id)) return;
+        if (OnConfirm(builds[selectedIndex].Id, seed)) return;
         confirming = false;
         comps.btnContinue.interactable = true;
         TipHelper.Show("初始牌组配置无效，无法开始游戏");

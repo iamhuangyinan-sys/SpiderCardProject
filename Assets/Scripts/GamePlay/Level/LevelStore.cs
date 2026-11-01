@@ -6,6 +6,7 @@ using Framework.Store;
 /// </summary>
 public class LevelStore : StoreBase<LevelStore>
 {
+    public RunMapData map;
     /// <summary>
     /// 玩家选择过的关卡 id（按选择顺序追加，含正在打的那一关）
     ///   相邻两项 = 玩家实际走过的路线（选关界面 / 地图据此把连线置白）
@@ -44,10 +45,10 @@ public class LevelStore : StoreBase<LevelStore>
     public readonly HashSet<string> unlockedIds = new();
 
     /// <summary>全部关卡（id → 配置）</summary>
-    public readonly Dictionary<string, LevelConfig> allLevels = new();
+    public readonly Dictionary<string, RunLevelData> allLevels = new();
 
     /// <summary>层号 → 该层关卡配置列表（按关号排序）</summary>
-    public readonly Dictionary<int, List<LevelConfig>> levelsByLayer = new();
+    public readonly Dictionary<int, List<RunLevelData>> levelsByLayer = new();
 
     protected override void OnInit()
     {
@@ -61,6 +62,7 @@ public class LevelStore : StoreBase<LevelStore>
 
     private void Clear()
     {
+        map = null;
         chosenLevelIds.Clear();
         selectedLevelId = null;
         currentLayer = 0;

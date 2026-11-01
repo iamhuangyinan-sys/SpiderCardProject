@@ -474,13 +474,13 @@ CheckAndDiscard(col)
 
 ## 开局事件
 
-`LevelConfig.LevelEvent`（int）= 配表 `LevelEventConfig.Id`，**0 = 没有开局事件**。
+`RunLevelData.LevelEvent`（int）= 配表 `LevelEventConfig.Id`，**0 = 没有开局事件**。
 
 `LevelEventConfig.xlsx`（`Config/Excel/`）→ `Assets/Scripts/Config/LevelEventConfig.cs` + `Assets/Resources/Config/LevelEventConfig.json`
 
 | 字段 | 类型 | 说明 |
 |------|------|------|
-| Id | string | 事件 id，`LevelConfig.LevelEvent` 引用 |
+| Id | string | 事件 id，`RunLevelData.LevelEvent` 引用 |
 | Description | string | 选关卡片上的「开局事件：xxx」，UI 直接读 |
 
 表里**只放身份 + 文案**，行为与参数全在代码：
@@ -562,7 +562,7 @@ RunManager.Instance.TrySpend(100);     // 扣钱（不足返回 false）
 
 | 收支 | 位置 |
 |------|------|
-| +`LevelConfig.FinishReward` | `LevelManager.SettleLevelReward()` —— 与层号刷新同一时机（结算动画之后） |
+| +`RunLevelData.FinishReward` | `LevelManager.SettleLevelReward()` —— 与层号刷新同一时机（结算动画之后） |
 | −`ShopGoods.price` | `ShopManager.TryBuy()`（先 `IsEnough` 判定，不足则购买失败） |
 
 ### 牌组

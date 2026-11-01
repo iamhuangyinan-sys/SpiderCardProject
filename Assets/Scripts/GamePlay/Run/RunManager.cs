@@ -25,9 +25,10 @@ public class RunManager : ManagerBase<RunManager>
     // ==================== 一大局生命周期 ====================
 
     /// <summary>确认初始牌组后开始新的一大局；配方无效时保留原有状态。</summary>
-    public bool StartNewRun(string beginBuildId)
+    public bool StartNewRun(string beginBuildId, int? seed = null)
     {
         if (!BeginBuildHelper.TryBuild(beginBuildId, out var deck)) return false;
+        if (!LevelManager.Instance.TryCreateRunMap(deck.Count, seed)) return false;
         RunStore.Instance.Reset();
         foreach (var def in deck) RunStore.Instance.deck.Add(def.Clone());
         RunStore.Instance.hasStarted = true;

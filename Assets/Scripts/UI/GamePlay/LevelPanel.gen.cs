@@ -15,5 +15,6 @@ public partial class LevelPanel
     {
         public Image imgLevelBtns;
         public Button btnClose;
+        public Button btnCopySeed;
     }
 }

@@ -68,9 +68,9 @@ public class CardGameEntry : MonoBehaviour
         ConsoleEntryPanel.ShowInEditor();
     }
 
-    private bool OnConfirmBeginBuild(string id)
+    private bool OnConfirmBeginBuild(string id, int? seed)
     {
-        if (!RunManager.Instance.StartNewRun(id)) return false;
+        if (!RunManager.Instance.StartNewRun(id, seed)) return false;
         CardGameModule.Instance.SaveRun();
         // Hide 才会播放 NormalPanel 的退出动画；切场景时再 Close 释放资源。
         if (_beginBuildPanel != null) UIManager.Instance.Hide(_beginBuildPanel);

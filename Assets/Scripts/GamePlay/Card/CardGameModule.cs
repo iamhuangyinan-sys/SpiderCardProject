@@ -108,9 +108,21 @@ public class CardGameModule : ManagerBase<CardGameModule>
             return false;
         }
 
+        if (!LevelGenerationHelper.Validate(data.map, out _))
+        {
+            UnityEngine.Debug.LogError("[Level] 存档地图校验失败，未重新随机或覆盖存档");
+            return false;
+        }
+
         RunManager.Instance.ImportFrom(data);
         LevelManager.Instance.ImportFrom(data);
         ShopManager.Instance.ImportFrom(data);
+        // 结算动画期间退出时，补发已完成关卡的挂起奖励并立即保存，防止丢失或重复领取。
+        if (data.pendingLevelReward > 0)
+        {
+            LevelManager.Instance.SettleLevelReward();
+            SaveRun();
+        }
         return true;
     }
 }

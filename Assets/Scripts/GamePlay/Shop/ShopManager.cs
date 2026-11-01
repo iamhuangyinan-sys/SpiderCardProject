@@ -29,7 +29,7 @@ public class ShopManager : ManagerBase<ShopManager>
         (E_CardPreSetTypeEnum.Multi, 4),
     };
 
-    /// <summary>本次商店的删牌上限（暂写死；后续可扩展成 LevelConfig 的字段）</summary>
+    /// <summary>本次商店的删牌上限（暂写死，后续可配置）</summary>
     private const int DefaultDeleteLimit = 5;
 
     /// <summary>删牌单次费用（暂写死）</summary>
@@ -44,6 +44,11 @@ public class ShopManager : ManagerBase<ShopManager>
     protected override void OnInit() { }
 
     protected override void OnDispose()
+    {
+        ResetForNewRun();
+    }
+
+    public void ResetForNewRun()
     {
         ShopStore.Instance.Clear();
         _goodsPrepared = false;

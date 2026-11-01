@@ -8,26 +8,34 @@ using Framework.Mgr;
 /// </summary>
 public class LevelManager : ManagerBase<LevelManager>
 {
-    protected override void OnInit()
-    {
-        LoadLevels();
-    }
+    // 地图只在新局生成或读档恢复时装载，初始化不再加载固定地图。
+    protected override void OnInit() { }
 
     protected override void OnDispose() { }
 
-    /// <summary>读配表 → 按层分组 → 初始解锁第一层</summary>
-    private void LoadLevels()
+    private void ApplyLevels(IEnumerable<RunLevelData> levels)
     {
         var store = LevelStore.Instance;
+        store.allLevels.Clear();
+        store.levelsByLayer.Clear();
+        store.unlockedIds.Clear();
+        store.chosenLevelIds.Clear();
+        store.selectedLevelId = null;
+        store.pendingReward = 0;
 
-        foreach (var cfg in ConfigHelper.GetAll<LevelConfig>())
+        foreach (var cfg in levels)
         {
+            if (cfg is RunLevelData node)
+            {
+                node.initialCards?.Sort();
+                node.actualInitialCards?.Sort();
+            }
             store.allLevels[cfg.Id] = cfg;
 
             int layer = GetLayer(cfg.Id);
             if (!store.levelsByLayer.TryGetValue(layer, out var list))
             {
-                list = new List<LevelConfig>();
+                list = new List<RunLevelData>();
                 store.levelsByLayer[layer] = list;
             }
             list.Add(cfg);
@@ -49,6 +57,46 @@ public class LevelManager : ManagerBase<LevelManager>
                 store.unlockedIds.Add(cfg.Id);
             }
         }
+    }
+
+    /// <summary>先生成成功再替换当前地图，避免错误参数破坏正在玩的局。</summary>
+    public bool TryCreateRunMap(int deckCount, int? requestedSeed = null)
+    {
+        try
+        {
+            int seed = requestedSeed ?? System.Guid.NewGuid().GetHashCode();
+            var map = LevelGenerationHelper.Generate(seed, deckCount);
+            ApplyLevels(map.levels);
+            LevelStore.Instance.map = map;
+            ShopManager.Instance.ResetForNewRun();
+            UnityEngine.Debug.Log($"[Level] 新地图 seed={seed}, version={map.generatorVersion}");
+            return true;
+        }
+        catch (System.Exception error)
+        {
+            UnityEngine.Debug.LogException(error);
+            TipHelper.Show("关卡生成失败，请检查关卡模板和生成参数");
+            return false;
+        }
+    }
+
+    /// <summary>获取当前局地图种子；没有地图时返回空。</summary>
+    public int? GetMapSeed() => LevelStore.Instance.map?.seed;
+
+    /// <summary>开局事件完成后确定实际配额，删牌导致不足时削减深列，并保存避免读档变化。</summary>
+    public List<int> GetInitialDeal(int columns, int available)
+    {
+        var store = LevelStore.Instance;
+        if (!string.IsNullOrEmpty(store.selectedLevelId)
+            && store.allLevels.TryGetValue(store.selectedLevelId, out var cfg) && cfg is RunLevelData node)
+        {
+            bool resolved = node.actualInitialCards != null && node.actualInitialCards.Count == columns;
+            var result = LevelGenerationHelper.FitDeal(resolved ? node.actualInitialCards : node.initialCards, columns, available);
+            node.actualInitialCards = result;
+            CardGameModule.Instance.SaveRun();
+            return result;
+        }
+        throw new System.InvalidOperationException("当前关卡缺少本局地图数据，无法发牌");
     }
 
     /// <summary>取层号（id 第 3-4 位）</summary>
@@ -287,6 +335,8 @@ public class LevelManager : ManagerBase<LevelManager>
         var store = LevelStore.Instance;
 
         data.selectedLevelId = store.selectedLevelId;
+        data.map = store.map;
+        data.pendingLevelReward = store.pendingReward;
 
         data.chosenLevelIds.Clear();
         data.chosenLevelIds.AddRange(store.chosenLevelIds);
@@ -296,6 +346,9 @@ public class LevelManager : ManagerBase<LevelManager>
     public void ImportFrom(RunSaveData data)
     {
         var store = LevelStore.Instance;
+        ApplyLevels(data.map.levels);
+        store.map = data.map;
+        store.pendingReward = data.pendingLevelReward;
 
         store.selectedLevelId = data.selectedLevelId;
 

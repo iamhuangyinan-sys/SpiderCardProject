@@ -77,6 +77,7 @@ public partial class LevelPanel : NormalPanel, ISceneInputBlockPanel
 
     /// <summary>查看模式（关卡中打开地图）：所有关卡按钮不可点，只显示当前位置</summary>
     private bool _viewOnly;
+    private RunMapData _builtMap;
 
     /// <summary>当前是否处于查看模式（地图）</summary>
     public bool IsViewOnly => _viewOnly;
@@ -84,6 +85,7 @@ public partial class LevelPanel : NormalPanel, ISceneInputBlockPanel
     protected override void OnOpen()
     {
         LevelStore.Instance.OnDataChanged += RefreshLevels;
+        comps.btnCopySeed.onClick.AddListener(OnClickCopySeed);
 
         if (comps.btnClose != null)
         {
@@ -99,6 +101,12 @@ public partial class LevelPanel : NormalPanel, ISceneInputBlockPanel
     /// <summary>重新显示时按最新存档刷新（通关后回选关 → 走过的线自动变白）</summary>
     protected override void OnShow()
     {
+        if (!ReferenceEquals(_builtMap, LevelStore.Instance.map))
+        {
+            ClearGeneratedMap();
+            BuildLevels();
+            BuildLines();
+        }
         _previewPlayerId = null;   // 重新打开时以真实存档为准
         RefreshLevels();
     }
@@ -111,6 +119,7 @@ public partial class LevelPanel : NormalPanel, ISceneInputBlockPanel
     protected override void OnClose()
     {
         LevelStore.Instance.OnDataChanged -= RefreshLevels;
+        comps.btnCopySeed.onClick.RemoveListener(OnClickCopySeed);
 
         if (comps.btnClose != null) comps.btnClose.onClick.RemoveListener(OnClickClose);
 
@@ -123,6 +132,19 @@ public partial class LevelPanel : NormalPanel, ISceneInputBlockPanel
         _entering = false;
         _previewPlayerId = null;
 
+        ClearGeneratedMap();
+    }
+
+    private void OnClickCopySeed()
+    {
+        int? seed = LevelManager.Instance.GetMapSeed();
+        if (!seed.HasValue) return;
+        GUIUtility.systemCopyBuffer = seed.Value.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        TipHelper.Show("种子已复制");
+    }
+
+    private void ClearGeneratedMap()
+    {
         foreach (var m in _modules)
         {
             if (m == null) continue;
@@ -139,6 +161,7 @@ public partial class LevelPanel : NormalPanel, ISceneInputBlockPanel
     /// <summary>生成所有关卡按钮</summary>
     private void BuildLevels()
     {
+        _builtMap = LevelStore.Instance.map;
         var parent = comps.imgLevelBtns.transform;
         int minLayer = LevelManager.Instance.GetMinLayer();
         int maxLayer = LevelManager.Instance.GetMaxLayer();
@@ -216,7 +239,7 @@ public partial class LevelPanel : NormalPanel, ISceneInputBlockPanel
     private static Vector2 CalcPosition(int layer, int index, int count, int minLayer, int maxLayer)
     {
         float x = (layer - (minLayer + maxLayer) / 2f) * Spacing;
-        float y = ((count - 1) / 2f - index) * Spacing;
+        float y = LevelGenerationHelper.GetRowOffset(index, count) * Spacing;
         return new Vector2(x, y);
     }
 
@@ -312,7 +335,7 @@ public partial class LevelPanel : NormalPanel, ISceneInputBlockPanel
     // ==================== 选关 ====================
 
     /// <summary>按钮点击 → 箭头挪过去 + 走过的线刷白 → 停留一小段 → 进入关卡</summary>
-    private void OnClickModule(LevelConfig cfg)
+    private void OnClickModule(RunLevelData cfg)
     {
         if (cfg == null || _entering || _viewOnly) return;
 

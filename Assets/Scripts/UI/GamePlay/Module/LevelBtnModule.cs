@@ -20,9 +20,9 @@ public partial class LevelBtnModule : BaseModule
     /// 点击回调 —— 由 LevelPanel 赋值。
     /// 选关流程包含「刷白路线 + 停留一小段再进关」，统一交给面板处理
     /// </summary>
-    public Action<LevelConfig> OnClickLevel;
+    public Action<RunLevelData> OnClickLevel;
 
-    private LevelConfig _cfg;
+    private RunLevelData _cfg;
     private TextMeshProUGUI _txtType;
     private Image _imgIcon;
 
@@ -67,7 +67,7 @@ public partial class LevelBtnModule : BaseModule
     }
 
     /// <summary>绑定关卡配置并刷新</summary>
-    public void Bind(LevelConfig cfg)
+    public void Bind(RunLevelData cfg)
     {
         _cfg = cfg;
 
@@ -199,7 +199,7 @@ public partial class LevelBtnModule : BaseModule
     /// <summary>
     /// 提示正文 —— 目前全部写死在代码里，后续可以改成事件 / 关卡配表驱动
     /// </summary>
-    private static string BuildTipContent(LevelConfig cfg)
+    private static string BuildTipContent(RunLevelData cfg)
     {
         // 商店关没有牌局，只说它是商店
         if ((E_LevelTypeEnum)cfg.LevelType == E_LevelTypeEnum.Shop)
@@ -210,6 +210,11 @@ public partial class LevelBtnModule : BaseModule
         var sb = new StringBuilder();
         sb.Append("场上列数 ").Append(cfg.ColumnNum);
         sb.Append('\n').Append("牌包数 ").Append(cfg.PocketNum);
+        sb.Append('\n').Append("接龙目标 ").Append(cfg.NeedStraightNum).Append(" 次");
+        if (cfg is RunLevelData node)
+        {
+            sb.Append('\n').Append("初始发牌 ").Append(string.Join(" / ", node.initialCards));
+        }
         sb.Append('\n').Append("通关金币 ").Append(cfg.FinishReward);
 
         string evt = GetEventDesc(cfg.LevelEvent);
