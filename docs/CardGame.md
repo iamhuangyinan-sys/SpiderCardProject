@@ -524,6 +524,23 @@ CheckAndDiscard(col)
 - 配表里某类型为空 / 某行非法（属性、落牌技能不是已定义枚举）时会跳过并打警告，不影响其它商品。
 - 商品只在「本次商店还没备好」时生成一次：退出重进 / 续档都沿用同一批（`_goodsPrepared` + 存档里的 `shopGoods`）。
 
+### 价格波动与打折（`ShopManager.CreateGoods`）
+
+| 环节 | 规则 |
+|------|------|
+| 真实价 | 配表 `Price` × (1 ± 10%)，**四舍五入**，最低 1（`Price = 0` 保持 0）；存进 `ShopGoods.price` |
+| 打折 | 每件商品 5% 概率打折（`DiscountChance`，暂写死 / TODO 进配置）；`ShopGoods.discount` |
+| 实际售价 | `ShopGoods.FinalPrice` = 打折 ? `price × 50%` 四舍五入（最低 1） : `price` |
+
+- 两者都在**生成时定死**，`ShopGoods.price` + `discount` 都进存档，退出重进同一商店不会重抽。
+- 显示（`ShopCardItem.RefreshPrice`）：
+  - `img_Discount` 只在打折时显示，买牌飞行时一起隐藏
+  - `txt_Coin`：买不起 → 红；买得起且打折 → 绿；否则原色（红的优先级最高）
+  - 金币变化（`OnCoinChanged`）时 `ShopPanel.RefreshGoodsPrice` 用 `ScrollList.ForEachVisible` 逐格刷新，**不重建列表**
+- 买不起时点商品 → `TipHelper.Show("金币不足")`，不静默失败。
+- 删牌区同理：`txt_DeletePrice` 钱不够变红、`txt_DeleteCount` 次数到上限变红；按钮始终可点，
+  点击分别提示「金币不足」/「删除次数达到上限」。
+
 ### 流程
 
 ```

@@ -15,12 +15,44 @@ public partial class ShopCardItem : BaseListItem
 
     private int _index = -1;
 
+    /// <summary>价格文字的原始颜色（预制体上的值，只记一次）</summary>
+    private Color _coinDefaultColor;
+    private bool _coinColorCaptured;
+
+    /// <summary>打折时价格文字的颜色（在预制体上调）</summary>
+    [SerializeField] private Color discountColor = new Color(0.35f, 0.95f, 0.45f);
+
+    /// <summary>买不起时价格文字的颜色</summary>
+    [SerializeField] private Color unaffordableColor = new Color(1f, 0.4f, 0.4f);
+
+    /// <summary>点数列表达到这个数量时，打折角标要下移避让</summary>
+    private const int DiscountShiftRankCount = 4;
+
+    /// <summary>打折角标下移的距离（像素，正数 = 往下移）</summary>
+    [SerializeField] private float discountShiftY = 30f;
+
+    /// <summary>打折角标的初始位置（预制体上的值，只记一次）</summary>
+    private Vector2 _discountBasePos;
+    private bool _discountPosCaptured;
+
     /// <summary>悬停缩放（挂在根节点上，缩放目标是内部那个轴心居中的 layout；没有就退化成不缩放）</summary>
     private HoverScaleBehaviour _hoverScale;
 
     public override void OnActivate()
     {
         if (_hoverScale == null) _hoverScale = GetComponent<HoverScaleBehaviour>();
+
+        if (!_coinColorCaptured)
+        {
+            _coinDefaultColor = comps.txtCoin.color;
+            _coinColorCaptured = true;
+        }
+
+        if (!_discountPosCaptured)
+        {
+            _discountBasePos = comps.imgDiscount.rectTransform.anchoredPosition;
+            _discountPosCaptured = true;
+        }
 
         comps.modCard.OnHoverChanged = OnCardHover;
     }
@@ -30,6 +62,8 @@ public partial class ShopCardItem : BaseListItem
         comps.modCard.OnHoverChanged = null;
         _hoverScale?.SetHover(false, true);   // 回收：立即复位（组件 OnDisable 也会兜底）
         comps.modCard.Clear();
+        comps.imgDiscount.gameObject.SetActive(false);
+        comps.txtCoin.color = _coinDefaultColor;
         _index = -1;
     }
 
@@ -45,16 +79,61 @@ public partial class ShopCardItem : BaseListItem
         {
             comps.modCard.Clear();
             comps.txtCoin.text = string.Empty;
+            comps.imgDiscount.gameObject.SetActive(false);
             return;
         }
 
         comps.modCard.Bind(goods.def);
         comps.modCard.SetClickable(OnClickCard);
-        comps.txtCoin.text = goods.price.ToString();
+        RefreshPrice();
+    }
+
+    /// <summary>
+    /// 刷新价格区：实际售价 + 折扣图标 + 颜色（买不起 = 红；买得起且打折 = 绿；否则原色）。
+    /// 只改显示，不动牌面 —— 金币变化时可以反复调
+    /// </summary>
+    public void RefreshPrice()
+    {
+        var goods = ShopStore.Instance.Get(_index);
+        if (goods == null) return;
+
+        int price = goods.FinalPrice;
+
+        comps.txtCoin.text = price.ToString();
+        comps.imgDiscount.gameObject.SetActive(goods.discount);
+        ApplyDiscountPos(goods);
+
+        if (!RunManager.Instance.IsEnough(price)) comps.txtCoin.color = unaffordableColor;
+        else comps.txtCoin.color = goods.discount ? discountColor : _coinDefaultColor;
+    }
+
+    /// <summary>
+    /// 打折角标位置：点数列表长（≥4 个）时会和角标重叠，角标往下让一截；否则回原位
+    /// </summary>
+    private void ApplyDiscountPos(ShopGoods goods)
+    {
+        if (!_discountPosCaptured) return;
+
+        bool needShift = goods.discount
+            && goods.def.ranks != null
+            && goods.def.ranks.Count >= DiscountShiftRankCount;
+
+        comps.imgDiscount.rectTransform.anchoredPosition =
+            needShift ? _discountBasePos + new Vector2(0f, -discountShiftY) : _discountBasePos;
     }
 
     private void OnClickCard()
     {
+        var goods = ShopStore.Instance.Get(_index);
+        if (goods == null || goods.sold) return;
+
+        // 买不起：不静默失败，弹提示（和删牌一致）
+        if (!RunManager.Instance.IsEnough(goods.FinalPrice))
+        {
+            TipHelper.Show("金币不足");
+            return;
+        }
+
         if (!ShopManager.Instance.TryBuy(_index)) return;
 
         PlayBuyFly();
@@ -73,8 +152,9 @@ public partial class ShopCardItem : BaseListItem
         // 不碰 btnCard：SetClickable(null) 会把按钮关掉，按钮进 Disabled 态后牌面立刻变灰，很难看。
         // 飞行期间由 FlyAndVanish 加的 CanvasGroup（blocksRaycasts = false）挡住点击；
         // 万一漏进来一次，TryBuy 也会因为 goods.sold 直接返回 false。
-        // 价格整块一起藏（img_Price 下面挂着金币底图和数字），只让牌面飞
+        // 价格整块一起藏（img_Price 下面挂着金币底图和数字），打折角标也一起藏，只让牌面飞
         if (comps.imgPrice != null) comps.imgPrice.gameObject.SetActive(false);
+        comps.imgDiscount.gameObject.SetActive(false);
 
         // 先从列表摘掉自己：否则滚动 / 刷新时这一格会被当成空闲格子回收，飞行被打断
         GetComponentInParent<ScrollList>()?.ReleaseItem(this);

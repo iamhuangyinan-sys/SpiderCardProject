@@ -16,5 +16,6 @@ public partial class ShopCardItem
         public CardModule modCard;
         public Image imgPrice;
         public TMP_Text txtCoin;
+        public Image imgDiscount;
     }
 }

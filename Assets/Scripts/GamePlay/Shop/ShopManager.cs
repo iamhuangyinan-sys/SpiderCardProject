@@ -35,6 +35,14 @@ public class ShopManager : ManagerBase<ShopManager>
     /// <summary>删牌单次费用（暂写死）</summary>
     private const int DefaultDeletePrice = 20;
 
+    /// <summary>价格波动幅度：真实价 = 固定价 × (1 ± 10%)，结果四舍五入</summary>
+    private const float PriceFluctuation = 0.1f;
+
+    /// <summary>每件商品打折的概率</summary>
+    private const float DiscountChance = 0.1f;
+
+    private readonly System.Random _random = new System.Random();
+
     /// <summary>本关商店的商品是否已备好（防止退出重进刷商品）</summary>
     private bool _goodsPrepared;
 
@@ -89,7 +97,7 @@ public class ShopManager : ManagerBase<ShopManager>
 
     /// <summary>
     /// 刷新商品：固定回收 ×2 + 按 RandomGoodsPlan 从各类型预设里随机抽取。
-    /// 只在「本次商店还没备好商品」时调用一次（退出重进 / 续档都不重刷）
+    /// 每件都过一遍价格波动与打折；只在「本次商店还没备好商品」时调用一次
     /// </summary>
     private void RandomizeGoods()
     {
@@ -101,7 +109,7 @@ public class ShopManager : ManagerBase<ShopManager>
         {
             for (int i = 0; i < FixedGoodsCount; i++)
             {
-                store.goods.Add(new ShopGoods { def = fixedDef.Clone(), price = fixedPrice });
+                store.goods.Add(CreateGoods(fixedDef, fixedPrice));
             }
         }
 
@@ -116,9 +124,29 @@ public class ShopManager : ManagerBase<ShopManager>
                     continue;
                 }
 
-                store.goods.Add(new ShopGoods { def = def, price = cfg.Price });
+                store.goods.Add(CreateGoods(def, cfg.Price));
             }
         }
+    }
+
+    /// <summary>生成一件商品：价格上下 10% 波动 + 按概率打折（两者都随商品固定下来，进出商店不变）</summary>
+    private ShopGoods CreateGoods(CardDef def, int basePrice)
+    {
+        return new ShopGoods
+        {
+            def = def.Clone(),
+            price = RollPrice(basePrice),
+            discount = _random.NextDouble() < DiscountChance,
+        };
+    }
+
+    /// <summary>固定价 → 真实价：上下 10% 随机后四舍五入（固定价为 0 就保持 0）</summary>
+    private int RollPrice(int basePrice)
+    {
+        if (basePrice <= 0) return 0;
+
+        double factor = 1.0 + (_random.NextDouble() * 2.0 - 1.0) * PriceFluctuation;
+        return Mathf.Max(1, Mathf.RoundToInt((float)(basePrice * factor)));
     }
 
     // ==================== 购买 / 继续 ====================
@@ -129,11 +157,11 @@ public class ShopManager : ManagerBase<ShopManager>
         var goods = ShopStore.Instance.Get(index);
         if (goods == null || goods.sold) return false;
 
-        // 金币不足 → 买不了
-        if (!RunManager.Instance.IsEnough(goods.price)) return false;
+        // 金币不足 → 买不了（价格按打折后的实际售价算）
+        if (!RunManager.Instance.IsEnough(goods.FinalPrice)) return false;
 
         // 扣金币 + 把该牌加入本局牌组
-        RunManager.Instance.TrySpend(goods.price);
+        RunManager.Instance.TrySpend(goods.FinalPrice);
         RunManager.Instance.AddCardToDeck(goods.def);
 
         goods.sold = true;
@@ -226,7 +254,13 @@ public class ShopManager : ManagerBase<ShopManager>
 
         foreach (var g in store.goods)
         {
-            data.shopGoods.Add(new ShopGoods { def = g.def, price = g.price, sold = g.sold });
+            data.shopGoods.Add(new ShopGoods
+            {
+                def = g.def,
+                price = g.price,
+                discount = g.discount,
+                sold = g.sold,
+            });
         }
 
         // 删牌次数也要落盘：退出重进同一个商店要保持一样（次数不能洗回来）
@@ -244,7 +278,13 @@ public class ShopManager : ManagerBase<ShopManager>
 
         foreach (var g in data.shopGoods)
         {
-            store.goods.Add(new ShopGoods { def = g.def, price = g.price, sold = g.sold });
+            store.goods.Add(new ShopGoods
+            {
+                def = g.def,
+                price = g.price,
+                discount = g.discount,
+                sold = g.sold,
+            });
         }
 
         _goodsPrepared = true;   // 已有商品 → 不再重新随机

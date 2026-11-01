@@ -163,6 +163,20 @@ namespace Framework.UI
             item.IsInUse = false;
             item.OwnerPool = null;
         }
+
+        /// <summary>
+        /// 对当前所有可见 item 执行一次回调 —— 不重建、不重排、不重新绑定数据。
+        /// 用于「只改显示」的局部刷新（比如金币变了给所有价格上色）
+        /// </summary>
+        public void ForEachVisible(Action<BaseListItem> action)
+        {
+            if (action == null) return;
+
+            for (int i = _slots.Count - 1; i >= 0; i--)
+            {
+                action(_slots[i].item);
+            }
+        }
         // ==================== 虚拟滚动核心 ====================
 
         private void HandleScroll(bool force)
