@@ -1,4 +1,4 @@
-﻿using Framework.Mgr;
+using Framework.Mgr;
 using Framework.Save;
 using Framework.UI;
 
@@ -16,6 +16,7 @@ public class CardGameModule : ManagerBase<CardGameModule>
         // ===== 数据层（无依赖）=====
         LevelStore.Instance.Init();      // 关卡数据
         RunStore.Instance.Init();        // 一大局资产数据
+        LittleShopStore.Instance.Init();
         ShopStore.Instance.Init();       // 商店数据
         CardsStore.Instance.Init();      // 牌局数据
 
@@ -23,6 +24,7 @@ public class CardGameModule : ManagerBase<CardGameModule>
         LevelManager.Instance.Init();    // 关卡逻辑（依赖 LevelStore + ConfigHelper）
         RunManager.Instance.Init();      // 一大局资产逻辑（依赖 RunStore）
         LevelResManager.Instance.Init(); // 关卡图标（依赖 ResManager + ConfigHelper）
+        LittleShopManager.Instance.Init();
         ShopManager.Instance.Init();     // 商店逻辑（依赖 ShopStore + RunManager + ConfigHelper）
 
         // ===== 卡牌（资源 → 对象池 → 表现 → 规则 → 逻辑）=====
@@ -42,12 +44,14 @@ public class CardGameModule : ManagerBase<CardGameModule>
         CardPoolManager.Instance.Dispose();
         CardResManager.Instance.Dispose();
 
+        LittleShopManager.Instance.Dispose();
         ShopManager.Instance.Dispose();
         LevelResManager.Instance.Dispose();
         RunManager.Instance.Dispose();
         LevelManager.Instance.Dispose();
 
         CardsStore.Instance.Dispose();
+        LittleShopStore.Instance.Dispose();
         ShopStore.Instance.Dispose();
         RunStore.Instance.Dispose();
         LevelStore.Instance.Dispose();
@@ -87,6 +91,7 @@ public class CardGameModule : ManagerBase<CardGameModule>
         RunManager.Instance.ExportTo(data);
         LevelManager.Instance.ExportTo(data);
         ShopManager.Instance.ExportTo(data);
+        LittleShopManager.Instance.ExportTo(data);
 
         SaveManager.Instance.Save(E_SaveCustomEnum.RunData, data);
     }
@@ -117,6 +122,7 @@ public class CardGameModule : ManagerBase<CardGameModule>
         RunManager.Instance.ImportFrom(data);
         LevelManager.Instance.ImportFrom(data);
         ShopManager.Instance.ImportFrom(data);
+        LittleShopManager.Instance.ImportFrom(data);
         // 结算动画期间退出时，补发已完成关卡的挂起奖励并立即保存，防止丢失或重复领取。
         if (data.pendingLevelReward > 0)
         {

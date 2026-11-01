@@ -1,4 +1,4 @@
-﻿using System.Collections;
+using System.Collections;
 using Framework;
 using Framework.Event;
 using Framework.UI;
@@ -20,6 +20,7 @@ public class CardGameEntry : MonoBehaviour
     private LevelPanel _levelPanel;
     private MainTopPanel _mainTopPanel;
     private ShopPanel _shopPanel;
+    private LittleShopPanel littleShopPanel;
 
     /// <summary>「等选关面板挡住牌桌后再隐藏牌桌物件」的协程句柄（开新局时取消）</summary>
     private Coroutine _hideTableRoutine;
@@ -46,7 +47,8 @@ public class CardGameEntry : MonoBehaviour
         {
             _mainTopPanel = UIManager.Instance.Show<MainTopPanel>();
             var currentId = LevelStore.Instance.selectedLevelId;
-            if (string.IsNullOrEmpty(currentId)) ShowLevelSelect();
+            if (LittleShopManager.Instance.IsPending) ShowLittleShop();
+            else if (string.IsNullOrEmpty(currentId)) ShowLevelSelect();
             else LevelManager.Instance.SelectLevel(currentId);
         }
         else
@@ -104,11 +106,24 @@ public class CardGameEntry : MonoBehaviour
     /// <summary>收牌结束（关卡结束）：弹选关面板，等它飞入挡住牌桌后再隐藏牌桌物件</summary>
     private void OnLevelEnd()
     {
-        ShowLevelSelect();
+        if (LittleShopManager.Instance.IsPending) ShowLittleShop();
+        else ShowLevelSelect();
         _hideTableRoutine = MonoManager.Instance.StartCoroutine(HideTableRoutine());
     }
 
-    /// <summary>等选关面板飞入到位（挡住牌桌）再隐藏，避免玩家看到牌桌物件凭空消失</summary>
+    /// <summary>显示通关小商店，保留只读地图入口。</summary>
+    private void ShowLittleShop()
+    {
+        if (_levelPanel != null) UIManager.Instance.Hide(_levelPanel);
+        SetMapButtonVisible(true);
+        littleShopPanel = UIManager.Instance.Show<LittleShopPanel>();
+        littleShopPanel.OnFinished = () =>
+        {
+            UIManager.Instance.Hide(littleShopPanel);
+            ShowLevelSelect();
+        };
+    }
+
     private IEnumerator HideTableRoutine()
     {
         yield return new WaitForSeconds(AnimationHelper.PanelFlyInDuration);
@@ -195,6 +210,7 @@ public class CardGameEntry : MonoBehaviour
         if (_levelPanel != null) UIManager.Instance.Close(_levelPanel);
         if (_mainTopPanel != null) UIManager.Instance.Close(_mainTopPanel);
         if (_shopPanel != null) UIManager.Instance.Close(_shopPanel);
+        if (littleShopPanel != null) UIManager.Instance.Close(littleShopPanel);
 
         CardGameModule.Instance.Dispose();
     }

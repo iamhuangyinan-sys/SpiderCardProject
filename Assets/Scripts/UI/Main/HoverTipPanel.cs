@@ -21,7 +21,7 @@ public partial class HoverTipPanel : BasePanel
     /// <summary>单条描述的预制体（Inspector 里拖入 HoverTipItemModule.prefab）</summary>
     [SerializeField] private HoverTipItemModule itemPrefab;
 
-    /// <summary>提示框与目标之间的基础间距（屏幕像素；每个宿主还可通过 extraGap 再让开一点）</summary>
+    /// <summary>提示框与目标之间的基础间距（Canvas 单位；每个宿主还可通过 extraGap 再让开一点）</summary>
     [SerializeField] private float gap = 12f;
 
     /// <summary>img_Root 的 RectTransform（框体尺寸与摆放都以它为准）</summary>
@@ -43,7 +43,6 @@ public partial class HoverTipPanel : BasePanel
 
     /// <summary>跟随用的摆放参数（显示时记下，之后每帧复用）</summary>
     private E_TipDirection _followDirection = E_TipDirection.Down;
-    private float _followScale = 1f;
     private float _followExtraGap;
 
     /// <summary>框体尺寸（屏幕像素）。内容固定，显示时算一次就够，每帧不用再问布局系统</summary>
@@ -96,7 +95,7 @@ public partial class HoverTipPanel : BasePanel
     {
         if (_target == null) return;
 
-        Place(_target, _followDirection, _followScale, _followExtraGap);
+        Place(_target, _followDirection, _followExtraGap);
     }
 
     protected override void OnPanelOpened()
@@ -115,10 +114,9 @@ public partial class HoverTipPanel : BasePanel
     /// <param name="tips">每条描述（空条目会被跳过）</param>
     /// <param name="target">提示要对齐的目标（一般传触发悬停的 item）</param>
     /// <param name="preferred">首选方向（放不下会自动换方向）</param>
-    /// <param name="targetScale">目标最终会放大到多少倍（悬停放大时用；按放大后的尺寸定位，间距才不会被吃掉）</param>
-    /// <param name="extraGap">额外让出的距离（像素）</param>
+    /// <param name="extraGap">额外让出的距离（Canvas 单位）</param>
     public void ShowTips(IReadOnlyList<HoverTipData> tips, RectTransform target, E_TipDirection preferred,
-        float targetScale = 1f, float extraGap = 0f)
+        float extraGap = 0f)
     {
         if (!ApplyTips(tips))
         {
@@ -145,18 +143,17 @@ public partial class HoverTipPanel : BasePanel
         // 记下摆放参数：之后每帧都要按同一套参数重新摆（目标会滚动 / 移动 / 缩放）
         _target = target;
         _followDirection = preferred;
-        _followScale = targetScale;
         _followExtraGap = extraGap;
 
-        Place(target, preferred, targetScale, extraGap);
+        Place(target, preferred, extraGap);
     }
 
     /// <summary>单条描述的旧接口（关卡按钮等不需要分条的提示用）</summary>
     public void ShowTip(string title, string content, RectTransform target, E_TipDirection preferred,
-        float targetScale = 1f, float extraGap = 0f)
+        float extraGap = 0f)
     {
         _single[0] = new HoverTipData(title, content);
-        ShowTips(_single, target, preferred, targetScale, extraGap);
+        ShowTips(_single, target, preferred, extraGap);
     }
 
     // ==================== 内部 ====================
@@ -219,23 +216,16 @@ public partial class HoverTipPanel : BasePanel
     /// 这样即使框体尺寸晚一帧才被布局系统纠正，也只是朝远离目标的方向伸展，
     /// 与目标之间的间距永远不变（不会出现"距离乱跳"）。
     /// </summary>
-    private void Place(RectTransform target, E_TipDirection preferred, float targetScale, float extraGap)
+    private void Place(RectTransform target, E_TipDirection preferred, float extraGap)
     {
         if (target == null || _rootRect == null) return;
 
         var canvas = _canvas != null ? _canvas : GetComponentInParent<Canvas>();
         if (canvas == null) return;
 
-        // 目标中心：用世界角点换算（不受锚点 / 轴心 / 缩放影响；放大是从中心长，中心基本不动）
-        GetTargetCenter(target, out var targetCenter);
-
-        // 目标尺寸：用「局部 rect 尺寸 × 画布缩放 × 悬停放大倍数」算。
-        // ⚠ 不能用角点量出来的尺寸：那是「当前实际大小」，悬停放大补间跑完后它已经含着放大倍数了，
-        //    再乘一次就是重复放大，间距会莫名变远（每帧跟随之后才会暴露这个问题）。
-        Vector2 targetSize = target.rect.size * canvas.scaleFactor
-                             * (targetScale > 0f ? targetScale : 1f);
-
-        float useGap = gap + Mathf.Max(0f, extraGap);
+        // 世界角点包含父级缩放和当前悬停动画，直接取屏幕边界，避免漏算或重复乘缩放。
+        GetTargetBounds(target, out var targetCenter, out var targetSize);
+        float useGap = (gap + Mathf.Max(0f, extraGap)) * canvas.rootCanvas.scaleFactor;
 
         var screen = new Rect(0f, 0f, Screen.width, Screen.height);
 
@@ -330,22 +320,32 @@ public partial class HoverTipPanel : BasePanel
         var canvasRect = canvas.transform as RectTransform;
         if (canvasRect == null) return;
 
-        // Overlay 画布：camera 传 null
-        if (!RectTransformUtility.ScreenPointToWorldPointInRectangle(canvasRect, anchorScreen, null, out var world))
+        // 转回提示框所在画布，支持 Overlay 与 Camera 画布。
+        var camera = canvas.rootCanvas.renderMode == RenderMode.ScreenSpaceOverlay
+            ? null : canvas.rootCanvas.worldCamera;
+        if (!RectTransformUtility.ScreenPointToWorldPointInRectangle(canvasRect, anchorScreen, camera, out var world))
             return;
 
         _rootRect.pivot = ToPivot(dir);
         _rootRect.position = world;
     }
 
-    /// <summary>取目标中心点的屏幕坐标（用世界角点，不受锚点 / 轴心 / 缩放影响）</summary>
-    private static void GetTargetCenter(RectTransform rect, out Vector2 center)
+    /// <summary>取目标实际屏幕边界，包含各层缩放、旋转和悬停动画。</summary>
+    private static void GetTargetBounds(RectTransform rect, out Vector2 center, out Vector2 size)
     {
-        rect.GetWorldCorners(Corners);   // 0=左下 1=左上 2=右上 3=右下（复用静态数组，避免每帧分配）
-
-        Vector2 min = RectTransformUtility.WorldToScreenPoint(null, Corners[0]);
-        Vector2 max = RectTransformUtility.WorldToScreenPoint(null, Corners[2]);
-
+        var targetCanvas = rect.GetComponentInParent<Canvas>();
+        var camera = targetCanvas != null && targetCanvas.rootCanvas.renderMode != RenderMode.ScreenSpaceOverlay
+            ? targetCanvas.rootCanvas.worldCamera : null;
+        rect.GetWorldCorners(Corners);
+        Vector2 min = RectTransformUtility.WorldToScreenPoint(camera, Corners[0]);
+        Vector2 max = min;
+        for (int i = 1; i < Corners.Length; i++)
+        {
+            Vector2 point = RectTransformUtility.WorldToScreenPoint(camera, Corners[i]);
+            min = Vector2.Min(min, point);
+            max = Vector2.Max(max, point);
+        }
         center = (min + max) * 0.5f;
+        size = max - min;
     }
 }

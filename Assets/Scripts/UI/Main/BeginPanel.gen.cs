@@ -17,5 +17,6 @@ public partial class BeginPanel
         public Button btnStart;
         public Button btnSetting;
         public Button btnQuit;
+        public TMP_Text txtVersion;
     }
 }

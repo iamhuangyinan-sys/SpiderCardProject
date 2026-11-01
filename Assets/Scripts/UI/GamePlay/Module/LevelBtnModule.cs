@@ -189,11 +189,8 @@ public partial class LevelBtnModule : BaseModule
             ? comps.btnLevel.image.rectTransform
             : (RectTransform)transform;
 
-        // 悬停时整个按钮会放大 → 提示框按放大后的尺寸定位，间距才不会被吃掉
-        float targetScale = _hoverScale != null ? _hoverScale.HoverScale : 1f;
-
         // 关卡提示不写标题（普通关 / 商店关 / BOSS 关都不标注自己），信息全写在正文里
-        HoverTipHelper.Show(this, null, BuildTipContent(_cfg), target, tipDirection, targetScale);
+        HoverTipHelper.Show(this, null, BuildTipContent(_cfg), target, tipDirection);
     }
 
     /// <summary>

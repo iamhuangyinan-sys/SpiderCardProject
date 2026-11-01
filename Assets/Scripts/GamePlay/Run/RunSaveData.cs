@@ -34,4 +34,6 @@ public class RunSaveData
 
     /// <summary>进行中的商店关已用的删牌次数（退出重进要保持一样，不能洗回来）</summary>
     public int shopDeleteCount;
+    public bool littleShopPending;
+    public List<ShopGoods> littleShopGoods = new();
 }

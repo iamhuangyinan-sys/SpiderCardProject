@@ -37,7 +37,7 @@ public partial class CardModule : BaseModule, IPointerEnterHandler, IPointerExit
     /// <summary>悬停提示的首选方向（放不下会自动换方向）</summary>
     [SerializeField] private E_TipDirection tipDirection = E_TipDirection.Down;
 
-    /// <summary>提示框额外让出的距离（像素，默认 0；个别牌想再远一点就在预制体上调）</summary>
+    /// <summary>提示框额外让出的距离（Canvas 单位，默认 0；个别牌想再远一点就在预制体上调）</summary>
     [SerializeField] private float tipExtraGap = 0f;
 
     /// <summary>当前绑定的牌定义（IsValid = false 表示未绑定）</summary>
@@ -48,9 +48,6 @@ public partial class CardModule : BaseModule, IPointerEnterHandler, IPointerExit
 
     /// <summary>点击回调（null = 不响应点击）</summary>
     private Action _onClick;
-
-    /// <summary>宿主的悬停缩放（用来把“放大后的尺寸”算进提示框间距；没有就按 1 倍算）</summary>
-    private HoverScaleBehaviour _hoverScale;
 
     /// <summary>当前是否处于悬停中（只在变化时广播，避免重复驱动缩放）</summary>
     private bool _hovering;
@@ -67,7 +64,6 @@ public partial class CardModule : BaseModule, IPointerEnterHandler, IPointerExit
     protected override void OnBind()
     {
         SetClickable(null);   // 默认不可点击，需要点击的宿主自己开启
-        _hoverScale = GetComponentInParent<HoverScaleBehaviour>();
 
         if (comps.imgImg != null)
         {
@@ -169,10 +165,7 @@ public partial class CardModule : BaseModule, IPointerEnterHandler, IPointerExit
             ? comps.btnCard.image.rectTransform
             : (RectTransform)transform;
 
-        // 宿主悬停时会整体放大 → 让提示框按「放大后的尺寸」定位，间距才不会被放大吃掉
-        float targetScale = _hoverScale != null ? _hoverScale.HoverScale : 1f;
-
-        HoverTipHelper.Show(this, tips, target, tipDirection, targetScale, tipExtraGap);
+        HoverTipHelper.Show(this, tips, target, tipDirection, tipExtraGap);
     }
 
     // ==================== 内部 ====================

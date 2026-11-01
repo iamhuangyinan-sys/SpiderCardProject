@@ -14,6 +14,9 @@ public partial class ShopCardItem : BaseListItem
     private const float BuyFlyEndScale = 0.3f;
 
     private int _index = -1;
+    private ShopGoods boundGoods;
+    private System.Func<bool> purchase;
+    private System.Action flyComplete;
 
     /// <summary>价格文字的原始颜色（预制体上的值，只记一次）</summary>
     private Color _coinDefaultColor;
@@ -65,15 +68,22 @@ public partial class ShopCardItem : BaseListItem
         comps.imgDiscount.gameObject.SetActive(false);
         comps.txtCoin.color = _coinDefaultColor;
         _index = -1;
+        boundGoods = null;
+        purchase = null;
+        flyComplete = null;
     }
 
     /// <summary>牌面悬停变化 → 整个格子缩放（连价格一起）</summary>
     private void OnCardHover(bool hovering) => _hoverScale?.SetHover(hovering);
 
     /// <summary>绑定商品并刷新显示（已售出的商品不进列表，这里不用管）</summary>
-    public void Bind(int index, ShopGoods goods)
+    public void Bind(int index, ShopGoods goods, System.Func<bool> onPurchase = null, System.Action onFlyComplete = null)
     {
         _index = index;
+        boundGoods = goods;
+        purchase = onPurchase;
+        flyComplete = onFlyComplete;
+        if (comps.imgPrice != null) comps.imgPrice.gameObject.SetActive(true);
 
         if (goods == null)
         {
@@ -94,7 +104,7 @@ public partial class ShopCardItem : BaseListItem
     /// </summary>
     public void RefreshPrice()
     {
-        var goods = ShopStore.Instance.Get(_index);
+        var goods = boundGoods;
         if (goods == null) return;
 
         int price = goods.FinalPrice;
@@ -124,7 +134,7 @@ public partial class ShopCardItem : BaseListItem
 
     private void OnClickCard()
     {
-        var goods = ShopStore.Instance.Get(_index);
+        var goods = boundGoods;
         if (goods == null || goods.sold) return;
 
         // 买不起：不静默失败，弹提示（和删牌一致）
@@ -134,7 +144,7 @@ public partial class ShopCardItem : BaseListItem
             return;
         }
 
-        if (!ShopManager.Instance.TryBuy(_index)) return;
+        if (!(purchase != null ? purchase() : ShopManager.Instance.TryBuy(_index))) return;
 
         PlayBuyFly();
     }
@@ -164,6 +174,7 @@ public partial class ShopCardItem : BaseListItem
         if (anchor == null)
         {
             Destroy(gameObject);
+            flyComplete?.Invoke();
             return;
         }
 
@@ -175,9 +186,10 @@ public partial class ShopCardItem : BaseListItem
         if (tween == null)
         {
             Destroy(gameObject);
+            flyComplete?.Invoke();
             return;
         }
 
-        tween.OnComplete(() => Destroy(gameObject));
+        tween.OnComplete(() => { Destroy(gameObject); flyComplete?.Invoke(); });
     }
 }

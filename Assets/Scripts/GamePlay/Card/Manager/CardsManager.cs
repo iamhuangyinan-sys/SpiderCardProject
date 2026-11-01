@@ -459,7 +459,9 @@ public class CardsManager : ManagerBase<CardsManager>
         if (store.straightCount < store.needStraightNum) return false;
 
         // 关卡完成：记录进度 + 解锁下一关 + 挂起奖励，奖励在结算动画结束后发放
+        LittleShopManager.Instance.Prepare(LevelStore.Instance.selectedLevelId);
         LevelManager.Instance.CompleteLevel(LevelStore.Instance.selectedLevelId);
+        CardGameModule.Instance.SaveRun();
         return true;
     }
 

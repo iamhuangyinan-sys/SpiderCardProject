@@ -38,7 +38,7 @@ public partial class IconInfoModule : BaseModule, IPointerEnterHandler, IPointer
     /// <summary>提示框首选方向（放不下会自动换方向）</summary>
     [SerializeField] private E_TipDirection tipDirection = E_TipDirection.Down;
 
-    /// <summary>提示框额外让出的距离（像素，默认 0；个别图标想再远一点就在预制体上调）</summary>
+    /// <summary>提示框额外让出的距离（Canvas 单位，默认 0；个别图标想再远一点就在预制体上调）</summary>
     [SerializeField] private float tipExtraGap = 0f;
 
     /// <summary>点击回调（null = 不响应点击）</summary>
@@ -126,11 +126,8 @@ public partial class IconInfoModule : BaseModule, IPointerEnterHandler, IPointer
         if (!fixedTip) return;
         if (string.IsNullOrEmpty(tipTitle) && string.IsNullOrEmpty(tipContent)) return;
 
-        // 悬停时整个图标会放大 → 让提示框按「放大后的尺寸」定位，间距才不会被放大吃掉
-        float targetScale = _hoverScale != null ? _hoverScale.HoverScale : 1f;
-
         HoverTipHelper.Show(this, tipTitle, tipContent, (RectTransform)transform,
-            tipDirection, targetScale, tipExtraGap);
+            tipDirection, tipExtraGap);
     }
 
     /// <summary>收起提示（只有自己的提示才会被关）</summary>

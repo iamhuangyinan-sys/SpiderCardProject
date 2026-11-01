@@ -69,6 +69,7 @@ public class LevelManager : ManagerBase<LevelManager>
             ApplyLevels(map.levels);
             LevelStore.Instance.map = map;
             ShopManager.Instance.ResetForNewRun();
+            LittleShopManager.Instance.ResetForNewRun();
             UnityEngine.Debug.Log($"[Level] 新地图 seed={seed}, version={map.generatorVersion}");
             return true;
         }
