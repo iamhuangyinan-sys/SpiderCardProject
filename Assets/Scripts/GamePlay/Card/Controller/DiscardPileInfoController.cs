@@ -32,6 +32,6 @@ public class DiscardPileInfoController : MonoBehaviour
             return;
         }
 
-        ShowCardsPanel.ShowCards(cards);
+        ShowCardsPanel.ShowCards(cards, "弃牌堆中的牌（不按照弃牌顺序排列）");
     }
 }

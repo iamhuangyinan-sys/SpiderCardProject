@@ -185,6 +185,7 @@ public class ShopManager : ManagerBase<ShopManager>
     {
         if (!def.IsValid) return false;
         if (!CanDelete) return false;
+        if (def.attributes != null && def.attributes.Contains(E_CardAttributeEnum.CannotDelete)) return false;
 
         // 先移除再扣钱：移除失败就什么都不动
         if (!RunManager.Instance.RemoveCardFromDeck(def)) return false;

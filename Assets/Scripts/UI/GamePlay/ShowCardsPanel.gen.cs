@@ -15,5 +15,6 @@ public partial class ShowCardsPanel
     {
         public ScrollList listCard;
         public Button btnClose;
+        public TMP_Text txtInfo;
     }
 }

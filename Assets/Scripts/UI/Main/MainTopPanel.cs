@@ -60,7 +60,7 @@ public partial class MainTopPanel : NormalPanel
     /// <summary>查看当前牌组</summary>
     private void OnClickCardBuild()
     {
-        ShowCardsPanel.ShowCards(RunManager.Instance.Deck);
+        ShowCardsPanel.ShowCards(RunManager.Instance.Deck, "牌组中的牌，将在后续每个关卡进入发牌堆");
     }
 
     /// <summary>打开菜单（保存 / 回主菜单 / 退出）</summary>
@@ -90,6 +90,12 @@ public partial class MainTopPanel : NormalPanel
     public void SetMapButtonVisible(bool visible)
     {
         if (comps.modMap != null) comps.modMap.gameObject.SetActive(visible);
+    }
+
+    /// <summary>选择初始牌组时隐藏本局牌组入口，确认后恢复。</summary>
+    public void SetCardBuildButtonVisible(bool visible)
+    {
+        if (comps.modCardBuild != null) comps.modCardBuild.gameObject.SetActive(visible);
     }
 
     /// <summary>开始一局：显示接龙进度并刷新</summary>
@@ -122,10 +128,12 @@ public partial class MainTopPanel : NormalPanel
         comps.txtLevelProgress.text = $"{store.straightCount} / {store.needStraightNum}";
     }
 
-    /// <summary>刷新层数信息（显示当前层，只显示数字）</summary>
-    private void RefreshLevelInfo()
+    /// <summary>刷新层数信息：未确认初始牌组时显示 0，开始本局后显示当前层。</summary>
+    public void RefreshLevelInfo()
     {
-        comps.modLevelInfo.SetInfo(LevelStore.Instance.currentLayer.ToString());
+        comps.modLevelInfo.SetInfo(RunManager.Instance.HasStarted
+            ? LevelStore.Instance.currentLayer.ToString()
+            : "0");
     }
 
     /// <summary>刷新金币数量（只显示数字）</summary>

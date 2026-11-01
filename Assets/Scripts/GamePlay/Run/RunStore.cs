@@ -9,6 +9,9 @@ using Framework.Store;
 /// </summary>
 public class RunStore : StoreBase<RunStore>
 {
+    /// <summary>已确认初始牌组或成功读档，允许保存本局。</summary>
+    public bool hasStarted;
+
     /// <summary>本局金币</summary>
     public int coin;
 
@@ -28,6 +31,7 @@ public class RunStore : StoreBase<RunStore>
     /// <summary>重置本局资产（开始新的一大局时调用）</summary>
     public void Reset()
     {
+        hasStarted = false;
         coin = 0;
         deck.Clear();
         // 以后：临时 buff 等

@@ -47,6 +47,7 @@ namespace Framework.UI
             Register<HoverTipPanel>("Main/HoverTipPanel", E_UILayerEnum.Top);
             // ===== 关卡 =====
             Register<LevelPanel>("GamePlay/LevelPanel", E_UILayerEnum.Normal);
+            Register<BeginBuildPanel>("GamePlay/BeginBuildPanel", E_UILayerEnum.Normal);
             Register<ShopPanel>("GamePlay/ShopPanel", E_UILayerEnum.Normal);
             Register<ShowCardsPanel>("GamePlay/ShowCardsPanel", E_UILayerEnum.Normal);
             // ===== 控制台（调试工具，置顶层避免被遮挡）=====

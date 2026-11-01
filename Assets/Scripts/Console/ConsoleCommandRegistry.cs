@@ -23,6 +23,10 @@ public static class ConsoleCommandRegistry
         //   例：add 0123_123 / add _m_10002 / add 0123_s_10002_10002
         cmd.Register("add *", CmdAddCard, "往发牌堆洗入一张牌（* = 花色_点数[_技能[_属性]]，如 0123_123）");
 
+        // add_build <牌定义> —— 往本局牌组加入一张牌
+        cmd.Register("add_build *", CmdAddBuildCard, "往牌组加入一张牌（* = 花色_点数[_技能[_属性]]）");
+        cmd.Register("add_build", args => "执行失败：缺少参数（用法：add_build <牌定义>）");
+
         // ===== 资源 =====
 
         // coin <数量> —— 增加金币（调试用，商店里也能加）
@@ -64,6 +68,23 @@ public static class ConsoleCommandRegistry
         }
 
         return $"已洗入发牌堆：{CardDefCodec.ToText(def)}";
+    }
+
+    /// <summary>add_build &lt;牌定义&gt; —— 往本局牌组加入一张牌</summary>
+    private static string CmdAddBuildCard(string[] args)
+    {
+        if (!CardGameEntry.IsInCardScene) return "执行失败：当前不在卡牌场景";
+        if (CardsManager.Instance.IsSettling) return "执行失败：正在结算收牌";
+
+        string text = args.Length > 1 ? args[1] : string.Empty;
+        if (!CardDefCodec.TryParse(text, out var def, out string error))
+        {
+            return $"添加失败：{error}（{text}）";
+        }
+
+        RunManager.Instance.AddCardToDeck(def);
+        CardGameModule.Instance.SaveRun();
+        return $"已加入牌组：{CardDefCodec.ToText(def)}";
     }
 
     /// <summary>coin &lt;数量&gt; —— 增加金币</summary>

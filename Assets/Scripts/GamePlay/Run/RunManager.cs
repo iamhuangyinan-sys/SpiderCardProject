@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using Framework.Event;
 using Framework.Mgr;
 
@@ -16,37 +16,23 @@ public class RunManager : ManagerBase<RunManager>
     /// <summary>本局牌组（牌定义列表，同一张出现多次即多份）</summary>
     public IReadOnlyList<CardDef> Deck => RunStore.Instance.deck;
 
-    /// <summary>初始牌组每组点数份数</summary>
-    private const int DefaultDeckCopies = 2;
+    public bool HasStarted => RunStore.Instance.hasStarted;
 
-#if UNITY_EDITOR
-    /// <summary>【编辑器测试】额外塞进初始牌组的牌</summary>
-    private static readonly CardDef[] TestExtraCardDefs =
-    {
-        // CardDef.Create(new[] { 0 }, new[] { CardRankConst.Ignore }),                       // 蜘蛛：红心
-        // CardDef.Create(new[] { 0, 1 }, new[] { 10, 11, 12 }),                              // 多重花色 + 多重点数
-        // CardDef.Create(null, null),                                                       // 无花色无点数
-        // CardDef.Create(null, new[] { CardRankConst.Wild }, E_PlaceSkillEnum.Copy),          // 复制
-        // CardDef.Create(null, new[] { CardRankConst.Wild }, E_PlaceSkillEnum.Recycle),       // 回收
-    };
-#endif
-
-    protected override void OnInit()
-    {
-        // 保证任何时候读牌组都是有效的（进 card 场景时 CardGameEntry 会再调一次）
-        StartNewRun();
-    }
+    protected override void OnInit() { }
 
     protected override void OnDispose() { }
 
     // ==================== 一大局生命周期 ====================
 
-    /// <summary>开始新的一大局：本局资产清零 + 重建初始牌组</summary>
-    public void StartNewRun()
+    /// <summary>确认初始牌组后开始新的一大局；配方无效时保留原有状态。</summary>
+    public bool StartNewRun(string beginBuildId)
     {
+        if (!BeginBuildHelper.TryBuild(beginBuildId, out var deck)) return false;
         RunStore.Instance.Reset();
-        BuildDefaultDeck();
+        foreach (var def in deck) RunStore.Instance.deck.Add(def.Clone());
+        RunStore.Instance.hasStarted = true;
         NotifyCoinChanged();
+        return true;
     }
 
     // ==================== 金币 ====================
@@ -108,38 +94,6 @@ public class RunManager : ManagerBase<RunManager>
         return true;
     }
 
-    /// <summary>构建初始牌组：红桃 A-K + 黑桃 A-K，各两份</summary>
-    private void BuildDefaultDeck()
-    {
-        var deck = RunStore.Instance.deck;
-        deck.Clear();
-
-        AddDefaultDeckCards(deck, E_CardSuitEnum.Hearts);
-        AddDefaultDeckCards(deck, E_CardSuitEnum.Spades);
-
-        // 【编辑器测试】额外塞几张，出包不生效
-#if UNITY_EDITOR
-        foreach (var def in TestExtraCardDefs)
-        {
-            deck.Add(def.Clone());
-        }
-#endif
-    }
-
-    /// <summary>把一个花色的 A-K 各塞 DefaultDeckCopies 份</summary>
-    private static void AddDefaultDeckCards(List<CardDef> deck, E_CardSuitEnum suit)
-    {
-        for (int rank = 1; rank <= 13; rank++)
-        {
-            var def = CardDef.Create((int)suit, rank);
-
-            for (int i = 0; i < DefaultDeckCopies; i++)
-            {
-                deck.Add(def.Clone());
-            }
-        }
-    }
-
     // ==================== 存档 ====================
 
     /// <summary>导出本局资产（存档用）</summary>
@@ -160,6 +114,7 @@ public class RunManager : ManagerBase<RunManager>
 
         store.coin = data.coin;
         if (data.deck != null) store.deck.AddRange(data.deck);
+        store.hasStarted = true;
 
         NotifyCoinChanged();
     }

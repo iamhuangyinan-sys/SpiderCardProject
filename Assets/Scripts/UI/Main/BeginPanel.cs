@@ -40,16 +40,20 @@ public partial class BeginPanel : NormalPanel
         comps.btnContinue.gameObject.SetActive(hasSave);
     }
 
-    /// <summary>开始新游戏：删档，重新开始一整局</summary>
+    /// <summary>开始新游戏：立即删除旧存档，再进场景选择牌组</summary>
     private void OnClickStart()
     {
+        if (SceneController.Instance.IsLoading) return;
         SaveManager.Instance.DeleteKey(E_SaveCustomEnum.RunData);
+        CardGameEntry.RequestNewRun = true;
         SceneController.Instance.LoadScene(GameSceneName, CloseSelf);
     }
 
     /// <summary>继续游戏：读档接着玩</summary>
     private void OnClickContinue()
     {
+        if (SceneController.Instance.IsLoading) return;
+        CardGameEntry.RequestNewRun = false;
         SceneController.Instance.LoadScene(GameSceneName, CloseSelf);
     }
 

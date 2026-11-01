@@ -1,6 +1,7 @@
 ﻿{
   "items": [
     {"Id": "10001", "Icon": "sunk", "Name": "沉底", "Description": "下一次发出时会发到列堆底"},
-    {"Id": "10002", "Icon": "poison", "Name": "毒", "Description": "不能放入额外牌包中"}
+    {"Id": "10002", "Icon": "poison", "Name": "毒", "Description": "不能放入额外牌包中"},
+    {"Id": "10003", "Icon": "noDel", "Name": "无法删除", "Description": "不可以在商店主动删除"}
   ]
 }

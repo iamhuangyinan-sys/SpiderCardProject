@@ -99,6 +99,9 @@ public enum E_CardAttributeEnum
 
     /// <summary>毒：不能放入额外牌包</summary>
     Poison = 10002,
+
+    /// <summary>无法在商店主动删除</summary>
+    CannotDelete = 10003,
 }
 
 /// <summary>

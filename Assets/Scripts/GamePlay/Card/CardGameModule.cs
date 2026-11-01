@@ -1,4 +1,4 @@
-using Framework.Mgr;
+﻿using Framework.Mgr;
 using Framework.Save;
 using Framework.UI;
 
@@ -81,6 +81,8 @@ public class CardGameModule : ManagerBase<CardGameModule>
     /// <summary>把本局进度写入存档（金币 / 牌组 / 关卡进度 / 商店状态）</summary>
     public void SaveRun()
     {
+        // 选初始牌组期间尚无新局，退出或其他保存入口不能生成半成品存档。
+        if (!RunManager.Instance.HasStarted) return;
         var data = new RunSaveData();
         RunManager.Instance.ExportTo(data);
         LevelManager.Instance.ExportTo(data);
@@ -91,25 +93,24 @@ public class CardGameModule : ManagerBase<CardGameModule>
 
     /// <summary>
     /// 读取存档并恢复到各子系统（需在 Init 之后调用）
-    /// 无存档时开始新的一大局面
+    /// 返回是否成功恢复；无存档时由场景入口显示初始牌组选择
     /// </summary>
-    public void LoadRun()
+    public bool LoadRun()
     {
         if (!SaveManager.Instance.HasKey(E_SaveCustomEnum.RunData))
         {
-            RunManager.Instance.StartNewRun();
-            return;
+            return false;
         }
 
         var data = SaveManager.Instance.Load<RunSaveData>(E_SaveCustomEnum.RunData);
         if (data == null)
         {
-            RunManager.Instance.StartNewRun();
-            return;
+            return false;
         }
 
         RunManager.Instance.ImportFrom(data);
         LevelManager.Instance.ImportFrom(data);
         ShopManager.Instance.ImportFrom(data);
+        return true;
     }
 }

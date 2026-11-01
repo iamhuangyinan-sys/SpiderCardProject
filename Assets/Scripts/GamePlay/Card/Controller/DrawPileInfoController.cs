@@ -32,6 +32,6 @@ public class DrawPileInfoController : MonoBehaviour
             return;
         }
 
-        ShowCardsPanel.ShowCards(cards);
+        ShowCardsPanel.ShowCards(cards, "发牌堆中的牌（不按照发牌顺序排列）");
     }
 }

@@ -5,7 +5,7 @@ using Framework.UI;
 /// <summary>
 /// 展示牌面板 —— 用一批牌定义在列表里铺开显示
 /// 牌组查看、奖励预览等需要展示若干张牌的地方都用它
-/// 也可进「选牌模式」：点选一张牌后立即关面板并回调（商店删牌等）
+/// 也可进「选牌模式」：回调成功后关闭面板（商店删牌等）
 /// 遮挡场景输入（实现 ISceneInputBlockPanel）
 /// </summary>
 public partial class ShowCardsPanel : NormalPanel, ISceneInputBlockPanel
@@ -20,26 +20,26 @@ public partial class ShowCardsPanel : NormalPanel, ISceneInputBlockPanel
     private readonly List<CardShow> _cards = new();
 
     /// <summary>选牌模式下的回调（null = 纯展示）</summary>
-    private Action<CardDef> _onPick;
+    private Func<CardDef, bool> _onPick;
 
-    /// <summary>打开面板并展示指定牌（牌组查看 / 奖励预览等只有牌定义的场合，无属性）</summary>
-    public static void ShowCards(IReadOnlyList<CardDef> defs)
+    /// <summary>打开面板并展示指定牌定义及其属性</summary>
+    public static void ShowCards(IReadOnlyList<CardDef> defs, string info)
     {
         var panel = UIManager.Instance.Show<ShowCardsPanel>();
-        if (panel != null) panel.SetDefs(defs);
+        if (panel != null) { panel.SetInfo(info); panel.SetDefs(defs); }
     }
 
     /// <summary>打开面板并展示指定牌（发牌堆 / 弃牌堆等带属性的场合）</summary>
-    public static void ShowCards(IReadOnlyList<CardData> cards)
+    public static void ShowCards(IReadOnlyList<CardData> cards, string info)
     {
         var panel = UIManager.Instance.Show<ShowCardsPanel>();
-        if (panel != null) panel.SetCards(cards);
+        if (panel != null) { panel.SetInfo(info); panel.SetCards(cards); }
     }
 
     /// <summary>
-    /// 选牌模式：点选一张牌后立刻关面板，并把牌定义回调出去（商店删牌等）
+    /// 选牌模式：回调返回 true 时关闭面板
     /// </summary>
-    public static void PickCard(IReadOnlyList<CardDef> defs, Action<CardDef> onPick)
+    public static void PickCard(IReadOnlyList<CardDef> defs, string info, Func<CardDef, bool> onPick)
     {
         if (onPick == null) return;
 
@@ -47,7 +47,13 @@ public partial class ShowCardsPanel : NormalPanel, ISceneInputBlockPanel
         if (panel == null) return;
 
         panel._onPick = onPick;      // 先设回调，SetDefs 里的刷新才会挂上点击
+        panel.SetInfo(info);
         panel.SetDefs(defs);
+    }
+
+    private void SetInfo(string info)
+    {
+        if (comps.txtInfo != null) comps.txtInfo.text = info;
     }
 
     protected override void OnOpen()
@@ -86,7 +92,7 @@ public partial class ShowCardsPanel : NormalPanel, ISceneInputBlockPanel
         RefreshList();
     }
 
-    /// <summary>设置要展示的牌定义（无属性）</summary>
+    /// <summary>设置要展示的牌定义及其属性</summary>
     public void SetDefs(IReadOnlyList<CardDef> defs)
     {
         _cards.Clear();
@@ -95,7 +101,7 @@ public partial class ShowCardsPanel : NormalPanel, ISceneInputBlockPanel
         {
             for (int i = 0; i < defs.Count; i++)
             {
-                _cards.Add(new CardShow { def = defs[i], attributes = null });
+                _cards.Add(new CardShow { def = defs[i], attributes = defs[i].attributes });
             }
         }
 
@@ -120,7 +126,7 @@ public partial class ShowCardsPanel : NormalPanel, ISceneInputBlockPanel
         comps.listCard.ItemCount = _cards.Count;
     }
 
-    /// <summary>选中一张牌：先把回调取出来，关掉面板后再回调（避免拿着已关闭面板的引用）</summary>
+    /// <summary>选中一张牌，操作成功后关闭面板</summary>
     private void OnPickCard(int index)
     {
         if (_onPick == null) return;
@@ -129,10 +135,9 @@ public partial class ShowCardsPanel : NormalPanel, ISceneInputBlockPanel
         var callback = _onPick;
         var def = _cards[index].def;
 
-        _onPick = null;   // 防止连点触发两次
-        CloseSelf();
-
-        callback(def);
+        _onPick = null;   // 防止回调执行期间重复触发
+        if (callback(def)) CloseSelf();
+        else _onPick = callback;
     }
 
     private void OnClickClose()

@@ -1,4 +1,4 @@
-using System.Collections;
+﻿using System.Collections;
 using Framework;
 using Framework.Event;
 using Framework.UI;
@@ -13,6 +13,10 @@ public class CardGameEntry : MonoBehaviour
     /// <summary>卡牌场景是否已就绪（场景中存在 CardGameEntry 且已初始化）</summary>
     public static bool IsInCardScene { get; private set; }
 
+    /// <summary>主菜单传入的新游戏意图，在进入场景时消费一次。</summary>
+    public static bool RequestNewRun { get; set; }
+
+    private BeginBuildPanel _beginBuildPanel;
     private LevelPanel _levelPanel;
     private MainTopPanel _mainTopPanel;
     private ShopPanel _shopPanel;
@@ -36,21 +40,25 @@ public class CardGameEntry : MonoBehaviour
         EventManager.Instance.AddListener(E_EventEnum.OnMapOpen, OnMapOpen);
         EventManager.Instance.AddListener(E_EventEnum.OnMapClose, OnMapClose);
 
-        // 有档读档，无档开新的一大局面
-        CardGameModule.Instance.LoadRun();
-
-        // 顶部 UI 常驻显示（放在读档之后，确保层号 / 金币读到的是恢复后的值）
-        _mainTopPanel = UIManager.Instance.Show<MainTopPanel>();
-
-        // 存档里停在某一关 → 直接重开这一关（商店关由 SelectLevel 内部弹出商店面板）
-        var currentId = LevelStore.Instance.selectedLevelId;
-        if (string.IsNullOrEmpty(currentId))
+        bool newRun = RequestNewRun;
+        RequestNewRun = false;
+        if (!newRun && CardGameModule.Instance.LoadRun())
         {
-            ShowLevelSelect();
+            _mainTopPanel = UIManager.Instance.Show<MainTopPanel>();
+            var currentId = LevelStore.Instance.selectedLevelId;
+            if (string.IsNullOrEmpty(currentId)) ShowLevelSelect();
+            else LevelManager.Instance.SelectLevel(currentId);
         }
         else
         {
-            LevelManager.Instance.SelectLevel(currentId);
+            _beginBuildPanel = UIManager.Instance.Show<BeginBuildPanel>();
+            if (_beginBuildPanel != null) _beginBuildPanel.OnConfirm = OnConfirmBeginBuild;
+            _mainTopPanel = UIManager.Instance.Show<MainTopPanel>();
+            if (_mainTopPanel != null)
+            {
+                _mainTopPanel.SetMapButtonVisible(false);
+                _mainTopPanel.SetCardBuildButtonVisible(false);
+            }
         }
 
         // 内容就绪：告知场景控制器可以淡出黑屏遮罩
@@ -58,6 +66,22 @@ public class CardGameEntry : MonoBehaviour
 
         // 编辑器模式：控制台入口（面板会被切场景的 DestroyAll 清掉，每个场景入口重新显示）
         ConsoleEntryPanel.ShowInEditor();
+    }
+
+    private bool OnConfirmBeginBuild(string id)
+    {
+        if (!RunManager.Instance.StartNewRun(id)) return false;
+        CardGameModule.Instance.SaveRun();
+        // Hide 才会播放 NormalPanel 的退出动画；切场景时再 Close 释放资源。
+        if (_beginBuildPanel != null) UIManager.Instance.Hide(_beginBuildPanel);
+        _mainTopPanel = UIManager.Instance.Show<MainTopPanel>();
+        if (_mainTopPanel != null)
+        {
+            _mainTopPanel.SetCardBuildButtonVisible(true);
+            _mainTopPanel.RefreshLevelInfo();
+        }
+        ShowLevelSelect();
+        return true;
     }
 
     /// <summary>选关开局：关选关面板（顶部 UI 保持显示），显示牌桌场景物件</summary>
@@ -167,6 +191,7 @@ public class CardGameEntry : MonoBehaviour
         // 否则下个场景再进时 Show 只走 OnShow（不重建列表），
         // 而 OnClose 里的解绑事件 / 回收列表项也永远跑不到。
         // 此刻画面已经在黑幕下，看不到关闭过程。
+        if (_beginBuildPanel != null) UIManager.Instance.Close(_beginBuildPanel);
         if (_levelPanel != null) UIManager.Instance.Close(_levelPanel);
         if (_mainTopPanel != null) UIManager.Instance.Close(_mainTopPanel);
         if (_shopPanel != null) UIManager.Instance.Close(_shopPanel);

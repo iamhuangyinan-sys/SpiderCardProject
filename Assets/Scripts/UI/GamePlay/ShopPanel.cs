@@ -111,6 +111,14 @@ public partial class ShopPanel : NormalPanel
             return;
         }
 
-        ShowCardsPanel.PickCard(RunManager.Instance.Deck, def => shop.TryDeleteCard(def));
+        ShowCardsPanel.PickCard(RunManager.Instance.Deck, "请选择一张要删除的牌", def =>
+        {
+            if (def.attributes != null && def.attributes.Contains(E_CardAttributeEnum.CannotDelete))
+            {
+                TipHelper.Show("无法删除这张牌");
+                return false;
+            }
+            return shop.TryDeleteCard(def);
+        });
     }
 }
