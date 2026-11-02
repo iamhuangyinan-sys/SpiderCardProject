@@ -60,7 +60,7 @@ public partial class MainTopPanel : NormalPanel
     /// <summary>查看当前牌组</summary>
     private void OnClickCardBuild()
     {
-        ShowCardsPanel.ShowCards(RunManager.Instance.Deck, "牌组中的牌，将在后续每个关卡进入发牌堆");
+        ShowCardsPanel.ShowCards(RunManager.Instance.Deck, LanguageHelper.Get("title_deck_list"));
     }
 
     /// <summary>打开菜单（保存 / 回主菜单 / 退出）</summary>

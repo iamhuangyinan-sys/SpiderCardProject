@@ -3,8 +3,8 @@ using Framework.UI;
 /// <summary>
 /// 提示工具 —— 业务层弹提示的统一入口（面板的创建 / 复用对业务透明）
 ///
-/// 用法：TipHelper.Show("有空列时不能发牌");
-/// 后续接提示表 / 语言表时，只需把这里的 string 换成「查表得到文案」，业务调用点不用改。
+/// 用法：TipHelper.Show(LanguageHelper.Get("tip_deal_empty_column"));
+/// 文案统一放 LanguageConfig 表，这里只负责把字串显示出来。
 /// </summary>
 public static class TipHelper
 {

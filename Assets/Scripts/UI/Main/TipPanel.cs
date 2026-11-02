@@ -4,7 +4,7 @@ using Framework.UI;
 /// <summary>
 /// 通用提示面板 —— 淡入 → 停留一段时间 → 淡出 → 自动隐藏
 ///
-/// 业务层不要直接 UIManager.Show&lt;TipPanel&gt;()，统一走 TipHelper.Show("文案")：
+/// 业务层不要直接 UIManager.Show&lt;TipPanel&gt;()，统一走 TipHelper.Show(LanguageHelper.Get("xxx_id"))：
 /// 面板的创建 / 复用、停留时长、开关动画都由这里负责。
 /// </summary>
 public partial class TipPanel : NormalPanel

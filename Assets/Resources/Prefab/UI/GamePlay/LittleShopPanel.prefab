@@ -11,6 +11,7 @@ GameObject:
   - component: {fileID: 5725567116969536737}
   - component: {fileID: 3538627799878234092}
   - component: {fileID: 2983512153467860694}
+  - component: {fileID: 5611406412529806767}
   m_Layer: 5
   m_Name: tip
   m_TagString: Untagged
@@ -137,6 +138,20 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
+--- !u!114 &5611406412529806767
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 784604009264581831}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0b66d7d70ee80e54eb8408aaf670031f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
+  langId: ui_littleshop_tip
+  refreshOnEnable: 1
 --- !u!1 &1112576558430647357
 GameObject:
   m_ObjectHideFlags: 0
@@ -412,6 +427,7 @@ GameObject:
   - component: {fileID: 2025450448031595127}
   - component: {fileID: 6590509544448217280}
   - component: {fileID: 9201644891972932933}
+  - component: {fileID: 6973008362394969173}
   m_Layer: 0
   m_Name: skipText
   m_TagString: Untagged
@@ -538,6 +554,20 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
+--- !u!114 &6973008362394969173
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4819708623891409663}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0b66d7d70ee80e54eb8408aaf670031f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
+  langId: ui_littleshop_skip
+  refreshOnEnable: 1
 --- !u!1 &5442575966076856943
 GameObject:
   m_ObjectHideFlags: 0

@@ -76,7 +76,7 @@ public class LevelManager : ManagerBase<LevelManager>
         catch (System.Exception error)
         {
             UnityEngine.Debug.LogException(error);
-            TipHelper.Show("关卡生成失败，请检查关卡模板和生成参数");
+            TipHelper.Show(LanguageHelper.Get("tip_level_generate_failed"));
             return false;
         }
     }

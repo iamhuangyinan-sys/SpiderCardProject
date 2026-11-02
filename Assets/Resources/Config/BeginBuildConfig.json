@@ -1,6 +1,6 @@
 ﻿{
   "items": [
-    {"Id": "101", "Image": ["cardBuildHearts", "cardBuildSpades", "cardBuildSpider"], "Name": "蜘蛛"},
-    {"Id": "102", "Image": ["cardBuildDiamonds", "cardBuildSpades", "cardBuildMutipleRank"], "Name": "多重点数"}
+    {"Id": "101", "Image": ["cardBuildHearts", "cardBuildSpades", "cardBuildSpider"], "Name": "build_name_101"},
+    {"Id": "102", "Image": ["cardBuildDiamonds", "cardBuildSpades", "cardBuildMutipleRank"], "Name": "build_name_102"}
   ]
 }

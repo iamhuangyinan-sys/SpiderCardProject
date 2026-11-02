@@ -67,7 +67,7 @@ public partial class BeginBuildPanel : NormalPanel, ISceneInputBlockPanel
     {
         preview = null;
         var cfg = builds.Count > 0 ? builds[selectedIndex] : null;
-        comps.txtName.text = cfg?.Name ?? "暂无可用牌组";
+        comps.txtName.text = cfg != null ? LanguageHelper.Get(cfg.Name) : LanguageHelper.Get("ui_beginbuild_no_deck");
         bool valid = cfg != null && BeginBuildHelper.TryBuild(cfg.Id, out preview);
         comps.btnCheck.interactable = valid;
         comps.btnContinue.interactable = valid;
@@ -89,7 +89,7 @@ public partial class BeginBuildPanel : NormalPanel, ISceneInputBlockPanel
 
     private void OnCheck()
     {
-        if (preview != null) ShowCardsPanel.ShowCards(preview, "初始牌组中的所有牌");
+        if (preview != null) ShowCardsPanel.ShowCards(preview, LanguageHelper.Get("title_beginbuild_deck_cards"));
     }
 
     private void OnContinue()
@@ -103,7 +103,7 @@ public partial class BeginBuildPanel : NormalPanel, ISceneInputBlockPanel
                 System.Globalization.CultureInfo.InvariantCulture, out int parsedSeed))
             {
                 comps.iptSeed.text = string.Empty;
-                TipHelper.Show("种子错误");
+                TipHelper.Show(LanguageHelper.Get("tip_beginbuild_seed_invalid"));
                 return;
             }
             seed = parsedSeed;
@@ -114,6 +114,6 @@ public partial class BeginBuildPanel : NormalPanel, ISceneInputBlockPanel
         if (OnConfirm(builds[selectedIndex].Id, seed)) return;
         confirming = false;
         comps.btnContinue.interactable = true;
-        TipHelper.Show("初始牌组配置无效，无法开始游戏");
+        TipHelper.Show(LanguageHelper.Get("tip_beginbuild_deck_invalid"));
     }
 }

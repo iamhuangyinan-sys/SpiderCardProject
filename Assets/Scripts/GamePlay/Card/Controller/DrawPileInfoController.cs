@@ -28,10 +28,10 @@ public class DrawPileInfoController : MonoBehaviour
         var cards = CardsManager.Instance.GetDrawPileCards();
         if (cards.Count == 0)
         {
-            TipHelper.Show("发牌堆没有牌");
+            TipHelper.Show(LanguageHelper.Get("tip_draw_empty"));
             return;
         }
 
-        ShowCardsPanel.ShowCards(cards, "发牌堆中的牌（不按照发牌顺序排列）");
+        ShowCardsPanel.ShowCards(cards, LanguageHelper.Get("title_draw_list"));
     }
 }

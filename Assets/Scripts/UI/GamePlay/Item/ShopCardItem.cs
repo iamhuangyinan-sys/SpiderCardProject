@@ -140,7 +140,7 @@ public partial class ShopCardItem : BaseListItem
         // 买不起：不静默失败，弹提示（和删牌一致）
         if (!RunManager.Instance.IsEnough(goods.FinalPrice))
         {
-            TipHelper.Show("金币不足");
+            TipHelper.Show(LanguageHelper.Get("tip_shop_coin_not_enough"));
             return;
         }
 

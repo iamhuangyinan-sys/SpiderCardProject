@@ -29,10 +29,10 @@ public partial class IconInfoModule : BaseModule, IPointerEnterHandler, IPointer
     /// <summary>固定提示：勾上 = 悬停时直接显示下面填的文案（不勾没有任何提示）</summary>
     [SerializeField] private bool fixedTip = false;
 
-    /// <summary>提示标题（可空；空了只显示正文）</summary>
+    /// <summary>提示标题（填 LanguageConfig 的 Id；可空，空了只显示正文）</summary>
     [SerializeField] private string tipTitle = string.Empty;
 
-    /// <summary>提示正文（可多行）</summary>
+    /// <summary>提示正文（填 LanguageConfig 的 Id；可多行）</summary>
     [SerializeField, TextArea(2, 6)] private string tipContent = string.Empty;
 
     /// <summary>提示框首选方向（放不下会自动换方向）</summary>
@@ -126,8 +126,11 @@ public partial class IconInfoModule : BaseModule, IPointerEnterHandler, IPointer
         if (!fixedTip) return;
         if (string.IsNullOrEmpty(tipTitle) && string.IsNullOrEmpty(tipContent)) return;
 
-        HoverTipHelper.Show(this, tipTitle, tipContent, (RectTransform)transform,
-            tipDirection, tipExtraGap);
+        // 字段里存的是多语言 Id，显示时才转成当前语言的文案
+        HoverTipHelper.Show(this,
+            string.IsNullOrEmpty(tipTitle) ? null : LanguageHelper.Get(tipTitle),
+            string.IsNullOrEmpty(tipContent) ? null : LanguageHelper.Get(tipContent),
+            (RectTransform)transform, tipDirection, tipExtraGap);
     }
 
     /// <summary>收起提示（只有自己的提示才会被关）</summary>

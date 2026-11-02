@@ -1,10 +1,10 @@
 ﻿{
   "items": [
-    {"Id": "101", "Name": "多重点数", "Description": "可以用其中一点数进行连接"},
-    {"Id": "102", "Name": "任意放下", "Description": "可以放在任意牌上"},
-    {"Id": "103", "Name": "蜘蛛", "Description": "可以作为任意点数连接，花色需要相同"},
-    {"Id": "104", "Name": "无点数", "Description": "不可以与任意牌连接，只能单独拖动"},
-    {"Id": "201", "Name": "多重花色", "Description": "可以用其中一花色进行连接"},
-    {"Id": "202", "Name": "无花色", "Description": "不参与任意花色判断"}
+    {"Id": "101", "Name": "card_tip_name_101", "Description": "card_tip_desc_101"},
+    {"Id": "102", "Name": "card_tip_name_102", "Description": "card_tip_desc_102"},
+    {"Id": "103", "Name": "card_tip_name_103", "Description": "card_tip_desc_103"},
+    {"Id": "104", "Name": "card_tip_name_104", "Description": "card_tip_desc_104"},
+    {"Id": "201", "Name": "card_tip_name_201", "Description": "card_tip_desc_201"},
+    {"Id": "202", "Name": "card_tip_name_202", "Description": "card_tip_desc_202"}
   ]
 }

@@ -172,14 +172,13 @@ public class CardsManager : ManagerBase<CardsManager>
     {
         if (CardsStore.Instance.drawPile.Count == 0)
         {
-            TipHelper.Show("发牌堆没有牌");
+            TipHelper.Show(LanguageHelper.Get("tip_draw_empty"));
             return;
         }
 
         if (!CardRuleManager.Instance.CanDeal())
         {
-            // 有空列时不能发牌（文案先写死，后续接提示表 / 语言表时改 TipHelper）
-            TipHelper.Show("有空列时不能发牌");
+            TipHelper.Show(LanguageHelper.Get("tip_deal_empty_column"));
             return;
         }
 

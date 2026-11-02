@@ -28,10 +28,10 @@ public class DiscardPileInfoController : MonoBehaviour
         var cards = CardsManager.Instance.GetDiscardPileCards();
         if (cards.Count == 0)
         {
-            TipHelper.Show("弃牌堆没有牌");
+            TipHelper.Show(LanguageHelper.Get("tip_discard_empty"));
             return;
         }
 
-        ShowCardsPanel.ShowCards(cards, "弃牌堆中的牌（不按照弃牌顺序排列）");
+        ShowCardsPanel.ShowCards(cards, LanguageHelper.Get("title_discard_list"));
     }
 }

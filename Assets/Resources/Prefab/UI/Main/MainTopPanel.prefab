@@ -572,7 +572,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6736996750782427690, guid: b1a8eafed9d6d0e49873d45c17e0bc25, type: 3}
       propertyPath: tipContent
-      value: "\u5730\u56FE"
+      value: ui_top_tip_map
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -713,7 +713,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6736996750782427690, guid: b1a8eafed9d6d0e49873d45c17e0bc25, type: 3}
       propertyPath: tipContent
-      value: "\u91D1\u5E01"
+      value: ui_top_tip_coin
       objectReference: {fileID: 0}
     - target: {fileID: 6736996750782427690, guid: b1a8eafed9d6d0e49873d45c17e0bc25, type: 3}
       propertyPath: tipExtraGap
@@ -850,7 +850,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6736996750782427690, guid: b1a8eafed9d6d0e49873d45c17e0bc25, type: 3}
       propertyPath: tipContent
-      value: "\u83DC\u5355"
+      value: ui_top_tip_menu
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -999,7 +999,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6736996750782427690, guid: b1a8eafed9d6d0e49873d45c17e0bc25, type: 3}
       propertyPath: tipContent
-      value: "\u5C42\u6570"
+      value: ui_top_tip_floor
       objectReference: {fileID: 0}
     - target: {fileID: 6736996750782427690, guid: b1a8eafed9d6d0e49873d45c17e0bc25, type: 3}
       propertyPath: tipExtraGap
@@ -1136,7 +1136,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6736996750782427690, guid: b1a8eafed9d6d0e49873d45c17e0bc25, type: 3}
       propertyPath: tipContent
-      value: "\u724C\u7EC4"
+      value: ui_top_tip_deck
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []

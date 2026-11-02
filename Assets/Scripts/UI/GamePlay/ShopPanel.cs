@@ -128,27 +128,27 @@ public partial class ShopPanel : NormalPanel
 
         if (shop.IsDeleteLimitReached)
         {
-            TipHelper.Show("删除次数达到上限");
+            TipHelper.Show(LanguageHelper.Get("tip_shop_delete_limit"));
             return;
         }
 
         if (!shop.IsDeleteAffordable)
         {
-            TipHelper.Show("金币不足");
+            TipHelper.Show(LanguageHelper.Get("tip_shop_coin_not_enough"));
             return;
         }
 
         if (RunManager.Instance.Deck.Count == 0)
         {
-            TipHelper.Show("牌组里没有牌可以删");
+            TipHelper.Show(LanguageHelper.Get("tip_shop_deck_empty"));
             return;
         }
 
-        ShowCardsPanel.PickCard(RunManager.Instance.Deck, "请选择一张要删除的牌", def =>
+        ShowCardsPanel.PickCard(RunManager.Instance.Deck, LanguageHelper.Get("title_shop_pick_delete"), def =>
         {
             if (def.attributes != null && def.attributes.Contains(E_CardAttributeEnum.CannotDelete))
             {
-                TipHelper.Show("无法删除这张牌");
+                TipHelper.Show(LanguageHelper.Get("tip_shop_delete_failed"));
                 return false;
             }
             return shop.TryDeleteCard(def);

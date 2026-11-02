@@ -140,7 +140,7 @@ public partial class LevelPanel : NormalPanel, ISceneInputBlockPanel
         int? seed = LevelManager.Instance.GetMapSeed();
         if (!seed.HasValue) return;
         GUIUtility.systemCopyBuffer = seed.Value.ToString(System.Globalization.CultureInfo.InvariantCulture);
-        TipHelper.Show("种子已复制");
+        TipHelper.Show(LanguageHelper.Get("tip_level_seed_copied"));
     }
 
     private void ClearGeneratedMap()

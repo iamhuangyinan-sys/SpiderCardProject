@@ -142,7 +142,9 @@ public partial class LevelBtnModule : BaseModule
         if (_txtType != null)
         {
             // 文本按数据状态走：被地图置灰的关卡仍然显示类型名（它不是「锁定」）
-            _txtType.text = clickable || visited ? GetTypeName(_cfg.LevelType) : "锁定";
+            _txtType.text = clickable || visited
+                ? GetTypeName(_cfg.LevelType)
+                : LanguageHelper.Get("ui_level_locked");
         }
     }
 
@@ -156,9 +158,9 @@ public partial class LevelBtnModule : BaseModule
     {
         switch ((E_LevelTypeEnum)levelType)
         {
-            case E_LevelTypeEnum.Shop: return "商店";
+            case E_LevelTypeEnum.Shop: return LanguageHelper.Get("ui_level_type_shop");
             case E_LevelTypeEnum.Boss: return "BOSS";
-            default: return "普通";
+            default: return LanguageHelper.Get("ui_level_type_normal");
         }
     }
 
@@ -194,25 +196,25 @@ public partial class LevelBtnModule : BaseModule
     }
 
     /// <summary>
-    /// 提示正文 —— 目前全部写死在代码里，后续可以改成事件 / 关卡配表驱动
+    /// 提示正文 —— 文案全部走 LanguageConfig 表（Id 见 Config/Excel/LanguageConfig.xlsx）
     /// </summary>
     private static string BuildTipContent(RunLevelData cfg)
     {
         // 商店关没有牌局，只说它是商店
         if ((E_LevelTypeEnum)cfg.LevelType == E_LevelTypeEnum.Shop)
         {
-            return "商店";
+            return LanguageHelper.Get("ui_level_type_shop");
         }
 
         var sb = new StringBuilder();
-        sb.Append("场上列数 ").Append(cfg.ColumnNum);
-        sb.Append('\n').Append("牌包数 ").Append(cfg.PocketNum);
-        sb.Append('\n').Append("接龙目标 ").Append(cfg.NeedStraightNum).Append(" 次");
+        sb.Append(LanguageHelper.Get("ui_level_tip_columns", cfg.ColumnNum));
+        sb.Append('\n').Append(LanguageHelper.Get("ui_level_tip_pockets", cfg.PocketNum));
+        sb.Append('\n').Append(LanguageHelper.Get("ui_level_tip_target", cfg.NeedStraightNum));
         if (cfg is RunLevelData node)
         {
-            sb.Append('\n').Append("初始发牌 ").Append(string.Join(" / ", node.initialCards));
+            sb.Append('\n').Append(LanguageHelper.Get("ui_level_tip_initial_cards", string.Join(" / ", node.initialCards)));
         }
-        sb.Append('\n').Append("通关金币 ").Append(cfg.FinishReward);
+        sb.Append('\n').Append(LanguageHelper.Get("ui_level_tip_reward", cfg.FinishReward));
 
         string evt = GetEventDesc(cfg.LevelEvent);
         if (!string.IsNullOrEmpty(evt))
@@ -229,7 +231,7 @@ public partial class LevelBtnModule : BaseModule
         if (levelEvent == 0) return string.Empty;
 
         var cfg = ConfigHelper.Get<LevelEventConfig>(levelEvent.ToString());
-        return cfg != null ? cfg.Description : string.Empty;
+        return cfg != null ? LanguageHelper.Get(cfg.Description) : string.Empty;
     }
 
     private void OnClick()

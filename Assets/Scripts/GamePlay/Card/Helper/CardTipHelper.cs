@@ -6,6 +6,7 @@ using UnityEngine;
 ///
 /// 文案在配表里（PlaceSkillConfig / CardAttributeConfig / CardTipConfig），这里只做三件事：
 ///   判断属性是否成立 → 按顺序查表 → 包成 HoverTipData
+/// 注意：表的 Name / Description 存的是 LanguageConfig 的 Id，取文案要过 LanguageHelper.Get。
 /// 表里查不到的条目直接跳过（删一行 = 关掉那条 tip）。
 ///
 /// 顺序（与配表 Id 分段一致）：
@@ -86,7 +87,7 @@ public static class CardTipHelper
 
             // 图标读表和加载都在 CardResManager 里（有缓存），拿不到就显示空图标
             var icon = CardResManager.Instance.GetAttributeSprite(attribute);
-            tips.Add(new HoverTipData(cfg.Name, cfg.Description, icon));
+            tips.Add(new HoverTipData(LanguageHelper.Get(cfg.Name), LanguageHelper.Get(cfg.Description), icon));
         }
     }
 
@@ -94,14 +95,14 @@ public static class CardTipHelper
     private static void AddTip(List<HoverTipData> tips, E_CardTipEnum type, Sprite icon = null)
     {
         var cfg = ConfigHelper.Get<CardTipConfig>(((int)type).ToString());
-        if (cfg != null) tips.Add(new HoverTipData(cfg.Name, cfg.Description, icon));
+        if (cfg != null) tips.Add(new HoverTipData(LanguageHelper.Get(cfg.Name), LanguageHelper.Get(cfg.Description), icon));
     }
 
     /// <summary>按落牌技能查技能描述表（Id = 枚举值）；查不到就跳过</summary>
     private static void AddSkillTip(List<HoverTipData> tips, int placeSkill)
     {
         var cfg = ConfigHelper.Get<PlaceSkillConfig>(placeSkill.ToString());
-        if (cfg != null) tips.Add(new HoverTipData(cfg.Name, cfg.Description));
+        if (cfg != null) tips.Add(new HoverTipData(LanguageHelper.Get(cfg.Name), LanguageHelper.Get(cfg.Description)));
     }
 
     /// <summary>点数列表里有没有这个值</summary>
