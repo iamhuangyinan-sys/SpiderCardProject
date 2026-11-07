@@ -14,11 +14,13 @@ public partial class BeginPanel : NormalPanel
         comps.btnQuit.onClick.AddListener(OnClickQuit);
 
         RefreshContinueButton();
+        RefreshVersion();
     }
 
     protected override void OnShow()
     {
         RefreshContinueButton();
+        RefreshVersion();
     }
 
     protected override void OnHide()
@@ -31,6 +33,11 @@ public partial class BeginPanel : NormalPanel
         comps.btnStart.onClick.RemoveListener(OnClickStart);
         comps.btnContinue.onClick.RemoveListener(OnClickContinue);
         comps.btnQuit.onClick.RemoveListener(OnClickQuit);
+    }
+
+    private void RefreshVersion()
+    {
+        comps.txtVersion.text = $"v {BuildInfoHelper.GetVersion()}";
     }
 
     /// <summary>有存档才显示「继续游戏」</summary>
