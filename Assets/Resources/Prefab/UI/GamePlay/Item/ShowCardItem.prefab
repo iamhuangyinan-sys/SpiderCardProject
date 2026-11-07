@@ -13,6 +13,8 @@ GameObject:
   - component: {fileID: 5467110564400035397}
   - component: {fileID: 9161254738789686376}
   - component: {fileID: 5187293044761238906}
+  - component: {fileID: 920000000000000001}
+  - component: {fileID: 920000000000000002}
   m_Layer: 5
   m_Name: ShowCardItem
   m_TagString: Untagged
@@ -58,7 +60,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 5f010978704951d43971dc27d972261f, type: 3}
-  m_Name: 
+  m_Name:
   m_EditorClassIdentifier: Assembly-CSharp::ShowCardItem
 --- !u!114 &9161254738789686376
 MonoBehaviour:
@@ -70,7 +72,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 773e91988e8b681449ac06a79b4603b6, type: 3}
-  m_Name: 
+  m_Name:
   m_EditorClassIdentifier: Assembly-CSharp::Framework.UI.UIBinder
   uiComps:
   - prefix: mod
@@ -86,16 +88,17 @@ MonoBehaviour:
   m_GameObject: {fileID: 1371024226807795366}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 1271b70e11fab274f9605c3ec70cef75, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::HoverScaleBehaviour
-  target: {fileID: 3938591469724317070}
-  hoverScale: 1.4
+  m_Script: {fileID: 11500000, guid: 3a8d9b2c6090ec14d85f0639c274807f, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Assembly-CSharp::UIScaleEffect
   duration: 0.1
   ease: 6
-  autoTrigger: 0
-  raiseOnHover: 1
-  useUnscaledTime: 1
+  target: {fileID: 3938591469724317070}
+  normal: 1
+  hovered: 1.4
+  pressed: 1.4
+  focused: 1
+  disabled: 1
 --- !u!1001 &2451420368318353021
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -215,5 +218,34 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: e26ba0bab1300a441b38f64b4774f036, type: 3}
-  m_Name: 
+  m_Name:
   m_EditorClassIdentifier: Assembly-CSharp::CardModule
+--- !u!114 &920000000000000001
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1371024226807795366}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2cb8928130f8ab44faf80fbb03dae641, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Assembly-CSharp::UIFeedbackController
+  useUnscaledTime: 1
+  attentionOnStart: 0
+--- !u!114 &920000000000000002
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1371024226807795366}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9bb3bbecdd934e41916466437ba12178, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Assembly-CSharp::UIRaiseEffect
+  duration: 0.1
+  ease: 6
+  target: {fileID: 5011443919443176261}

@@ -13,6 +13,8 @@ public partial class HoverTipItemModule
     [System.Serializable]
     public class CompsData : CompsDataBase
     {
+        public Image imgShadow;
+        public Image imgLayout;
         public Image imgIcon;
         public TMP_Text txtTitle;
         public TMP_Text txtContent;

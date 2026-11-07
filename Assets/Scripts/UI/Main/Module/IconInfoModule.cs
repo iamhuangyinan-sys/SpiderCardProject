@@ -1,7 +1,6 @@
 using System;
 using Framework.UI;
 using UnityEngine;
-using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 /// <summary>
@@ -18,12 +17,10 @@ using UnityEngine.UI;
 ///   不勾就完全不弹（默认不勾，纯数字模块保持安静）。
 ///   方向默认 Down（这几个图标在顶部，向下弹；靠近屏幕底边时 HoverTipPanel 会自动换方向）。
 ///
-/// 点击走根节点上的 Button（预制体里已经挂好，target graphic 是根节点的 Image），
-/// 所以 interactable 的置灰、点击过滤都由 Button 负责，这里只转发 onClick。
-/// 悬停由本模组收指针事件，驱动同节点上的 HoverScaleBehaviour
-/// （预制体里 autoTrigger 不勾，由这里接管，避免两边都触发）。
+/// 点击与交互状态由根节点的 UIFeedbackButton 处理，效果组件各自驱动内部视觉。
+/// 模组订阅 Controller.HoverChanged 显示提示，不再重复处理指针输入。
 /// </summary>
-public partial class IconInfoModule : BaseModule, IPointerEnterHandler, IPointerExitHandler
+public partial class IconInfoModule : BaseModule
 {
     [Header("悬停提示")]
     /// <summary>固定提示：勾上 = 悬停时直接显示下面填的文案（不勾没有任何提示）</summary>
@@ -57,10 +54,10 @@ public partial class IconInfoModule : BaseModule, IPointerEnterHandler, IPointer
 
     protected override void OnBind()
     {
-        _hoverScale = GetComponent<HoverScaleBehaviour>();
-
+        _feedback = GetComponent<UIFeedbackController>();
         _button = GetComponent<Button>();
         if (_button != null) _button.onClick.AddListener(HandleClick);
+        if (_feedback != null) _feedback.HoverChanged += OnHoverChanged;
 
         // 绑定前设过的状态 / 文字在这里补上（模组可能默认失活，Awake 晚于宿主赋值）
         if (_interactable.HasValue) ApplyInteractable();
@@ -81,8 +78,12 @@ public partial class IconInfoModule : BaseModule, IPointerEnterHandler, IPointer
             _button = null;
         }
 
-        _hoverScale?.SetHover(false, true);
-        _hoverScale = null;
+        if (_feedback != null)
+        {
+            _feedback.HoverChanged -= OnHoverChanged;
+            _feedback.ResetFeedback();
+        }
+        _feedback = null;
         _info = null;
         _interactable = null;
     }
@@ -101,18 +102,10 @@ public partial class IconInfoModule : BaseModule, IPointerEnterHandler, IPointer
         if (comps.txtInfo != null) comps.txtInfo.gameObject.SetActive(visible);
     }
 
-    public void OnPointerEnter(PointerEventData eventData)
+    private void OnHoverChanged(bool hovering)
     {
-        if (_button != null && !_button.interactable) return;   // 置灰的按钮不给悬停反馈
-
-        _hoverScale?.SetHover(true);
-        ShowTip();
-    }
-
-    public void OnPointerExit(PointerEventData eventData)
-    {
-        _hoverScale?.SetHover(false);
-        HideTip();
+        if (hovering) ShowTip();
+        else HideTip();
     }
 
     /// <summary>失活（面板关掉 / 池化回收）时把提示收掉，不留残影</summary>
@@ -130,7 +123,8 @@ public partial class IconInfoModule : BaseModule, IPointerEnterHandler, IPointer
         HoverTipHelper.Show(this,
             string.IsNullOrEmpty(tipTitle) ? null : LanguageHelper.Get(tipTitle),
             string.IsNullOrEmpty(tipContent) ? null : LanguageHelper.Get(tipContent),
-            (RectTransform)transform, tipDirection, tipExtraGap);
+            _button != null && _button.image != null ? _button.image.rectTransform : (RectTransform)transform,
+            tipDirection, tipExtraGap);
     }
 
     /// <summary>收起提示（只有自己的提示才会被关）</summary>
@@ -145,10 +139,10 @@ public partial class IconInfoModule : BaseModule, IPointerEnterHandler, IPointer
         if (_button == null || !_interactable.HasValue) return;
 
         _button.interactable = _interactable.Value;
+        _feedback?.SetInteractable(_button.IsInteractable());
 
         if (!_interactable.Value)
         {
-            _hoverScale?.SetHover(false);   // 悬停中被禁用 → 立刻收起
             HideTip();
         }
     }
@@ -159,8 +153,7 @@ public partial class IconInfoModule : BaseModule, IPointerEnterHandler, IPointer
     /// <summary>期望的 interactable（null = 没设置过，沿用预制体上 Button 的值）</summary>
     private bool? _interactable;
 
-    /// <summary>悬停缩放（同节点上；没有就退化成不缩放）</summary>
-    private HoverScaleBehaviour _hoverScale;
+    private UIFeedbackController _feedback;
 
     /// <summary>待显示的文字（控件绑定前 SetInfo 的缓存）</summary>
     private string _info;

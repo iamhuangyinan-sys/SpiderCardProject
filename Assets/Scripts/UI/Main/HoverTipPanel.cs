@@ -126,14 +126,10 @@ public partial class HoverTipPanel : BasePanel
 
         // 同帧把框体尺寸算准，摆放依赖它（否则会按上一帧尺寸摆：位置偏、字两边也会没留白）
         //
-        // 两个坑（沿用原实现）：
-        //   1. 必须从 img_Root 开始重建。uGUI 的 PerformLayoutControl 碰到“自己身上没有任何布局组件”
-        //      的节点会整棵子树跳过 —— 传面板根节点等于什么都没做。
-        //   2. 要连做两次。子物体（条目 / 框）的尺寸是它们自己的 ContentSizeFitter 在同一次布局里
-        //      “稍后”才写进去的；第一遍读到的还是上一轮旧值，第二遍才是新值。
+        // 条目已在 ApplyTips 中完成内部布局并同步根节点尺寸，这里只需排列一次。
+        // 必须从带布局组件的 img_Root 开始重建，面板根节点没有布局控制器。
         if (_rootRect != null)
         {
-            LayoutRebuilder.ForceRebuildLayoutImmediate(_rootRect);
             LayoutRebuilder.ForceRebuildLayoutImmediate(_rootRect);
         }
 
@@ -198,10 +194,13 @@ public partial class HoverTipPanel : BasePanel
 
         if (shown == 0) return false;
 
-        // 3. 统一正文宽度 → 所有框等宽（短的正文也撑到最宽那条）
+        // 3. 统一正文宽度，再完成各条目的内部布局，供外层按实际框体尺寸排列。
         for (int i = 0; i < _items.Count; i++)
         {
-            if (_items[i].gameObject.activeSelf) _items[i].SetContentWidth(maxWidth);
+            if (!_items[i].gameObject.activeSelf) continue;
+
+            _items[i].SetContentWidth(maxWidth);
+            _items[i].RebuildLayout();
         }
 
         return true;

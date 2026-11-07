@@ -38,12 +38,14 @@ public partial class ShopCardItem : BaseListItem
     private Vector2 _discountBasePos;
     private bool _discountPosCaptured;
 
-    /// <summary>悬停缩放（挂在根节点上，缩放目标是内部那个轴心居中的 layout；没有就退化成不缩放）</summary>
-    private HoverScaleBehaviour _hoverScale;
+    private UIFeedbackController _feedback;
+    private bool _flying;
 
     public override void OnActivate()
     {
-        if (_hoverScale == null) _hoverScale = GetComponent<HoverScaleBehaviour>();
+        if (_feedback == null) _feedback = GetComponent<UIFeedbackController>();
+        _feedback?.ResetFeedback();
+        _flying = false;
 
         if (!_coinColorCaptured)
         {
@@ -63,7 +65,8 @@ public partial class ShopCardItem : BaseListItem
     public override void OnRecycle()
     {
         comps.modCard.OnHoverChanged = null;
-        _hoverScale?.SetHover(false, true);   // 回收：立即复位（组件 OnDisable 也会兜底）
+        _feedback?.ResetFeedback();
+        _flying = false;
         comps.modCard.Clear();
         comps.imgDiscount.gameObject.SetActive(false);
         comps.txtCoin.color = _coinDefaultColor;
@@ -74,7 +77,10 @@ public partial class ShopCardItem : BaseListItem
     }
 
     /// <summary>牌面悬停变化 → 整个格子缩放（连价格一起）</summary>
-    private void OnCardHover(bool hovering) => _hoverScale?.SetHover(hovering);
+    private void OnCardHover(bool hovering)
+    {
+        if (!_flying) _feedback?.SetHovered(hovering);
+    }
 
     /// <summary>绑定商品并刷新显示（已售出的商品不进列表，这里不用管）</summary>
     public void Bind(int index, ShopGoods goods, System.Func<bool> onPurchase = null, System.Action onFlyComplete = null)
@@ -156,11 +162,11 @@ public partial class ShopCardItem : BaseListItem
     /// </summary>
     private void PlayBuyFly()
     {
-        _hoverScale?.SetHover(false, true);
+        _flying = true;
+        _feedback?.ResetFeedback();
         comps.modCard.HideTip();
 
-        // 不碰 btnCard：SetClickable(null) 会把按钮关掉，按钮进 Disabled 态后牌面立刻变灰，很难看。
-        // 飞行期间由 FlyAndVanish 加的 CanvasGroup（blocksRaycasts = false）挡住点击；
+        // 飞行期间停止悬停反馈，并由 FlyAndVanish 的 CanvasGroup 阻挡后续点击。
         // 万一漏进来一次，TryBuy 也会因为 goods.sold 直接返回 false。
         // 价格整块一起藏（img_Price 下面挂着金币底图和数字），打折角标也一起藏，只让牌面飞
         if (comps.imgPrice != null) comps.imgPrice.gameObject.SetActive(false);

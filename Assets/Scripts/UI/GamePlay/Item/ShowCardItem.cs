@@ -7,12 +7,13 @@ using Framework.UI;
 /// </summary>
 public partial class ShowCardItem : BaseListItem
 {
-    /// <summary>悬停缩放（挂在根节点上，缩放目标是内部的 mod_Card；没有就退化成不缩放）</summary>
-    private HoverScaleBehaviour _hoverScale;
+    /// <summary>由牌面悬停驱动；展示牌即使不可点击，仍可缩放并显示提示。</summary>
+    private UIFeedbackController _feedback;
 
     public override void OnActivate()
     {
-        if (_hoverScale == null) _hoverScale = GetComponent<HoverScaleBehaviour>();
+        if (_feedback == null) _feedback = GetComponent<UIFeedbackController>();
+        _feedback?.ResetFeedback();
 
         comps.modCard.OnHoverChanged = OnCardHover;
     }
@@ -20,12 +21,12 @@ public partial class ShowCardItem : BaseListItem
     public override void OnRecycle()
     {
         comps.modCard.OnHoverChanged = null;
-        _hoverScale?.SetHover(false, true);   // 回收：立即复位（组件 OnDisable 也会兜底）
+        _feedback?.ResetFeedback();
         comps.modCard.Clear();
     }
 
     /// <summary>牌面悬停变化 → 整个格子缩放</summary>
-    private void OnCardHover(bool hovering) => _hoverScale?.SetHover(hovering);
+    private void OnCardHover(bool hovering) => _feedback?.SetHovered(hovering);
 
     /// <summary>按牌定义 + 属性显示牌图（有 Sunk 属性会染黄）</summary>
     public void Bind(CardDef def, IReadOnlyList<E_CardAttributeEnum> attributes = null)

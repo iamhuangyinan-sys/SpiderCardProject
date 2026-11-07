@@ -14,6 +14,7 @@ public partial class MenuPanel
     public class CompsData : CompsDataBase
     {
         public Button btnSaveReturn;
+        public Button btnSetting;
         public Button btnSaveQuit;
         public Button btnClose;
     }

@@ -616,7 +616,7 @@ PrefabInstance:
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 1606151811898266790, guid: b1a8eafed9d6d0e49873d45c17e0bc25, type: 3}
-      propertyPath: hoverScale
+      propertyPath: hovered
       value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 3083820975585334242, guid: b1a8eafed9d6d0e49873d45c17e0bc25, type: 3}
@@ -894,7 +894,7 @@ PrefabInstance:
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 1606151811898266790, guid: b1a8eafed9d6d0e49873d45c17e0bc25, type: 3}
-      propertyPath: hoverScale
+      propertyPath: hovered
       value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 3083820975585334242, guid: b1a8eafed9d6d0e49873d45c17e0bc25, type: 3}

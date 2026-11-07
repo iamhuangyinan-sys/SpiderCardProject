@@ -81,19 +81,19 @@ MonoBehaviour:
   - prefix: btn
     fieldName: btnContinue
     typeName: 
-    component: {fileID: 4484645198753272298}
+    component: {fileID: 4977686063532864384}
   - prefix: btn
     fieldName: btnStart
     typeName: 
-    component: {fileID: 4112845813992955814}
+    component: {fileID: 4772444978474450380}
   - prefix: btn
     fieldName: btnSetting
     typeName: 
-    component: {fileID: 33587017658185822}
+    component: {fileID: 8890018943864199732}
   - prefix: btn
     fieldName: btnQuit
     typeName: 
-    component: {fileID: 2019658747287357277}
+    component: {fileID: 7435345094640837943}
   - prefix: txt
     fieldName: txtVersion
     typeName: 
@@ -196,7 +196,7 @@ MonoBehaviour:
     m_Top: 0
     m_Bottom: 0
   m_ChildAlignment: 1
-  m_Spacing: 25
+  m_Spacing: 30
   m_ChildForceExpandWidth: 1
   m_ChildForceExpandHeight: 1
   m_ChildControlWidth: 0
@@ -628,17 +628,17 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
   langId: ui_begin_continue
   refreshOnEnable: 1
---- !u!114 &4484645198753272298 stripped
+--- !u!114 &4977686063532864384 stripped
 MonoBehaviour:
-  m_CorrespondingSourceObject: {fileID: 9049712831050129181, guid: 78d4c8bb09cae00498cdbcd61ea92780, type: 3}
+  m_CorrespondingSourceObject: {fileID: 486366535130676599, guid: 78d4c8bb09cae00498cdbcd61ea92780, type: 3}
   m_PrefabInstance: {fileID: 4876167851692527351}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 4e29b1a8efbd4b44bb3f3716e73f07ff, type: 3}
+  m_Script: {fileID: 11500000, guid: 2ffee5359dcdacc4fa7d31224503891d, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Button
+  m_EditorClassIdentifier: Assembly-CSharp::UIFeedbackButton
 --- !u!224 &9156124240910584839 stripped
 RectTransform:
   m_CorrespondingSourceObject: {fileID: 4376010851140862704, guid: 78d4c8bb09cae00498cdbcd61ea92780, type: 3}
@@ -852,17 +852,17 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
   langId: ui_begin_new_game
   refreshOnEnable: 1
---- !u!114 &4112845813992955814 stripped
+--- !u!114 &4772444978474450380 stripped
 MonoBehaviour:
-  m_CorrespondingSourceObject: {fileID: 9049712831050129181, guid: 78d4c8bb09cae00498cdbcd61ea92780, type: 3}
+  m_CorrespondingSourceObject: {fileID: 486366535130676599, guid: 78d4c8bb09cae00498cdbcd61ea92780, type: 3}
   m_PrefabInstance: {fileID: 4937293902748647611}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 4e29b1a8efbd4b44bb3f3716e73f07ff, type: 3}
+  m_Script: {fileID: 11500000, guid: 2ffee5359dcdacc4fa7d31224503891d, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Button
+  m_EditorClassIdentifier: Assembly-CSharp::UIFeedbackButton
 --- !u!224 &8664499116883608139 stripped
 RectTransform:
   m_CorrespondingSourceObject: {fileID: 4376010851140862704, guid: 78d4c8bb09cae00498cdbcd61ea92780, type: 3}
@@ -1037,17 +1037,6 @@ PrefabInstance:
       insertIndex: -1
       addedObject: {fileID: 2823558889653489411}
   m_SourcePrefab: {fileID: 100100000, guid: 78d4c8bb09cae00498cdbcd61ea92780, type: 3}
---- !u!114 &2019658747287357277 stripped
-MonoBehaviour:
-  m_CorrespondingSourceObject: {fileID: 9049712831050129181, guid: 78d4c8bb09cae00498cdbcd61ea92780, type: 3}
-  m_PrefabInstance: {fileID: 7030203892274780224}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 4e29b1a8efbd4b44bb3f3716e73f07ff, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Button
 --- !u!1 &4066203668610581913 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 6484694731073248729, guid: 78d4c8bb09cae00498cdbcd61ea92780, type: 3}
@@ -1072,6 +1061,17 @@ RectTransform:
   m_CorrespondingSourceObject: {fileID: 4376010851140862704, guid: 78d4c8bb09cae00498cdbcd61ea92780, type: 3}
   m_PrefabInstance: {fileID: 7030203892274780224}
   m_PrefabAsset: {fileID: 0}
+--- !u!114 &7435345094640837943 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 486366535130676599, guid: 78d4c8bb09cae00498cdbcd61ea92780, type: 3}
+  m_PrefabInstance: {fileID: 7030203892274780224}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2ffee5359dcdacc4fa7d31224503891d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::UIFeedbackButton
 --- !u!1001 &9070349609093375811
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -1264,17 +1264,6 @@ PrefabInstance:
       insertIndex: -1
       addedObject: {fileID: 5722142651037331131}
   m_SourcePrefab: {fileID: 100100000, guid: 78d4c8bb09cae00498cdbcd61ea92780, type: 3}
---- !u!114 &33587017658185822 stripped
-MonoBehaviour:
-  m_CorrespondingSourceObject: {fileID: 9049712831050129181, guid: 78d4c8bb09cae00498cdbcd61ea92780, type: 3}
-  m_PrefabInstance: {fileID: 9070349609093375811}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 4e29b1a8efbd4b44bb3f3716e73f07ff, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Button
 --- !u!1 &2602545575658977946 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 6484694731073248729, guid: 78d4c8bb09cae00498cdbcd61ea92780, type: 3}
@@ -1299,3 +1288,14 @@ RectTransform:
   m_CorrespondingSourceObject: {fileID: 4376010851140862704, guid: 78d4c8bb09cae00498cdbcd61ea92780, type: 3}
   m_PrefabInstance: {fileID: 9070349609093375811}
   m_PrefabAsset: {fileID: 0}
+--- !u!114 &8890018943864199732 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 486366535130676599, guid: 78d4c8bb09cae00498cdbcd61ea92780, type: 3}
+  m_PrefabInstance: {fileID: 9070349609093375811}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2ffee5359dcdacc4fa7d31224503891d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::UIFeedbackButton

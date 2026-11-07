@@ -3,15 +3,16 @@ using System.Text;
 using Framework.UI;
 using TMPro;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 /// <summary>
 /// 关卡选择按钮模组 —— 显示关卡类型图标 + 名称 + 锁定状态；悬停放大并弹出关卡信息
 ///
-/// 悬停缩放挂在子节点 btn_Level 上（只有它有指针接收面），这里订阅它的 OnHoverChanged
-/// 来驱动提示框 —— 跟 CardModule 那套是同一个套路。
+/// btn_Level 的 Feedback 负责交互缩放和呼吸；业务只设置是否需要提醒。
+/// 提示单独接收指针进出，使不可点击的锁定/已走过关卡仍能查看信息。
 /// </summary>
-public partial class LevelBtnModule : BaseModule
+public partial class LevelBtnModule : BaseModule, IPointerEnterHandler, IPointerExitHandler
 {
     /// <summary>提示框首选方向（放不下会自动换方向）</summary>
     [SerializeField] private E_TipDirection tipDirection = E_TipDirection.Up;
@@ -26,8 +27,10 @@ public partial class LevelBtnModule : BaseModule
     private TextMeshProUGUI _txtType;
     private Image _imgIcon;
 
-    /// <summary>预制体上配的 Button 禁用色 —— 未解锁关卡沿用它</summary>
-    private Color _lockedColor;
+    [SerializeField, Tooltip("未解锁或地图查看时的图标颜色乘数；与是否可点击分开控制")]
+    private Color lockedColor = new Color(0.78431374f, 0.78431374f, 0.78431374f, 0.5019608f);
+
+    private Color _normalIconColor;
 
     /// <summary>进关停留期间屏蔽点击（只挡点击，外观仍按解锁 / 走过的状态）</summary>
     private bool _clickBlocked;
@@ -35,8 +38,7 @@ public partial class LevelBtnModule : BaseModule
     /// <summary>屏蔽期间是否把「可选但没走过」的关卡一并置灰（地图查看模式用）</summary>
     private bool _greyOutWhenBlocked;
 
-    /// <summary>悬停缩放（挂在 btn_Level 上）；没有就退化成不缩放、提示框按 1 倍算</summary>
-    private HoverScaleBehaviour _hoverScale;
+    private UIFeedbackController _feedback;
 
     protected override void OnBind()
     {
@@ -44,11 +46,8 @@ public partial class LevelBtnModule : BaseModule
         _txtType = comps.btnLevel.GetComponentInChildren<TextMeshProUGUI>();
         _imgIcon = comps.btnLevel.image;
 
-        // 记住预制体上的禁用色：未解锁关卡用它，走过的关卡改用正常色（亮但不可点）
-        _lockedColor = comps.btnLevel.colors.disabledColor;
-
-        _hoverScale = GetComponentInChildren<HoverScaleBehaviour>(true);
-        if (_hoverScale != null) _hoverScale.OnHoverChanged = OnHoverChanged;
+        if (_imgIcon != null) _normalIconColor = _imgIcon.color;
+        _feedback = comps.btnLevel.GetComponent<UIFeedbackController>();
     }
 
     protected override void OnUnBind()
@@ -57,11 +56,11 @@ public partial class LevelBtnModule : BaseModule
 
         OnClickLevel = null;      // 模组会进对象池复用，回调必须清掉
 
-        if (_hoverScale != null) _hoverScale.OnHoverChanged = null;
-
+        _feedback?.ResetFeedback();
         HideTip();
 
-        _hoverScale = null;
+        _feedback = null;
+        _cfg = null;
         _txtType = null;
         _imgIcon = null;
     }
@@ -70,6 +69,7 @@ public partial class LevelBtnModule : BaseModule
     public void Bind(RunLevelData cfg)
     {
         _cfg = cfg;
+        _feedback?.ResetFeedback();
 
         // 模组是池化复用的：上一次进关时留下的「屏蔽点击」不能带过来
         _clickBlocked = false;
@@ -129,15 +129,15 @@ public partial class LevelBtnModule : BaseModule
         bool bright = visited || (clickable && !dimmed);
 
         comps.btnLevel.interactable = clickable && !_clickBlocked;
+        // 池化重绑会清空 Feedback；即使按钮的 interactable 没有变化，也同步有效禁用状态。
+        _feedback?.SetInteractable(comps.btnLevel.IsInteractable());
 
-        // Button 在 interactable = false 时会强制把图标染成 disabledColor：
-        // 亮着的关卡把它换成正常色，就做到了「亮着但（暂时）点不动」
-        var colors = comps.btnLevel.colors;
-        colors.disabledColor = bright ? colors.normalColor : _lockedColor;
-        comps.btnLevel.colors = colors;
+        // 亮/灰属于地图业务状态：已走过的关卡不可点击，但仍保持明亮。
+        // 不再使用 Button.colors，也不挂 UIColorEffect，避免两个入口同时改图标颜色。
+        if (_imgIcon != null) _imgIcon.color = bright ? _normalIconColor : _normalIconColor * lockedColor;
 
         // 只有真正可点的关卡才呼吸；进关停留期间停掉
-        _hoverScale?.SetBreathing(clickable && !_clickBlocked);
+        _feedback?.SetAttention(clickable && !_clickBlocked);
 
         if (_txtType != null)
         {
@@ -166,16 +166,11 @@ public partial class LevelBtnModule : BaseModule
 
     // ==================== 悬停提示 ====================
 
-    private void OnHoverChanged(bool hovering)
-    {
-        if (!hovering)
-        {
-            HideTip();
-            return;
-        }
+    public void OnPointerEnter(PointerEventData eventData) => ShowTip();
 
-        ShowTip();
-    }
+    public void OnPointerExit(PointerEventData eventData) => HideTip();
+
+    private void OnDisable() => HideTip();
 
     private void HideTip()
     {
