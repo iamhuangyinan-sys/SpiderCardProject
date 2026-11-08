@@ -1,22 +1,21 @@
 using Framework.UI;
 using UnityEngine;
-using UnityEngine.UI;
 using Framework.Res;
 
-public class BeginBuildItemModule : BaseModule
+public partial class BeginBuildItemModule : BaseModule
 {
+    private UIFeedbackController feedback;
     private string imagePath;
 
     public void SetImage(string imageName)
     {
+        feedback?.ResetFeedback();
+        comps.imgCardVisual.sprite = null;
         ReleaseImage();
-        var image = GetComponent<Image>();
-        image.raycastTarget = false;
-        image.sprite = null;
         if (string.IsNullOrEmpty(imageName)) return;
         string path = $"GamePlay/CardBuild/{imageName}";
-        image.sprite = ResManager.Instance.Load<Sprite>(path);
-        if (image.sprite != null) imagePath = path;
+        comps.imgCardVisual.sprite = ResManager.Instance.Load<Sprite>(path);
+        if (comps.imgCardVisual.sprite != null) imagePath = path;
     }
 
     private void ReleaseImage()
@@ -27,11 +26,12 @@ public class BeginBuildItemModule : BaseModule
     }
     protected override void OnBind()
     {
-        
+        feedback = GetComponent<UIFeedbackController>();
     }
 
     protected override void OnUnBind()
     {
+        if (comps.imgCardVisual != null) comps.imgCardVisual.sprite = null;
         ReleaseImage();
     }
 }
