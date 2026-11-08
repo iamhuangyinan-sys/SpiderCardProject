@@ -42,6 +42,7 @@ namespace Framework.UI
             Register<BeginPanel>("Main/BeginPanel", E_UILayerEnum.Normal);
             Register<MainTopPanel>("Main/MainTopPanel", E_UILayerEnum.Normal);
             Register<MenuPanel>("Main/MenuPanel", E_UILayerEnum.Normal);
+            Register<SettingsPanel>("Main/SettingsPanel", E_UILayerEnum.Normal);
             // ===== 通用提示（置顶层，避免被面板遮挡）=====
             Register<TipPanel>("Main/TipPanel", E_UILayerEnum.Top);
             Register<HoverTipPanel>("Main/HoverTipPanel", E_UILayerEnum.Top);

@@ -146,7 +146,7 @@ public static class AnimationHelper
     /// 与 FlyInFromBottom 的区别：只做透明度、不动位置（提示条 / Toast 用）。
     /// </summary>
     public static Tween FadeIn(CanvasGroup canvasGroup, float duration = PanelFadeDuration,
-        Ease ease = Ease.OutQuad)
+        Ease ease = Ease.OutQuad, TweenCallback onComplete = null)
     {
         if (canvasGroup == null) return null;
 
@@ -155,7 +155,7 @@ public static class AnimationHelper
         canvasGroup.interactable = true;     // 淡出时被置 false，不恢复会导致面板失效
         canvasGroup.blocksRaycasts = true;
 
-        return canvasGroup.DOFade(1f, duration).SetEase(ease);
+        return canvasGroup.DOFade(1f, duration).SetEase(ease).OnComplete(() => onComplete?.Invoke());
     }
 
     /// <summary>
@@ -193,5 +193,10 @@ public static class AnimationHelper
     public static void Kill(Transform trans)
     {
         trans.DOKill();
+    }
+
+    public static void Kill(CanvasGroup group)
+    {
+        if (group != null) group.DOKill();
     }
 }

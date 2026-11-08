@@ -10,6 +10,9 @@ using Framework.UI;
 /// </summary>
 public partial class ShowCardsPanel : NormalPanel, ISceneInputBlockPanel
 {
+    protected override bool FadeInOnOpen => true;
+    protected override bool FadeOutOnClose => true;
+
     /// <summary>列表里一格的内容（牌定义 + 要显示的属性）</summary>
     private struct CardShow
     {

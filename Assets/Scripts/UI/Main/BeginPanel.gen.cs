@@ -15,7 +15,6 @@ public partial class BeginPanel
     {
         public Image imgLogo;
         public Button btnAbout;
-        public Image imgBtnPanel;
         public Button btnContinue;
         public Button btnStart;
         public Button btnSetting;

@@ -69,6 +69,8 @@ feedback.ResetFeedback();
 
 隐藏对象会停止自身 Tween、还原初始属性并清空瞬时输入，保留 Attention 意图；重新显示时恢复提醒。对象池换数据时请调用 ResetFeedback，然后设置新的 Attention。
 
+面板内容过渡由 `NormalPanel` 的 `Fade Target` 指定 CanvasGroup，不属于按钮 Feedback。需要保持显示的背景放在目标外；开始界面和菜单用 `PanelBackdrop` 独立保存背景。面板退场完成后才停用或销毁，使对象的 OnDisable 复位发生在不可见之后；设置来源的背景保留策略由面板业务处理。
+
 不需要按钮的卡牌格可挂 Controller + 效果，由宿主调用 `SetHovered` / `SetInteractable`。希望零代码响应指针进出时挂 `UIFeedbackHoverInput`。**FeedbackButton、HoverInput、宿主手动驱动三选一**，不要重复输入。
 
 ## 扩展与边界

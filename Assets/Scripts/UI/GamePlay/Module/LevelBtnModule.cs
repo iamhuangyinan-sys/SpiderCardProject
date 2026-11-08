@@ -1,6 +1,7 @@
 using System;
 using System.Text;
 using Framework.UI;
+using Framework.Event;
 using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -45,6 +46,7 @@ public partial class LevelBtnModule : BaseModule, IPointerEnterHandler, IPointer
     protected override void OnBind()
     {
         comps.btnLevel.onClick.AddListener(OnClick);
+        EventManager.Instance.AddListener(E_EventEnum.OnLanguageChanged, RefreshState);
         _txtType = comps.btnLevel.GetComponentInChildren<TextMeshProUGUI>();
         _imgIcon = comps.btnLevel.image;
 
@@ -55,6 +57,7 @@ public partial class LevelBtnModule : BaseModule, IPointerEnterHandler, IPointer
     protected override void OnUnBind()
     {
         comps.btnLevel.onClick.RemoveListener(OnClick);
+        EventManager.Instance.RemoveListener(E_EventEnum.OnLanguageChanged, RefreshState);
 
         OnClickLevel = null;      // 模组会进对象池复用，回调必须清掉
 

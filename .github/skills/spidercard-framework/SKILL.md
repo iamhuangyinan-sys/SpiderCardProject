@@ -135,6 +135,18 @@ SceneController.Instance.OnBeforeLoad += () => { /* 遮罩淡入 */ };
 SceneController.Instance.OnAfterLoad += () => { /* 遮罩淡出 */ };
 ```
 
+### 9. 玩家设置（PlayerSetting/）
+
+- `PlayerSettingData` 定义默认值（中文、全屏开启）；`PlayerSettingStore` 保存数据，业务通过 `PlayerSettingManager` 访问。
+- `FrameworkEntry` 在存档注册后、首个业务界面打开前初始化设置，读取并应用 `Saves/PlayerSetting.json`。新游戏仅删除 `RunData`，保留设置。
+- `SetLanguage()` / `SetFullScreen()` 修改后立即应用并保存。语言下拉框的名称由 `LanguageNames` 字典提供，顺序由 `LanguageOrder` 明确指定。
+- `LanguageHelper.Current` 只读；`SetLanguage()` 派发 `E_EventEnum.OnLanguageChanged`，`LocalizedText` 自动响应刷新，动态文案由对应 UI 订阅刷新。
+- `SaveManager.LoadWithDefaults<T>()` 在默认对象上覆盖读档，缺失字段保留字段初始值，损坏文件回退到默认对象。
+- `SettingsPanel` 从主菜单及游戏内菜单打开，使用 `NormalPanel + ISceneInputBlockPanel`；全屏模式仅在独立播放器应用，编辑器仍可修改并保存设置。
+- 使用 `SettingsPanel.OpenFrom(this)` 打开设置并隐藏来源面板，完成回调在同一帧打开下一面板；关闭设置先淡出再恢复来源实例。切场景等统一隐藏或销毁操作不会触发返回。
+- 三个面板通过 `NormalPanel.fadeTarget` 指定预制体的 `FadeRoot`，内容淡入 / 淡出均为 0.2 秒。开始背景由 `PanelBackdrop` 在运行时独立到面板同级，不随内容动画或设置切换隐藏；切场景统一收起。
+- 菜单通过 `PanelBackdrop` 保留自己的黑底。菜单进入设置时关闭设置自己的黑底，返回菜单仍使用同一黑底；最终关闭菜单时黑底与内容一起淡出。开始界面进入设置则启用设置自己的黑底，黑底在设置的 `FadeRoot` 内跟随动画。
+
 ---
 
 ## UI 架构（Framework/UI/）
@@ -151,6 +163,11 @@ SceneController.Instance.OnAfterLoad += () => { /* 遮罩淡出 */ };
 ### 声明式开关动画（NormalPanel）
 
 面板不写动画代码，只 override 开关：
+
+- Inspector 的 `Fade Target` 可拖入某个子节点的 `CanvasGroup`；留空时沿用根节点。目标外的节点不参与透明度动画。位移动画沿用原有根节点行为。
+- `HideSelf(Action)` / `CloseSelf(Action)` 在退场完成后调用回调；普通 `Close` 也等待退场动画，之后执行 `OnClose`、移出缓存并销毁。框架销毁时 `CloseAll` 立即清理。
+- 淡出期间重新 `Show` 会取消旧关闭回调并打断淡出。场景输入锁保持到退场及切换交接完成。
+- `UIManager.Show<T>(configure)` 可在 `OnOpen` / `OnShow` 及入场动画前配置面板。
 
 ```csharp
 protected override bool  FlyInOnOpen    => true;   // 从下方飞入（LevelPanel / ShopPanel 用）
@@ -225,6 +242,7 @@ UIManager.Instance.Close(panel);  // 关闭（销毁）
 | `sld_` | `Slider` | `sld_Volume` → `sldVolume` |
 | `list_` | `ScrollList` | `list_Shop` → `listShop` |
 | `ipt_` | `TMP_InputField` | `ipt_Name` → `iptName` |
+| `drp_` | `TMP_Dropdown` | `drp_Language` → `drpLanguage` |
 
 - 导出后生成 `XxxPanel.gen.cs`，内含 `comps` 字段和 `CompsData` 类（继承 `CompsDataBase`）。
 - 控件名不能重复，改了子物体名要重新 Refresh + Export Code。

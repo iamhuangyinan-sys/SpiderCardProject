@@ -205,6 +205,17 @@ namespace Framework.Save
         /// </summary>
         public T Load<T>(E_SaveCustomEnum key) where T : class, new()
         {
+            return LoadCustom<T>(key, false);
+        }
+
+        /// <summary>从默认对象上覆盖读取，JSON 中缺少的字段保留字段初始值。</summary>
+        public T LoadWithDefaults<T>(E_SaveCustomEnum key) where T : class, new()
+        {
+            return LoadCustom<T>(key, true);
+        }
+
+        private T LoadCustom<T>(E_SaveCustomEnum key, bool useDefaults) where T : class, new()
+        {
             if (!_customPaths.TryGetValue(key, out string fileName))
             {
                 Debug.LogError($"[SaveManager] 自定义 Key [{key}] 未注册！请先调用 RegisterCustom");
@@ -221,6 +232,14 @@ namespace Framework.Save
                 try
                 {
                     string json = File.ReadAllText(filePath);
+                    if (useDefaults)
+                    {
+                        if (string.IsNullOrWhiteSpace(json) || json.Trim() == "null")
+                            throw new FormatException("自定义存档为空");
+                        var data = new T();
+                        JsonUtility.FromJsonOverwrite(json, data);
+                        return data;
+                    }
                     return JsonUtility.FromJson<T>(json);
                 }
                 catch (Exception e)

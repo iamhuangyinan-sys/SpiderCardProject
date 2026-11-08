@@ -35,7 +35,7 @@ public class UIBinderEditor : Editor
         if (binder.uiComps.Count == 0)
         {
             EditorGUILayout.HelpBox(
-                "命名约定：btn_xxx / txt_xxx / img_xxx / mod_xxx / tog_xxx / sld_xxx / list_xxx / ipt_xxx\n" +
+                "命名约定：btn_xxx / txt_xxx / img_xxx / mod_xxx / tog_xxx / sld_xxx / list_xxx / ipt_xxx / drp_xxx\n" +
                 "点击 Refresh 自动扫描子物体",
                 MessageType.Info);
         }
@@ -135,6 +135,7 @@ public class UIBinderEditor : Editor
                 "sld" => "Slider",
                 "list" => "ScrollList",
                 "ipt" => "TMP_InputField",
+                "drp" => "TMP_Dropdown",
                 _ => "Component"
             };
             sb.AppendLine($"        public {type} {e.fieldName};");

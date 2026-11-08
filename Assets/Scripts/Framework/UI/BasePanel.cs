@@ -1,4 +1,5 @@
 using UnityEngine;
+using System;
 
 namespace Framework.UI
 {
@@ -31,6 +32,9 @@ namespace Framework.UI
 
         /// <summary>本面板是否实现了「遮挡场景输入」接口（Awake 时转一次，避免每次查询都转）</summary>
         private ISceneInputBlockPanel _sceneInputBlock;
+        private Action hiddenCallback;
+        private bool closing;
+        public bool IsTransitioning { get; protected set; }
 
         protected virtual void Awake()
         {
@@ -46,6 +50,8 @@ namespace Framework.UI
         {
             if (IsOpen) return;
             IsOpen = true;
+            closing = false;
+            hiddenCallback = null;
             HasOpened = true;
             gameObject.SetActive(true);
             transform.SetAsLastSibling();
@@ -60,6 +66,10 @@ namespace Framework.UI
         {
             if (IsOpen) return;
             IsOpen = true;
+            closing = false;
+            hiddenCallback = null;
+            CanvasGroup.interactable = true;
+            CanvasGroup.blocksRaycasts = true;
             gameObject.SetActive(true);
             transform.SetAsLastSibling();
             BindUI();
@@ -69,30 +79,47 @@ namespace Framework.UI
         }
 
         /// <summary> 隐藏（保留缓存，UIManager 内部） </summary>
-        internal void HideInternal()
+        internal void HideInternal(Action onHidden = null)
         {
             if (!IsOpen) return;
             IsOpen = false;
-            UnlockSceneInput();
+            hiddenCallback = onHidden;
             OnHide();
 
             // 子类接管隐藏（如先播关闭动画，动画结束后再自行隐藏）
             if (OnPanelClosing()) return;
 
-            gameObject.SetActive(false);
+            CompleteHide();
         }
 
         /// <summary> 永久关闭（UIManager 内部） </summary>
-        internal void CloseInternal()
+        internal void CloseInternal(Action onClosed = null, bool immediate = false)
         {
-            // 从未打开过 → 没有配对的 OnClose 需要触发
-            if (!HasOpened) return;
-
-            // 已经 Hide 过的面板也要走 OnClose（它负责解绑事件、回收列表项等资源）
+            if (closing && !immediate) return;
+            closing = true;
+            hiddenCallback = onClosed;
+            bool wasVisible = IsOpen || IsTransitioning;
             IsOpen = false;
-            UnlockSceneInput();
-            OnClose();
+            if (!immediate && wasVisible && OnPanelClosing()) return;
+            CompleteHide();
+        }
+
+        /// <summary>动画结束时调用；完成回调在本帧内交接下一面板。</summary>
+        protected void CompleteHide()
+        {
+            if (IsOpen) return;
+            IsTransitioning = false;
+            var callback = hiddenCallback;
+            hiddenCallback = null;
+            if (closing)
+            {
+                closing = false;
+                if (HasOpened) OnClose();
+                HasOpened = false;
+            }
             gameObject.SetActive(false);
+            try { callback?.Invoke(); }
+            finally { if (!IsOpen) UnlockSceneInput(); }
         }
 
         // ==================== 场景输入遮挡（实现 ISceneInputBlockPanel 的面板）====================
@@ -150,11 +177,15 @@ namespace Framework.UI
             UIManager.Instance.Hide(this);
         }
 
+        public void HideSelf(Action onHidden) => UIManager.Instance.Hide(this, onHidden);
+
         /// <summary> 关闭自身（移除缓存并销毁） </summary>
         public void CloseSelf()
         {
             UIManager.Instance.Close(this);
         }
+
+        public void CloseSelf(Action onClosed) => UIManager.Instance.Close(this, onClosed);
 
         /// <summary> 设置可交互（通过 CanvasGroup） </summary>
         public void SetInteractable(bool interactable)

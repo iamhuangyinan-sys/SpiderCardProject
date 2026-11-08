@@ -17,6 +17,9 @@ namespace Framework.UI
     /// </summary>
     public abstract class NormalPanel : BasePanel
     {
+        [SerializeField, Tooltip("淡入淡出目标；留空使用面板根节点。背景可放在目标外。")]
+        private CanvasGroup fadeTarget;
+        protected CanvasGroup FadeTarget => fadeTarget != null ? fadeTarget : CanvasGroup;
         /// <summary>面板原位（Awake 时记录），飞入 / 飞出动画的基准点，避免反复开关累积偏移</summary>
         private Vector2 _baseAnchoredPos;
 
@@ -46,24 +49,31 @@ namespace Framework.UI
 
         protected override void OnPanelOpened()
         {
+            IsTransitioning = false;
             if (FlyInOnOpen)
             {
                 AnimationHelper.FlyInFromBottom(RectTransform, CanvasGroup, _baseAnchoredPos, FlyOffsetY);
                 return;
             }
 
-            if (FadeInOnOpen) AnimationHelper.FadeIn(CanvasGroup, FadeDuration);
+            if (FadeInOnOpen)
+            {
+                IsTransitioning = true;
+                AnimationHelper.FadeIn(FadeTarget, FadeDuration,
+                    onComplete: () => IsTransitioning = false);
+            }
         }
 
         protected override bool OnPanelClosing()
         {
+            IsTransitioning = true;
             if (FlyOutOnClose)
             {
                 AnimationHelper.FlyOutToBottom(RectTransform, CanvasGroup, _baseAnchoredPos, FlyOffsetY,
                     onComplete: () =>
                     {
                         // 飞完时若已被重新 Show（IsOpen 又为 true），就不要把面板藏掉
-                        if (!IsOpen) gameObject.SetActive(false);
+                        CompleteHide();
                     });
 
                 return true;   // 接管隐藏：等飞完再 SetActive(false)
@@ -71,16 +81,23 @@ namespace Framework.UI
 
             if (FadeOutOnClose)
             {
-                AnimationHelper.FadeOut(CanvasGroup, FadeDuration,
+                AnimationHelper.FadeOut(FadeTarget, FadeDuration,
                     onComplete: () =>
                     {
-                        if (!IsOpen) gameObject.SetActive(false);
+                        CompleteHide();
                     });
 
                 return true;   // 接管隐藏：等淡完再 SetActive(false)
             }
 
+            IsTransitioning = false;
             return false;
+        }
+
+        protected virtual void OnDisable()
+        {
+            AnimationHelper.Kill(FadeTarget);
+            IsTransitioning = false;
         }
     }
 }

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Framework.Res;
 using Framework.UI;
+using Framework.Event;
 using UnityEngine;
 
 public partial class BeginBuildPanel : NormalPanel, ISceneInputBlockPanel
@@ -24,6 +25,7 @@ public partial class BeginBuildPanel : NormalPanel, ISceneInputBlockPanel
         comps.btnRight.onClick.AddListener(OnRight);
         comps.btnCheck.onClick.AddListener(OnCheck);
         comps.btnContinue.onClick.AddListener(OnContinue);
+        EventManager.Instance.AddListener(E_EventEnum.OnLanguageChanged, RefreshBuildName);
         itemPrefab = ResManager.Instance.Load<GameObject>(ItemPath);
         builds = ConfigHelper.GetAll<BeginBuildConfig>();
         // TODO: 难度选择，当前沿用预制体中隐藏的 dif 节点。
@@ -44,6 +46,7 @@ public partial class BeginBuildPanel : NormalPanel, ISceneInputBlockPanel
         comps.btnRight.onClick.RemoveListener(OnRight);
         comps.btnCheck.onClick.RemoveListener(OnCheck);
         comps.btnContinue.onClick.RemoveListener(OnContinue);
+        EventManager.Instance.RemoveListener(E_EventEnum.OnLanguageChanged, RefreshBuildName);
         OnConfirm = null;
         foreach (var item in items)
             if (item != null) Destroy(item.gameObject);
@@ -67,7 +70,7 @@ public partial class BeginBuildPanel : NormalPanel, ISceneInputBlockPanel
     {
         preview = null;
         var cfg = builds.Count > 0 ? builds[selectedIndex] : null;
-        comps.txtName.text = cfg != null ? LanguageHelper.Get(cfg.Name) : LanguageHelper.Get("ui_beginbuild_no_deck");
+        RefreshBuildName();
         bool valid = cfg != null && BeginBuildHelper.TryBuild(cfg.Id, out preview);
         comps.btnCheck.interactable = valid;
         comps.btnContinue.interactable = valid;
@@ -85,6 +88,12 @@ public partial class BeginBuildPanel : NormalPanel, ISceneInputBlockPanel
             items[i].gameObject.SetActive(visible);
             items[i].SetImage(visible ? cfg.Image[i] : null);
         }
+    }
+
+    private void RefreshBuildName()
+    {
+        var cfg = builds.Count > 0 ? builds[selectedIndex] : null;
+        comps.txtName.text = cfg != null ? LanguageHelper.Get(cfg.Name) : LanguageHelper.Get("ui_beginbuild_no_deck");
     }
 
     private void OnCheck()

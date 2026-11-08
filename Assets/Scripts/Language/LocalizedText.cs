@@ -1,5 +1,6 @@
 using TMPro;
 using UnityEngine;
+using Framework.Event;
 
 /// <summary>
 /// 多语言文本 —— 挂在某个 TMP 的同一节点上，填一个 LanguageConfig 的 Id，
@@ -7,7 +8,7 @@ using UnityEngine;
 ///
 /// 用法：
 ///   预制体里给 TMP 节点加本组件，Lang Id 填 ui_xxx（留空 = 不改文字）
-///   代码里也可以 SetId("ui_xxx") 动态换；切语言后重新打开面板会自动刷新
+///   代码里也可以 SetId("ui_xxx") 动态换；切语言后自动刷新
 ///
 /// 只负责「Id → 文案」，取词逻辑在 LanguageHelper。
 /// </summary>
@@ -27,7 +28,13 @@ public class LocalizedText : MonoBehaviour
 
     private void OnEnable()
     {
+        EventManager.Instance.AddListener(E_EventEnum.OnLanguageChanged, Refresh);
         if (refreshOnEnable) Refresh();
+    }
+
+    private void OnDisable()
+    {
+        EventManager.Instance.RemoveListener(E_EventEnum.OnLanguageChanged, Refresh);
     }
 
     /// <summary>换一个 Id 并立刻生效</summary>

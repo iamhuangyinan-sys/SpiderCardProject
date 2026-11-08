@@ -13,7 +13,7 @@ namespace Framework.UI
     [Serializable]
     public class UICompEntry
     {
-        /// <summary> 前缀类型：btn / txt / img / mod / tog / sld / list / ipt </summary>
+        /// <summary> 前缀类型：btn / txt / img / mod / tog / sld / list / ipt / drp </summary>
         public string prefix;
 
         /// <summary> C# 字段名（btn_Start → btnStart） </summary>
@@ -22,7 +22,7 @@ namespace Framework.UI
         /// <summary> 组件类型名（mod 类型时使用，如 "Mod_Button"） </summary>
         public string typeName;
 
-        /// <summary> 实际控件组件（Button / TMP_Text / Image / BaseModule / Toggle / Slider / ScrollList / TMP_InputField） </summary>
+        /// <summary> 实际控件组件（Button / TMP_Text / Image / BaseModule / Toggle / Slider / ScrollList / TMP_InputField / TMP_Dropdown） </summary>
         public Component component;
     }
 
@@ -38,6 +38,7 @@ namespace Framework.UI
     ///   sld_xxx  → Slider
     ///   list_xxx → ScrollList
     ///   ipt_xxx  → TMP_InputField
+    ///   drp_xxx  → TMP_Dropdown
     ///
     /// 使用方式：
     ///   1. 挂载到预制体根节点
@@ -122,6 +123,12 @@ namespace Framework.UI
                     var comp = child.GetComponent<TMP_InputField>();
                     if (comp != null)
                         entry = new UICompEntry { prefix = "ipt", component = comp };
+                }
+                else if (name.StartsWith("drp_"))
+                {
+                    var comp = child.GetComponent<TMP_Dropdown>();
+                    if (comp != null)
+                        entry = new UICompEntry { prefix = "drp", component = comp };
                 }
 
                 if (entry != null)

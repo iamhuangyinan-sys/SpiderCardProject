@@ -97,6 +97,7 @@ namespace Framework
             // ===== 2. 初始化 Store（数据层，无依赖）=====
             ResStore.Instance.Init();        // 资源缓存数据
             PoolStore.Instance.Init();       // 对象池数据
+            PlayerSettingStore.Instance.Init(); // 跨局玩家设置
             // XxxStore.Instance.Init();
 
             // ===== 3. 初始化 Manager（业务层，依赖 Store）=====
@@ -113,6 +114,7 @@ namespace Framework
 
             // ===== 4. 注册各类配置 =====
             SaveRegistry.RegisterAll();      // → 见 SaveRegistry.cs
+            PlayerSettingManager.Instance.Init(); // 读档并应用设置，早于首个业务界面
             UIConfig.RegisterAll();          // → 见 UIConfig.cs
 
             Debug.Log("[Framework] 游戏框架初始化完成");
@@ -126,6 +128,7 @@ namespace Framework
 
             // 按依赖的反序销毁
             ConsoleCommandManager.Instance.Dispose();
+            PlayerSettingManager.Instance.Dispose();
             SceneController.Instance.Dispose();
             UIManager.Instance.Dispose();
             BgmManager.Instance.Dispose();
@@ -134,6 +137,7 @@ namespace Framework
             EventManager.Instance.Dispose();
             SaveManager.Instance.Dispose();
             ResManager.Instance.Dispose();
+            PlayerSettingStore.Instance.Dispose();
             PoolStore.Instance.Dispose();
             ResStore.Instance.Dispose();
 

@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using Framework.Event;
 
 /// <summary>
 /// 多语言助手 —— 代码里只出现配表 Id，文案统一从 LanguageConfig 表取
@@ -11,13 +12,13 @@ using UnityEngine;
 /// 配表：Config/Excel/LanguageConfig.xlsx → 导出到 Resources/Config/LanguageConfig.json
 ///       列：Id | (空) | Chinese | English
 ///
-/// 语言暂时写死中文（Current = Chinese），要切语言只改 Current 或调用 SetLanguage。
+/// 当前语言由 PlayerSettingManager 启动时加载，切换后通知界面刷新。
 /// 表里查不到的 Id 会返回 Id 本身并打一次警告，方便发现漏配。
 /// </summary>
 public static class LanguageHelper
 {
-    /// <summary>当前语言（暂时固定中文）</summary>
-    public static E_LanguageEnum Current = E_LanguageEnum.English;
+    /// <summary>当前语言；玩家修改设置通过 PlayerSettingManager 保存。</summary>
+    public static E_LanguageEnum Current { get; private set; } = E_LanguageEnum.Chinese;
 
     private static Dictionary<string, LanguageConfig> _table;
     private static readonly HashSet<string> _missingLogged = new();
@@ -25,7 +26,9 @@ public static class LanguageHelper
     /// <summary>切换语言（表里加列后在这里补映射即可）</summary>
     public static void SetLanguage(E_LanguageEnum language)
     {
+        if (Current == language) return;
         Current = language;
+        EventManager.Instance.Dispatch(E_EventEnum.OnLanguageChanged);
     }
 
     /// <summary>取文案（不含格式化参数）</summary>

@@ -219,6 +219,56 @@ RectTransform:
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
+--- !u!1 &941000000000001000
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 941000000000001001}
+  - component: {fileID: 941000000000001002}
+  m_Layer: 5
+  m_Name: FadeRoot
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!224 &941000000000001001
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 941000000000001000}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 5727213638400663788}
+  - {fileID: 2145284739039590328}
+  m_Father: {fileID: 5958778965471466849}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0.5, y: 0.5}
+  m_AnchorMax: {x: 0.5, y: 0.5}
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: 0, y: 0}
+  m_Pivot: {x: 0.5, y: 0.5}
+--- !u!225 &941000000000001002
+CanvasGroup:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 941000000000001000}
+  m_Enabled: 1
+  m_Alpha: 1
+  m_Interactable: 1
+  m_BlocksRaycasts: 1
+  m_IgnoreParentGroups: 0
 --- !u!1 &973126934401127839
 GameObject:
   m_ObjectHideFlags: 0
@@ -253,7 +303,7 @@ RectTransform:
   - {fileID: 2870556189754586886}
   - {fileID: 295141676417456433}
   - {fileID: 2653574264278722714}
-  m_Father: {fileID: 5958778965471466849}
+  m_Father: {fileID: 941000000000001001}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
@@ -336,6 +386,7 @@ GameObject:
   - component: {fileID: -1384820021144630060}
   - component: {fileID: 5471086313736653306}
   - component: {fileID: 5621538257560833814}
+  - component: {fileID: 941000000000001004}
   m_Layer: 5
   m_Name: MenuPanel
   m_TagString: Untagged
@@ -356,8 +407,7 @@ RectTransform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 6587390541792186031}
-  - {fileID: 5727213638400663788}
-  - {fileID: 2145284739039590328}
+  - {fileID: 941000000000001001}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
@@ -389,6 +439,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6ca40d482fad9574ea95b546a4ef8b5d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::MenuPanel
+  fadeTarget: {fileID: 941000000000001002}
 --- !u!114 &5621538257560833814
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -418,6 +469,19 @@ MonoBehaviour:
     fieldName: btnClose
     typeName: 
     component: {fileID: 4596613043716145034}
+--- !u!114 &941000000000001004
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1767824909306962847}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 13ac65312e574bda9c82b777880ce0b1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Framework.UI.PanelBackdrop
+  background: {fileID: 941000000000001003}
 --- !u!1 &4446121447458276928
 GameObject:
   m_ObjectHideFlags: 0
@@ -454,7 +518,7 @@ RectTransform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 920000000000000003}
-  m_Father: {fileID: 5958778965471466849}
+  m_Father: {fileID: 941000000000001001}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
@@ -626,6 +690,7 @@ GameObject:
   - component: {fileID: 6587390541792186031}
   - component: {fileID: 3236294026701988389}
   - component: {fileID: 5279523760200184466}
+  - component: {fileID: 941000000000001003}
   m_Layer: 5
   m_Name: bg
   m_TagString: Untagged
@@ -690,6 +755,18 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
+--- !u!225 &941000000000001003
+CanvasGroup:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5442575966076856943}
+  m_Enabled: 1
+  m_Alpha: 1
+  m_Interactable: 1
+  m_BlocksRaycasts: 1
+  m_IgnoreParentGroups: 0
 --- !u!1001 &1759171415450462826
 PrefabInstance:
   m_ObjectHideFlags: 0

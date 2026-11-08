@@ -66,6 +66,10 @@
     {"Id": "ui_beginbuild_seed_placeholder", "Chinese": "可输入固定种子", "English": "Enter a fixed seed"},
     {"Id": "ui_level_copy_seed", "Chinese": "复制种子", "English": "Copy seed"},
     {"Id": "ui_littleshop_tip", "Chinese": "可以选择一张牌进行购买", "English": "Select a card to buy"},
-    {"Id": "ui_littleshop_skip", "Chinese": "跳过", "English": "Skip"}
+    {"Id": "ui_littleshop_skip", "Chinese": "跳过", "English": "Skip"},
+    {"Id": "ui_settings_localization", "Chinese": "本地化", "English": "Localization"},
+    {"Id": "ui_settings_language", "Chinese": "语言", "English": "Language"},
+    {"Id": "ui_settings_video", "Chinese": "视频", "English": "Video"},
+    {"Id": "ui_settings_full_screen", "Chinese": "全屏模式", "English": "Full screen"}
   ]
 }

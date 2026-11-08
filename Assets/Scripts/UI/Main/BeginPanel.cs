@@ -5,13 +5,20 @@ using UnityEngine;
 
 public partial class BeginPanel : NormalPanel
 {
+    protected override bool FadeInOnOpen => true;
+    protected override bool FadeOutOnClose => true;
+
     private const string GameSceneName = "CardGameScene";
+
+    private PanelBackdrop Backdrop => GetComponent<PanelBackdrop>();
 
     protected override void OnOpen()
     {
+        Backdrop.Show(false);
         comps.btnStart.onClick.AddListener(OnClickStart);
         comps.btnContinue.onClick.AddListener(OnClickContinue);
         comps.btnQuit.onClick.AddListener(OnClickQuit);
+        comps.btnSetting.onClick.AddListener(OnClickSettings);
 
         RefreshContinueButton();
         RefreshVersion();
@@ -19,6 +26,7 @@ public partial class BeginPanel : NormalPanel
 
     protected override void OnShow()
     {
+        Backdrop.Show(false);
         RefreshContinueButton();
         RefreshVersion();
     }
@@ -30,9 +38,11 @@ public partial class BeginPanel : NormalPanel
 
     protected override void OnClose()
     {
+        Backdrop.Hide(false);
         comps.btnStart.onClick.RemoveListener(OnClickStart);
         comps.btnContinue.onClick.RemoveListener(OnClickContinue);
         comps.btnQuit.onClick.RemoveListener(OnClickQuit);
+        comps.btnSetting.onClick.RemoveListener(OnClickSettings);
     }
 
     private void RefreshVersion()
@@ -63,6 +73,8 @@ public partial class BeginPanel : NormalPanel
         CardGameEntry.RequestNewRun = false;
         SceneController.Instance.LoadScene(GameSceneName, CloseSelf);
     }
+
+    private void OnClickSettings() => SettingsPanel.OpenFrom(this);
 
     private void OnClickQuit()
     {

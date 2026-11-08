@@ -178,7 +178,10 @@ namespace Framework.UI
         /// <summary>
         /// 显示面板（从 UIConfig 查路径和层级，优先从缓存取）
         /// </summary>
-        public T Show<T>() where T : BasePanel
+        public T Show<T>() where T : BasePanel => Show<T>(null);
+
+        /// <summary>在生命周期回调及动画开始前配置面板。</summary>
+        public T Show<T>(System.Action<T> configure) where T : BasePanel
         {
             if (!UIConfig.TryGet<T>(out var info))
             {
@@ -188,6 +191,7 @@ namespace Framework.UI
 
             if (_panelCache.TryGetValue(info.PrefabPath, out var cachedPanel))
             {
+                configure?.Invoke(cachedPanel as T);
                 cachedPanel.ShowInternal();
                 return cachedPanel as T;
             }
@@ -199,7 +203,7 @@ namespace Framework.UI
                 return null;
             }
 
-            return CreatePanel<T>(info, prefab);
+            return CreatePanel<T>(info, prefab, configure);
         }
 
         /// <summary>
@@ -236,7 +240,7 @@ namespace Framework.UI
             });
         }
 
-        private T CreatePanel<T>(UIPanelInfo info, GameObject prefab) where T : BasePanel
+        private T CreatePanel<T>(UIPanelInfo info, GameObject prefab, System.Action<T> configure = null) where T : BasePanel
         {
             if (!_layers.TryGetValue(info.Layer, out var parent))
             {
@@ -263,6 +267,7 @@ namespace Framework.UI
             if (canvas != null)
                 canvas.sortingOrder = (int)info.Layer;
 
+            configure?.Invoke(panel);
             panel.OpenInternal();
             PushPopup(panel);
             return panel;
@@ -273,23 +278,27 @@ namespace Framework.UI
         /// <summary>
         /// 隐藏面板（SetActive(false)，保留缓存，下次 Show 直接打开）
         /// </summary>
-        public void Hide(BasePanel panel)
+        public void Hide(BasePanel panel, System.Action onHidden = null)
         {
             if (panel == null) return;
             PopPopup(panel);
-            panel.HideInternal();
+            panel.HideInternal(onHidden);
         }
 
         /// <summary>
         /// 永久关闭面板（从缓存移除并销毁）
         /// </summary>
-        public void Close(BasePanel panel)
+        public void Close(BasePanel panel, System.Action onClosed = null)
         {
             if (panel == null) return;
             PopPopup(panel);
-            panel.CloseInternal();
-            _panelCache.Remove(panel.PrefabPath);
-            Object.Destroy(panel.gameObject);
+            panel.CloseInternal(() =>
+            {
+                if (_panelCache.TryGetValue(panel.PrefabPath, out var cached) && cached == panel)
+                    _panelCache.Remove(panel.PrefabPath);
+                Object.Destroy(panel.gameObject);
+                onClosed?.Invoke();
+            });
         }
 
         /// <summary>
@@ -356,7 +365,7 @@ namespace Framework.UI
             {
                 if (panel == null) continue;
 
-                panel.CloseInternal();          // 触发 OnClose，解除事件监听
+                panel.CloseInternal(immediate: true); // 框架销毁不等待动画
                 Object.Destroy(panel.gameObject);
             }
         }
