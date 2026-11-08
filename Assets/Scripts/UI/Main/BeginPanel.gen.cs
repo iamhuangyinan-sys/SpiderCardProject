@@ -13,6 +13,9 @@ public partial class BeginPanel
     [System.Serializable]
     public class CompsData : CompsDataBase
     {
+        public Image imgLogo;
+        public Button btnAbout;
+        public Image imgBtnPanel;
         public Button btnContinue;
         public Button btnStart;
         public Button btnSetting;

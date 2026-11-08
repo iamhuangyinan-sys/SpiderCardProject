@@ -13,8 +13,8 @@ public partial class MenuPanel
     [System.Serializable]
     public class CompsData : CompsDataBase
     {
+        public Button btnSettings;
         public Button btnSaveReturn;
-        public Button btnSetting;
         public Button btnSaveQuit;
         public Button btnClose;
     }

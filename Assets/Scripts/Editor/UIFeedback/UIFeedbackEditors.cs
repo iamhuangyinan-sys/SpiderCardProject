@@ -80,22 +80,35 @@ public sealed class UIFeedbackButtonEditor : Editor
         else if (effect is UIOffsetEffect) effectTarget = button.transform.Find("ScaleRoot/BreatheRoot/Surface") as RectTransform;
         else if (effect is UIShadowEffect)
         {
-            var node = button.transform.Find("ScaleRoot/BreatheRoot/Shadow");
+            var node = button.transform.Find("ScaleRoot/BreatheRoot/Shadow")
+                ?? button.transform.Find("ScaleRoot/BreatheRoot/img_Shadow");
             if (node != null) effectTarget = node.GetComponent<Image>();
         }
         else if (effect is UIColorEffect) effectTarget = button.targetGraphic;
         else if (effect is UIRaiseEffect) effectTarget = button.transform;
         else if (effect is UIOutlineEffect && button.targetGraphic != null)
         {
-            var outline = button.targetGraphic.GetComponent<Outline>();
-            if (outline == null)
+            var background = button.targetGraphic.transform;
+            var parent = background == button.transform ? background : background.parent;
+            var node = parent.Find("OutlineVisual");
+            if (node == null)
             {
-                outline = Undo.AddComponent<Outline>(button.targetGraphic.gameObject);
-                outline.effectColor = Color.clear;
-                outline.effectDistance = new Vector2(2f, 2f);
-                PrefabUtility.RecordPrefabInstancePropertyModifications(outline);
+                var go = new GameObject("OutlineVisual", typeof(RectTransform), typeof(Image));
+                Undo.RegisterCreatedObjectUndo(go, "Create Outline Visual");
+                go.layer = button.gameObject.layer;
+                go.transform.SetParent(parent, false);
+                go.transform.SetSiblingIndex(background == parent ? 0 : background.GetSiblingIndex() + 1);
+                var rect = go.GetComponent<RectTransform>();
+                rect.anchorMin = Vector2.zero;
+                rect.anchorMax = Vector2.one;
+                rect.sizeDelta = Vector2.zero;
+                var image = go.GetComponent<Image>();
+                image.color = Color.clear;
+                image.raycastTarget = false;
+                image.type = Image.Type.Sliced;
+                node = go.transform;
             }
-            effectTarget = outline;
+            effectTarget = node.GetComponent<Image>() ?? Undo.AddComponent<Image>(node.gameObject);
         }
         if (effectTarget == null) return;
         var data = new SerializedObject(effect);
@@ -162,6 +175,9 @@ public sealed class UIFeedbackControllerEditor : Editor
             if (!effect.enabled) continue;
             var bindings = new List<UIFeedbackBinding>();
             effect.CollectBindings(bindings);
+            if (effect is UIOutlineEffect && bindings.Count > 0 &&
+                bindings[0].Target is Image outlineImage && outlineImage.sprite == null)
+                EditorGUILayout.HelpBox("描边轮廓图尚未设置：请在 OutlineVisual 的 Image 上指定 Source Image。留空时不显示。", MessageType.Info);
             if (bindings.Count == 0 && !(effect is UIRaiseEffect))
                 EditorGUILayout.HelpBox(effect.GetType().Name + " 尚未指定 Target。", MessageType.Warning);
             foreach (var binding in bindings)

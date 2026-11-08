@@ -33,10 +33,10 @@ public static class CardAnimationHelper
     public const int FlipSortingOffset = 10000;
 
     /// <summary>发光目标透明度</summary>
-    public const float GlowAlpha = 0.9f;
+    public const float GlowAlpha = 1.0f;
 
     /// <summary>投影目标透明度</summary>
-    public const float ShadowAlpha = 0.8f;
+    public const float ShadowAlpha = 0.6f;
 
     /// <summary>抓起时牌串整体的左上偏移</summary>
     public static readonly Vector3 LiftOffset = new Vector3(-0.1f, 0.125f, 0f);

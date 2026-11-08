@@ -174,7 +174,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 1, y: 0.5}
   m_AnchorMax: {x: 1, y: 0.5}
-  m_AnchoredPosition: {x: 815.2091, y: 495.47}
+  m_AnchoredPosition: {x: 805, y: 495.47}
   m_SizeDelta: {x: 240.6203, y: 70}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &3190120432726847290
@@ -350,7 +350,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 518.0851, y: 495.47}
+  m_AnchoredPosition: {x: 510, y: 495.47}
   m_SizeDelta: {x: 249.8188, y: 70}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &5849613688138204980
@@ -608,16 +608,16 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 21300000, guid: d1a46d00ae5b55e41ba77b142c623aeb, type: 3}
     - target: {fileID: 1606151811898266790, guid: b1a8eafed9d6d0e49873d45c17e0bc25, type: 3}
+      propertyPath: hovered
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 1606151811898266790, guid: b1a8eafed9d6d0e49873d45c17e0bc25, type: 3}
       propertyPath: duration
       value: 0.1
       objectReference: {fileID: 0}
     - target: {fileID: 1606151811898266790, guid: b1a8eafed9d6d0e49873d45c17e0bc25, type: 3}
       propertyPath: m_Enabled
       value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 1606151811898266790, guid: b1a8eafed9d6d0e49873d45c17e0bc25, type: 3}
-      propertyPath: hovered
-      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 3083820975585334242, guid: b1a8eafed9d6d0e49873d45c17e0bc25, type: 3}
       propertyPath: m_Name
@@ -886,16 +886,16 @@ PrefabInstance:
       value: 99
       objectReference: {fileID: 0}
     - target: {fileID: 1606151811898266790, guid: b1a8eafed9d6d0e49873d45c17e0bc25, type: 3}
+      propertyPath: hovered
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 1606151811898266790, guid: b1a8eafed9d6d0e49873d45c17e0bc25, type: 3}
       propertyPath: duration
       value: 0.1
       objectReference: {fileID: 0}
     - target: {fileID: 1606151811898266790, guid: b1a8eafed9d6d0e49873d45c17e0bc25, type: 3}
       propertyPath: m_Enabled
       value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 1606151811898266790, guid: b1a8eafed9d6d0e49873d45c17e0bc25, type: 3}
-      propertyPath: hovered
-      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 3083820975585334242, guid: b1a8eafed9d6d0e49873d45c17e0bc25, type: 3}
       propertyPath: m_Name

@@ -15,7 +15,7 @@
 
 也可以自行添加 `UIFeedbackButton`，它会通过 RequireComponent 自动添加 Controller。在它的 Inspector 中勾选效果即可自动添加组件；自建层级需要在效果组件上手动指定 Target，缩放与呼吸要使用不同节点。勾选框反映实际组件是否存在，手动添加的效果也会显示为已勾选。
 
-取消勾选会移除该类型的所有效果组件（包括多个 UIColorEffect）并丢弃其参数，可通过 Undo 撤销。如果只想暂时关闭效果并保留参数，使用效果组件自己的启用开关。增删效果在编辑模式、停止预览后操作；没有选择阴影时，菜单生成的 Shadow 图片保持透明。描边首次勾选时会按需补充原生 Outline，移除描边效果后保留这个基础组件。
+取消勾选会移除该类型的所有效果组件（包括多个 UIColorEffect）并丢弃其参数，可通过 Undo 撤销。如果只想暂时关闭效果并保留参数，使用效果组件自己的启用开关。增删效果在编辑模式、停止预览后操作；没有选择阴影时，菜单生成的 Shadow 图片保持透明。描边首次勾选时会创建或绑定 OutlineVisual 的 Image，移除效果后保留轮廓节点。Source Image 留空时保持透明，后续自行指定轮廓 Sprite。
 
 ## 分工与挂载
 
@@ -27,7 +27,8 @@ btn_Feedback  [Image 透明点击区域、UIFeedbackButton、Controller、各效
    └─ BreatheRoot         ← UIBreathingEffect
       ├─ Shadow           ← UIShadowEffect；独立 Image
       └─ Surface          ← UIOffsetEffect
-         ├─ Background    ← UIOutlineEffect 指向这里的 Outline；UIColorEffect 指向 Image
+         ├─ Background    ← UIColorEffect
+         ├─ OutlineVisual ← UIOutlineEffect，独立 Image
          └─ Content       [HorizontalLayoutGroup]
             └─ Label      [TextMeshProUGUI]
 ```
@@ -38,7 +39,7 @@ btn_Feedback  [Image 透明点击区域、UIFeedbackButton、Controller、各效
 | --- | --- |
 | UIScaleEffect | 各状态倍率相对于目标初始 localScale；不假设初始缩放一定是 1 |
 | UIOffsetEffect | 各状态位移加在目标初始 anchoredPosition 上；目标不要交给 LayoutGroup 直接布局 |
-| UIOutlineEffect | 指向已挂好的原生 Outline；各状态设置绝对颜色和距离；Outline 保持启用，以颜色 Alpha 控制显隐 |
+| UIOutlineEffect | 指向独立轮廓 Image；各状态设置 Color、Padding（每侧外扩）和 Offset（偏移）；实际线条粗细由 Sprite 决定 |
 | UIShadowEffect | 指向独立 Image；offset 是该阴影的 anchoredPosition，extraSize 加在初始 sizeDelta 上，color 是绝对颜色 |
 | UIBreathingEffect | 只有 Attention 为 true 且状态为 Normal 时播放；Min / Max 是相对于初始缩放的倍率，Half Cycle 是半个周期 |
 | UIColorEffect | 与 Graphic 初始颜色相乘，白色保留原色；可以挂多个组件，分别调背景、文字和图标 |
@@ -92,7 +93,7 @@ LevelBtnModule                 ← UIRaiseEffect 的 Target，仍是地图定位
          └─ img_Arrow          ← 原来的玩家位置箭头
 ```
 
-业务调用 SetAttention 决定是否呼吸；悬停/按下/禁用时停止呼吸，重新空闲后恢复。没有增加描边、阴影、位移或通用变色。
+业务调用 SetAttention 决定是否呼吸；悬停/按下/禁用时停止呼吸，重新空闲后恢复。关卡不使用描边、位移或通用变色；悬停阴影复用当前 Icon。
 
 关卡按钮的 UIScaleEffect 和 UIRaiseEffect 均开启 `Hover When Disabled`：未解锁、已走过和地图查看中的不可点击关卡，鼠标移入仍放大并提层，移出后恢复。它们的交互状态始终保持 Disabled，不能点击，也不呼吸，业务亮/灰颜色保持不变。其它按钮默认关闭此开关。
 
@@ -118,9 +119,33 @@ LevelBtnModule                 ← UIRaiseEffect 的 Target，仍是地图定位
 | ShopCardItem | 原有居中的视觉容器，包含价格 | 1.3 |
 | ShowCardItem | 原有 mod_Card 视觉目标 | 1.4 |
 
-普通按钮使用 UIFeedbackButton + Controller + Scale/Raise/Color。可见 Image 和内容移到内部视觉层，根节点使用透明点击区域；原 Button、图标、文字及 UIBinder 的组件标识保持不变。UIColorEffect 承接原有 Button Color Tint 的状态颜色；没有额外添加阴影、描边或呼吸。
+普通按钮初次迁移使用 UIFeedbackButton + Controller + Scale/Raise/Color。可见 Image 和内容移到内部视觉层，根节点使用透明点击区域；原 Button、图标、文字及 UIBinder 的组件标识保持不变。UIColorEffect 承接原有 Button Color Tint 的状态颜色；后续单独调整的按钮以实际效果组件配置为准。
+
+BeginBuildPanel 的 btn_Left / btn_Right、ShopPanel 的 btn_Continue / btn_DeleteCard、LittleShopPanel 的 btn_Skip 已按 btn_Check 配置为 Scale/Raise/Shadow，不再额外变色。缩放过渡为 0.1 秒、OutBack，普通/按下/焦点/禁用倍率为 1，悬停为 1.3。阴影复用各按钮自身图标，配置与 btn_Check 一致；Reference Target 绑定可见 Background，删除按钮使用 DelIcon，不包含价格和次数文字，跳过按钮也只参考自身图标。新增 Shadow 在 BreatheRoot 下位于 Surface 之前，关闭 Raycast Target。
 
 IconInfoModule 订阅 Controller.HoverChanged 控制提示；不可交互时停止悬停并收起提示。提示对齐到实际缩放后的图标。MainTopPanel 中的五个嵌套实例随共享预制体更新，两处自定义缩放覆盖也已迁移到新字段。
 
 两个卡牌格使用 Controller + Scale/Raise，由 CardModule.OnHoverChanged 驱动 SetHovered，不在外层挂 FeedbackButton 或 HoverInput。展示牌可以保持不可点击，同时仍然悬停放大、查看提示。列表激活/回收时 ResetFeedback；商店购买飞行开始时先复位并停止接收悬停变化，避免干扰飞行动画。
+
+
+## 轮廓图片配置
+
+通用 Button 的原生 Outline 已迁移为独立 OutlineVisual 子节点，Target 已绑定，Source Image 留空。请在 Image 上指定透明背景的轮廓 Sprite；需要通过状态染色时使用白色轮廓图。矩形框可使用 Sliced 与九宫格资源，不规则图案可改用 Simple。节点的 Raycast Target 关闭，排序位于背景之后、文字/箭头之前。Sprite 留空时运行与预览都不显示，Inspector 会提示待配置。原来的 Distance 已迁移为 Padding；Padding 每侧增加对应距离，不代表图中线条宽度。
+
+
+### 关卡按钮不使用描边
+
+LevelBtnModule 已移除轮廓节点、UIOutlineEffect 和对应绑定，LevelResManager 只加载 IconImage。关卡保留缩放、呼吸、提层、悬停阴影、亮灰状态和悬停提示，不读取轮廓配表或资源。通用按钮的可选描边组件仍可单独使用。
+
+### 关卡阴影与提示间距
+
+LevelBtnModule 的 img_Shadow 位于 BreatheRoot 下、Background 之前，图案在绑定时复用当前 Icon Sprite，无需配表或额外阴影资源。只有可选关卡悬停时显示阴影，普通、按下、焦点和禁用状态透明；不可选关卡仍可悬停缩放、提层，但不显示阴影。参数在 btn_Level 的 UIShadowEffect 中调，Hover When Disabled 保持关闭。模块上的 Tip Extra Gap 默认6，通过 HoverTipHelper 的 extraGap 增加提示框间距。
+
+### 卡牌列表的悬停阴影
+
+ShopCardItem 和 ShowCardItem 均挂载 UIShadowEffect，使用 Assets/ArtRes/Img/Cards/cardShadow.png（Sliced）。普通状态透明，悬停时为黑色、Alpha 0.5，偏移(6,-6)，过渡0.1秒；移出或回收时隐藏。Shadow 关闭 Raycast Target，在牌面之前绘制，并跟随原有缩放。展示牌新增 ScaleRoot 包裹牌面与阴影，商店格使用原有视觉 root。无需新增业务输入；购买飞行沿用现有 ResetFeedback 清理阴影。
+
+### 指定阴影参考对象
+
+UIShadowEffect 新增可选的 Reference Target。指定时，在阴影父节点坐标系中计算参考对象的位置和尺寸，并叠加 Offset / Extra Size；LateUpdate 跟随布局和缩放，避免共同父节点的缩放重复计算。留空时保持旧的 anchoredPosition / 初始 sizeDelta 逻辑。ShopCardItem 已绑定内部 mod_Card 的 RectTransform，不再以包含价格的外层格子确定阴影范围。颜色仍为黑色 Alpha 0.5。复位或购买飞行时停止跟随并恢复原值。
 

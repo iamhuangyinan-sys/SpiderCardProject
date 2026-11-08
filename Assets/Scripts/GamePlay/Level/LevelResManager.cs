@@ -29,18 +29,20 @@ public class LevelResManager : ManagerBase<LevelResManager>
         _iconPaths.Clear();
     }
 
-    /// <summary>读 LevelTypeConfig → 异步预加载全部关卡类型图标</summary>
+    /// <summary>读 LevelTypeConfig，同步预热全部关卡类型图标。</summary>
     private void PreloadIcons()
     {
         foreach (var cfg in ConfigHelper.GetAll<LevelTypeConfig>())
         {
-            if (cfg == null || string.IsNullOrEmpty(cfg.IconImage)) continue;
+            if (cfg == null) continue;
             if (!int.TryParse(cfg.Id, out int type)) continue;
 
-            string path = IconRoot + cfg.IconImage;
-            _iconPaths[type] = path;
-
-            ResManager.Instance.Load<Sprite>(path);  // 预热，之后 GetIcon 直接命中缓存
+            if (!string.IsNullOrWhiteSpace(cfg.IconImage))
+            {
+                string path = IconRoot + cfg.IconImage.Trim();
+                _iconPaths[type] = path;
+                ResManager.Instance.Load<Sprite>(path);
+            }
         }
     }
 
@@ -50,4 +52,5 @@ public class LevelResManager : ManagerBase<LevelResManager>
 
     /// <summary>取类型图标（枚举版本）</summary>
     public Sprite GetIcon(E_LevelTypeEnum levelType) => GetIcon((int)levelType);
+
 }

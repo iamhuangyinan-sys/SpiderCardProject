@@ -87,6 +87,13 @@ public static class UIFeedbackButtonMenu
         background.color = new Color(0.22f, 0.6f, 0.215f);
         background.raycastTarget = false;
 
+        var outlineRect = Child("OutlineVisual", surface);
+        outlineRect.SetSiblingIndex(backgroundRect.GetSiblingIndex() + 1);
+        var outlineImage = outlineRect.gameObject.AddComponent<Image>();
+        outlineImage.color = Color.clear;
+        outlineImage.raycastTarget = false;
+        outlineImage.type = Image.Type.Sliced;
+
         var layout = content.gameObject.AddComponent<HorizontalLayoutGroup>();
         layout.childAlignment = TextAnchor.MiddleCenter;
         layout.childControlWidth = layout.childControlHeight = true;

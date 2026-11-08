@@ -16,6 +16,8 @@ public partial class LevelBtnModule : BaseModule, IPointerEnterHandler, IPointer
 {
     /// <summary>提示框首选方向（放不下会自动换方向）</summary>
     [SerializeField] private E_TipDirection tipDirection = E_TipDirection.Up;
+    [SerializeField, Min(0f), Tooltip("提示框额外间距，Canvas 单位")]
+    private float tipExtraGap = 6f;
 
     /// <summary>
     /// 点击回调 —— 由 LevelPanel 赋值。
@@ -81,12 +83,14 @@ public partial class LevelBtnModule : BaseModule, IPointerEnterHandler, IPointer
         RefreshState();
     }
 
-    /// <summary>刷新关卡类型图标（走 LevelResManager → ResManager 缓存）</summary>
+    /// <summary>按关卡类型刷新图标。</summary>
     private void RefreshIcon()
     {
-        if (_cfg == null || _imgIcon == null) return;
-
-        _imgIcon.sprite = LevelResManager.Instance.GetIcon(_cfg.LevelType);
+        var sprite = _cfg != null ? LevelResManager.Instance.GetIcon(_cfg.LevelType) : null;
+        if (_imgIcon != null)
+            _imgIcon.sprite = sprite;
+        if (comps.imgShadow != null)
+            comps.imgShadow.sprite = sprite;
     }
 
     /// <summary>当前绑定的关卡 id（未绑定时为 null）</summary>
@@ -187,7 +191,7 @@ public partial class LevelBtnModule : BaseModule, IPointerEnterHandler, IPointer
             : (RectTransform)transform;
 
         // 关卡提示不写标题（普通关 / 商店关 / BOSS 关都不标注自己），信息全写在正文里
-        HoverTipHelper.Show(this, null, BuildTipContent(_cfg), target, tipDirection);
+        HoverTipHelper.Show(this, null, BuildTipContent(_cfg), target, tipDirection, tipExtraGap);
     }
 
     /// <summary>
