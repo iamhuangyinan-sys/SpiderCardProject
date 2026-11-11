@@ -60,12 +60,12 @@ public class LevelManager : ManagerBase<LevelManager>
     }
 
     /// <summary>先生成成功再替换当前地图，避免错误参数破坏正在玩的局。</summary>
-    public bool TryCreateRunMap(int deckCount, int? requestedSeed = null)
+    public bool TryCreateRunMap(int deckCount, int difficulty, int? requestedSeed = null)
     {
         try
         {
             int seed = requestedSeed ?? System.Guid.NewGuid().GetHashCode();
-            var map = LevelGenerationHelper.Generate(seed, deckCount);
+            var map = LevelGenerationHelper.Generate(seed, deckCount, difficulty);
             ApplyLevels(map.levels);
             LevelStore.Instance.map = map;
             ShopManager.Instance.ResetForNewRun();

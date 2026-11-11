@@ -10,6 +10,7 @@ using System.Collections.Generic;
 [System.Serializable]
 public class RunSaveData
 {
+    public string difficultyId;
     /// <summary>完整地图快照，续玩必须具备有效地图。</summary>
     public RunMapData map;
     public int pendingLevelReward;

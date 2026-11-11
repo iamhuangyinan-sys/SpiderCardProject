@@ -12,6 +12,7 @@ public partial class MainTopPanel : NormalPanel
 
     protected override void OnOpen()
     {
+        EventManager.Instance.AddListener(E_EventEnum.OnLanguageChanged, RefreshDifficultyInfo);
         EventManager.Instance.AddListener(E_EventEnum.OnStraightCountChanged, RefreshProgress);
         EventManager.Instance.AddListener(E_EventEnum.OnLevelStart, OnLevelStart);
         EventManager.Instance.AddListener(E_EventEnum.OnCardsCollected, OnLevelEnd);
@@ -26,12 +27,14 @@ public partial class MainTopPanel : NormalPanel
 
         RefreshLevelInfo();
         RefreshCoinInfo();
+        RefreshDifficultyInfo();
         SetProgressVisible(false);   // 选关状态不显示进度
         SetMapButtonVisible(false);  // 选关界面本身就是地图，默认藏起来
     }
 
     protected override void OnShow()
     {
+        RefreshDifficultyInfo();
         RefreshProgress();
         RefreshLevelInfo();
         RefreshCoinInfo();
@@ -44,6 +47,7 @@ public partial class MainTopPanel : NormalPanel
 
     protected override void OnClose()
     {
+        EventManager.Instance.RemoveListener(E_EventEnum.OnLanguageChanged, RefreshDifficultyInfo);
         EventManager.Instance.RemoveListener(E_EventEnum.OnStraightCountChanged, RefreshProgress);
         EventManager.Instance.RemoveListener(E_EventEnum.OnLevelStart, OnLevelStart);
         EventManager.Instance.RemoveListener(E_EventEnum.OnCardsCollected, OnLevelEnd);
@@ -140,5 +144,16 @@ public partial class MainTopPanel : NormalPanel
     private void RefreshCoinInfo()
     {
         comps.modCoinInfo.SetInfo(RunManager.Instance.Coin.ToString());
+    }
+
+    public void RefreshDifficultyInfo()
+    {
+        bool visible = RunManager.Instance.HasStarted;
+        comps.modDifficultyInfo.gameObject.SetActive(visible);
+        if (!visible) return;
+        string id = RunManager.Instance.DifficultyId;
+        comps.modDifficultyInfo.SetInfo(DifficultyHelper.GetNumber(id));
+        var tip = DifficultyHelper.GetTip(id);
+        comps.modDifficultyInfo.SetTip(tip.Title, tip.Content);
     }
 }

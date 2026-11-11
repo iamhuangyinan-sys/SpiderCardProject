@@ -144,7 +144,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5c43835b509b0d74d8e21fe342fb30e9, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::HoverTipItemModule
-  maxContentWidth: 420
+  maxContentWidth: 460
   shadowOffset: {x: 9, y: -11}
   shadowPadding: {x: 0, y: 0}
 --- !u!114 &899982067975106667

@@ -70,9 +70,9 @@ public class CardGameEntry : MonoBehaviour
         ConsoleEntryPanel.ShowInEditor();
     }
 
-    private bool OnConfirmBeginBuild(string id, int? seed)
+    private bool OnConfirmBeginBuild(string id, string difficultyId, int? seed)
     {
-        if (!RunManager.Instance.StartNewRun(id, seed)) return false;
+        if (!RunManager.Instance.StartNewRun(id, difficultyId, seed)) return false;
         CardGameModule.Instance.SaveRun();
         // Hide 才会播放 NormalPanel 的退出动画；切场景时再 Close 释放资源。
         if (_beginBuildPanel != null) UIManager.Instance.Hide(_beginBuildPanel);
@@ -81,6 +81,7 @@ public class CardGameEntry : MonoBehaviour
         {
             _mainTopPanel.SetCardBuildButtonVisible(true);
             _mainTopPanel.RefreshLevelInfo();
+            _mainTopPanel.RefreshDifficultyInfo();
         }
         ShowLevelSelect();
         return true;

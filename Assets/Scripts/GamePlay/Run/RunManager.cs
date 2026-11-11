@@ -17,6 +17,7 @@ public class RunManager : ManagerBase<RunManager>
     public IReadOnlyList<CardDef> Deck => RunStore.Instance.deck;
 
     public bool HasStarted => RunStore.Instance.hasStarted;
+    public string DifficultyId => RunStore.Instance.difficultyId;
 
     protected override void OnInit() { }
 
@@ -25,11 +26,14 @@ public class RunManager : ManagerBase<RunManager>
     // ==================== 一大局生命周期 ====================
 
     /// <summary>确认初始牌组后开始新的一大局；配方无效时保留原有状态。</summary>
-    public bool StartNewRun(string beginBuildId, int? seed = null)
+    public bool StartNewRun(string beginBuildId, string difficultyId, int? seed = null)
     {
-        if (!BeginBuildHelper.TryBuild(beginBuildId, out var deck)) return false;
-        if (!LevelManager.Instance.TryCreateRunMap(deck.Count, seed)) return false;
+        if (string.IsNullOrEmpty(difficultyId) || ConfigHelper.Get<DifficultyConfig>(difficultyId) == null) return false;
+        if (!BeginBuildHelper.TryBuild(beginBuildId, difficultyId, out var deck)) return false;
+        int difficulty = int.Parse(difficultyId, System.Globalization.CultureInfo.InvariantCulture);
+        if (!LevelManager.Instance.TryCreateRunMap(deck.Count, difficulty, seed)) return false;
         RunStore.Instance.Reset();
+        RunStore.Instance.difficultyId = difficultyId;
         foreach (var def in deck) RunStore.Instance.deck.Add(def.Clone());
         RunStore.Instance.hasStarted = true;
         NotifyCoinChanged();
@@ -103,6 +107,7 @@ public class RunManager : ManagerBase<RunManager>
         var store = RunStore.Instance;
 
         data.coin = store.coin;
+        data.difficultyId = store.difficultyId;
         data.deck.Clear();
         data.deck.AddRange(store.deck);
     }
@@ -114,6 +119,7 @@ public class RunManager : ManagerBase<RunManager>
         store.Reset();
 
         store.coin = data.coin;
+        store.difficultyId = data.difficultyId;
         if (data.deck != null) store.deck.AddRange(data.deck);
         store.hasStarted = true;
 

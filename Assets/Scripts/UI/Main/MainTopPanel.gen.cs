@@ -17,6 +17,7 @@ public partial class MainTopPanel
         public IconInfoModule modMap;
         public IconInfoModule modCardBuild;
         public IconInfoModule modMenu;
+        public IconInfoModule modDifficultyInfo;
         public IconInfoModule modLevelInfo;
         public IconInfoModule modCoinInfo;
     }

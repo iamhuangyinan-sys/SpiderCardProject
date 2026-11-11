@@ -127,6 +127,10 @@ BeginBuildPanel 的 btn_Left / btn_Right、ShopPanel 的 btn_Continue / btn_Dele
 
 IconInfoModule 订阅 Controller.HoverChanged 控制提示；不可交互时停止悬停并收起提示。提示对齐到实际缩放后的图标。MainTopPanel 中的五个嵌套实例随共享预制体更新，两处自定义缩放覆盖也已迁移到新字段。
 
+IconInfoModule 支持 `SetTip(title, content)` 设置已经本地化的动态提示，优先于 Inspector 的固定提示；标题为空时只显示正文，两者都为空时隐藏提示。调用方在语言改变时重新设置，悬停中的提示会立即刷新；解绑时清理动态内容。MainTopPanel 的难度信息使用此接口，数字显示本局难度，正文按难度顺序用普通换行累计非空描述；难度 1 仅显示正文名称。
+
+BeginBuildPanel 的 btn_DifLeft / btn_DifRight 沿用对应牌组箭头的 Scale/Raise/Shadow 配置，保留自身尺寸与位置。另加 UIColorEffect，仅禁用时以灰色乘原色，其他状态保持原色；首尾按钮通过 interactable 禁用，不循环切换。
+
 两个卡牌格使用 Controller + Scale/Raise，由 CardModule.OnHoverChanged 驱动 SetHovered，不在外层挂 FeedbackButton 或 HoverInput。展示牌可以保持不可点击，同时仍然悬停放大、查看提示。列表激活/回收时 ResetFeedback；商店购买飞行开始时先复位并停止接收悬停变化，避免干扰飞行动画。
 
 

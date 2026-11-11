@@ -1,9 +1,26 @@
 using System.Collections.Generic;
+using System.Globalization;
 
 /// <summary>初始牌组配方。展示和正式开局必须共用此入口，Image 仅用于 UI。</summary>
 public static class BeginBuildHelper
 {
-    public static bool TryBuild(string id, out List<CardDef> deck)
+    public static bool TryBuild(string id, string difficultyId, out List<CardDef> deck)
+    {
+        deck = null;
+        if (!int.TryParse(difficultyId, NumberStyles.None, CultureInfo.InvariantCulture, out int difficulty)
+            || difficulty < 1 || !TryBuildBaseDeck(id, out var cards)) return false;
+
+        if (difficulty >= 2)
+        {
+            if (!CardPreSetHelper.TryGetDef("710001", out var blank, out _)) return false;
+            cards.Add(blank.Clone());
+        }
+
+        deck = cards;
+        return true;
+    }
+
+    private static bool TryBuildBaseDeck(string id, out List<CardDef> deck)
     {
         deck = new List<CardDef>();
         if (string.IsNullOrEmpty(id) || ConfigHelper.Get<BeginBuildConfig>(id) == null) return false;

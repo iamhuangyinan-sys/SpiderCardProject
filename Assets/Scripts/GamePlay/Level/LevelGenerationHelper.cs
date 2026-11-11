@@ -2,10 +2,10 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
-/// <summary>纯数据生成器：不使用 Unity 全局随机、不读取 Store，种子相同则地图相同。</summary>
+/// <summary>纯数据生成器：不读取 Store，相同输入生成相同地图。</summary>
 public static class LevelGenerationHelper
 {
-    public static RunMapData Generate(int seed, int deckCount)
+    public static RunMapData Generate(int seed, int deckCount, int difficulty = 1)
     {
         if (deckCount < 13) throw new ArgumentException("初始牌组不足 13 张");
         // 路线汇合后可能没有同时满足全部前置关卡约束的 Boss 参数，有限重试地图结构。
@@ -13,13 +13,13 @@ public static class LevelGenerationHelper
         InvalidOperationException lastError = null;
         for (int attempt = 0; attempt < 16; attempt++)
         {
-            try { return GenerateAttempt(seed, deckCount, attempt); }
+            try { return GenerateAttempt(seed, deckCount, attempt, difficulty); }
             catch (InvalidOperationException error) { lastError = error; }
         }
         throw new InvalidOperationException("地图生成重试后仍无合法组合，请检查生成参数", lastError);
     }
 
-    private static RunMapData GenerateAttempt(int seed, int deckCount, int attempt)
+    private static RunMapData GenerateAttempt(int seed, int deckCount, int attempt, int difficulty)
     {
         var random = new Random(attempt == 0 ? seed : DeriveSeed(seed, attempt, 3));
         var map = new RunMapData { seed = seed, generatorVersion = LevelGenerationSettings.Version };
@@ -56,6 +56,8 @@ public static class LevelGenerationHelper
         }
 
         float maxNormal = 0;
+        float targetBonus = difficulty >= 3 ? LevelGenerationSettings.Difficulty3TargetBonus : 0;
+        int extraDealCards = difficulty >= 3 ? LevelGenerationSettings.Difficulty3ExtraDealCards : 0;
         foreach (var node in map.levels)
         {
             int layer = Layer(node);
@@ -65,11 +67,15 @@ public static class LevelGenerationHelper
             node.LevelType = isBoss ? (int)E_LevelTypeEnum.Boss : (int)E_LevelTypeEnum.Normal;
             node.LevelEvent = isFirst ? LevelGenerationSettings.FirstEventId : isBoss ? LevelGenerationSettings.BossEventId : 0;
             var nodeRandom = new Random(DeriveSeed(seed, layer * 100 + Index(node), 1));
-            float target = isFirst ? LevelGenerationSettings.FirstTarget : isBoss
-                ? Math.Max(LevelGenerationSettings.BossTarget, maxNormal + LevelGenerationSettings.BossMinimumGap)
-                : LevelGenerationSettings.NormalStartTarget + (layer - 2) * LevelGenerationSettings.NormalLayerGrowth
+            float progress = (float)(layer - 2) / Math.Max(1, layers.Count - 3);
+            float target = isFirst ? LevelGenerationSettings.FirstTarget + targetBonus : isBoss
+                ? Math.Max(LevelGenerationSettings.BossTarget + targetBonus, maxNormal + LevelGenerationSettings.BossMinimumGap)
+                : LevelGenerationSettings.NormalStartTarget
+                    + progress * (LevelGenerationSettings.NormalEndTarget - LevelGenerationSettings.NormalStartTarget)
+                    + targetBonus
                     + LevelGenerationSettings.TierOffsets[Pick(nodeRandom, LevelGenerationSettings.TierWeights)];
-            FillCombat(map, node, nodeRandom, deckCount, target, isFirst, isBoss, maxNormal);
+            FillCombat(map, node, nodeRandom, deckCount, target, isFirst, isBoss, maxNormal,
+                progress, LevelGenerationSettings.FirstScoreLimit + targetBonus, extraDealCards);
             if (!isFirst && !isBoss) maxNormal = Math.Max(maxNormal, node.difficulty);
             var rewards = new Random(DeriveSeed(seed, layer * 100 + Index(node), 2));
             double reward = Math.Max(80, Math.Min(190, 100 + 1.5 * (node.difficulty - 90)));
@@ -77,6 +83,8 @@ public static class LevelGenerationHelper
             reward *= 1 + (rewards.NextDouble() * 2 - 1) * LevelGenerationSettings.RewardJitter;
             node.FinishReward = (int)Math.Round(reward / 5) * 5;
             if (isFirst) node.FinishReward = Math.Max(LevelGenerationSettings.FirstMinimumReward, node.FinishReward);
+            if (difficulty >= 4)
+                node.FinishReward = (int)Math.Round(node.FinishReward * LevelGenerationSettings.Difficulty4RewardMultiplier / 5) * 5;
         }
         if (!Validate(map, out string error)) throw new InvalidOperationException(error);
         return map;
@@ -126,21 +134,22 @@ public static class LevelGenerationHelper
         Math.Abs(GetRowOffset(fromIndex, fromCount) - GetRowOffset(toIndex, toCount)) <= 1f;
 
     private static void FillCombat(RunMapData map, RunLevelData node, Random random, int deckCount,
-        float target, bool first, bool boss, float maxNormal)
+        float target, bool first, bool boss, float maxNormal, float progress, float firstScoreLimit, int extraDealCards)
     {
         var previous = PreviousCombats(map, node).ToList();
         var candidates = new List<RunLevelData>();
         var weights = new List<double>();
-        int layer = Layer(node);
+        bool early = progress <= 0.25f;
+        bool late = progress > 0.5f;
         // 枚举目标/列/槽，避免随机重试碰不到合法组合；发牌轮廓做有限采样。
-        for (int c = first ? 12 : 11; c <= (boss ? 12 : 13); c++)
-        for (int p = first ? 3 : 2; p <= (boss ? 3 : 4); p++)
-        for (int goal = first ? 1 : boss ? 4 : 2; goal <= (first ? 2 : boss ? 5 : 4); goal++)
+        for (int c = first ? 12 : LevelGenerationSettings.MinimumColumns; c <= (boss ? 12 : 13); c++)
+        for (int p = first ? 3 : LevelGenerationSettings.MinimumPockets; p <= (boss ? 3 : 4); p++)
+        for (int goal = first ? 1 : boss ? 4 : 2; goal <= (first ? 2 : boss ? LevelGenerationSettings.MaximumStraightGoal : 4); goal++)
         {
             if (previous.Any(n => Math.Abs(n.ColumnNum - c) > 1 || Math.Abs(n.PocketNum - p) > 1)) continue;
             int goalWeight = first ? (goal == 1 ? 30 : 70) : boss ? (goal == 4 ? 70 : 30)
-                : (layer <= 3 ? LevelGenerationSettings.EarlyGoalWeights : layer <= 4
-                    ? LevelGenerationSettings.MiddleGoalWeights : LevelGenerationSettings.LateGoalWeights)[goal - 2];
+                : (early ? LevelGenerationSettings.EarlyGoalWeights : late
+                    ? LevelGenerationSettings.LateGoalWeights : LevelGenerationSettings.MiddleGoalWeights)[goal - 2];
             if (goalWeight == 0) continue;
             for (int sample = 0; sample < LevelGenerationSettings.CandidateCount / 10; sample++)
             {
@@ -148,14 +157,20 @@ public static class LevelGenerationHelper
                 var candidate = new RunLevelData { ColumnNum = c, PocketNum = p, NeedStraightNum = goal };
                 for (int col = 0; col < c; col++)
                     candidate.initialCards.Add(col < shorts ? 2 : random.Next(first ? 3 : 4, first ? 5 : 6));
+                if (extraDealCards > 0)
+                {
+                    int extra = random.Next(extraDealCards + 1);
+                    for (int card = 0; card < extra; card++)
+                        candidate.initialCards[random.Next(shorts, c)]++;
+                }
                 // 初始生成不依赖事件加牌，留给事件原有流程处理。
                 candidate.initialCards = FitDeal(candidate.initialCards, c, deckCount);
                 candidate.difficulty = Score(candidate, first, boss);
-                if (first && candidate.difficulty > 80) continue;
+                if (first && candidate.difficulty > firstScoreLimit) continue;
                 if (boss && candidate.difficulty < maxNormal + LevelGenerationSettings.BossMinimumGap) continue;
                 double distance = (candidate.difficulty - target) / LevelGenerationSettings.DifficultyTolerance;
-                int baseColumn = first || layer <= 3 ? 13 : boss || layer >= 5 ? 11 : 12;
-                int basePocket = first ? 4 : boss || layer >= 5 ? 2 : 3;
+                int baseColumn = first || early ? 13 : boss || late ? 11 : 12;
+                int basePocket = first ? 4 : boss || late ? 2 : 3;
                 double weight = goalWeight * (c == baseColumn ? 0.7 : 0.15) * (p == basePocket ? 0.7 : 0.15)
                     * Math.Exp(-0.5 * distance * distance);
                 candidates.Add(candidate);

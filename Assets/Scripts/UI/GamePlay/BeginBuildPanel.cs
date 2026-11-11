@@ -11,7 +11,9 @@ public partial class BeginBuildPanel : NormalPanel, ISceneInputBlockPanel
     protected override bool FlyOutOnClose => true;
 
     private const string ItemPath = "Prefab/UI/GamePlay/Module/BeginBuildItemModule";
-    public Func<string, int?, bool> OnConfirm;
+    public Func<string, string, int?, bool> OnConfirm;
+    private List<DifficultyConfig> difficulties;
+    private int difficultyIndex;
     private List<BeginBuildConfig> builds;
     private readonly List<BeginBuildItemModule> items = new();
     private GameObject itemPrefab;
@@ -23,12 +25,14 @@ public partial class BeginBuildPanel : NormalPanel, ISceneInputBlockPanel
     {
         comps.btnLeft.onClick.AddListener(OnLeft);
         comps.btnRight.onClick.AddListener(OnRight);
+        comps.btnDifLeft.onClick.AddListener(OnDifficultyLeft);
+        comps.btnDifRight.onClick.AddListener(OnDifficultyRight);
         comps.btnCheck.onClick.AddListener(OnCheck);
         comps.btnContinue.onClick.AddListener(OnContinue);
-        EventManager.Instance.AddListener(E_EventEnum.OnLanguageChanged, RefreshBuildName);
+        EventManager.Instance.AddListener(E_EventEnum.OnLanguageChanged, RefreshLanguage);
         itemPrefab = ResManager.Instance.Load<GameObject>(ItemPath);
         builds = ConfigHelper.GetAll<BeginBuildConfig>();
-        // TODO: 难度选择，当前沿用预制体中隐藏的 dif 节点。
+        difficulties = DifficultyHelper.GetAll();
         RefreshBuild();
     }
 
@@ -44,9 +48,11 @@ public partial class BeginBuildPanel : NormalPanel, ISceneInputBlockPanel
     {
         comps.btnLeft.onClick.RemoveListener(OnLeft);
         comps.btnRight.onClick.RemoveListener(OnRight);
+        comps.btnDifLeft.onClick.RemoveListener(OnDifficultyLeft);
+        comps.btnDifRight.onClick.RemoveListener(OnDifficultyRight);
         comps.btnCheck.onClick.RemoveListener(OnCheck);
         comps.btnContinue.onClick.RemoveListener(OnContinue);
-        EventManager.Instance.RemoveListener(E_EventEnum.OnLanguageChanged, RefreshBuildName);
+        EventManager.Instance.RemoveListener(E_EventEnum.OnLanguageChanged, RefreshLanguage);
         OnConfirm = null;
         foreach (var item in items)
             if (item != null) Destroy(item.gameObject);
@@ -58,6 +64,34 @@ public partial class BeginBuildPanel : NormalPanel, ISceneInputBlockPanel
 
     private void OnLeft() => SwitchBuild(-1);
     private void OnRight() => SwitchBuild(1);
+    private void OnDifficultyLeft() => SwitchDifficulty(-1);
+    private void OnDifficultyRight() => SwitchDifficulty(1);
+
+    private void SwitchDifficulty(int direction)
+    {
+        if (confirming || difficulties.Count == 0) return;
+        difficultyIndex = Mathf.Clamp(difficultyIndex + direction, 0, difficulties.Count - 1);
+        RefreshDeckPreview();
+        RefreshDifficulty();
+    }
+
+    private void RefreshLanguage()
+    {
+        RefreshBuildName();
+        RefreshDifficulty();
+    }
+
+    private void RefreshDifficulty()
+    {
+        var config = difficulties.Count > 0 ? difficulties[difficultyIndex] : null;
+        comps.txtDif.text = config != null ? DifficultyHelper.GetName(config.Id) : string.Empty;
+        string description = config != null ? DifficultyHelper.GetDescription(config) : string.Empty;
+        comps.txtDifDesc.text = description;
+        comps.txtDifDesc.gameObject.SetActive(!string.IsNullOrWhiteSpace(description));
+        comps.btnDifLeft.interactable = !confirming && difficultyIndex > 0;
+        comps.btnDifRight.interactable = !confirming && difficultyIndex < difficulties.Count - 1;
+        comps.btnContinue.interactable = !confirming && preview != null && config != null;
+    }
 
     private void SwitchBuild(int direction)
     {
@@ -68,12 +102,9 @@ public partial class BeginBuildPanel : NormalPanel, ISceneInputBlockPanel
 
     private void RefreshBuild()
     {
-        preview = null;
         var cfg = builds.Count > 0 ? builds[selectedIndex] : null;
         RefreshBuildName();
-        bool valid = cfg != null && BeginBuildHelper.TryBuild(cfg.Id, out preview);
-        comps.btnCheck.interactable = valid;
-        comps.btnContinue.interactable = valid;
+        RefreshDeckPreview();
         comps.btnLeft.interactable = builds.Count > 1;
         comps.btnRight.interactable = builds.Count > 1;
         int count = cfg?.Image?.Count ?? 0;
@@ -88,6 +119,15 @@ public partial class BeginBuildPanel : NormalPanel, ISceneInputBlockPanel
             items[i].gameObject.SetActive(visible);
             items[i].SetImage(visible ? cfg.Image[i] : null);
         }
+        RefreshDifficulty();
+    }
+
+    private void RefreshDeckPreview()
+    {
+        preview = null;
+        if (builds.Count > 0 && difficulties.Count > 0)
+            BeginBuildHelper.TryBuild(builds[selectedIndex].Id, difficulties[difficultyIndex].Id, out preview);
+        comps.btnCheck.interactable = preview != null;
     }
 
     private void RefreshBuildName()
@@ -103,7 +143,7 @@ public partial class BeginBuildPanel : NormalPanel, ISceneInputBlockPanel
 
     private void OnContinue()
     {
-        if (confirming || preview == null || OnConfirm == null) return;
+        if (confirming || preview == null || difficulties.Count == 0 || OnConfirm == null) return;
         string seedText = comps.iptSeed.text.Trim();
         int? seed = null;
         if (seedText.Length > 0)
@@ -118,11 +158,11 @@ public partial class BeginBuildPanel : NormalPanel, ISceneInputBlockPanel
             seed = parsedSeed;
         }
         confirming = true;
-        comps.btnContinue.interactable = false;
+        RefreshDifficulty();
         // 回调成功时场景入口会隐藏本面板并播放退出动画。
-        if (OnConfirm(builds[selectedIndex].Id, seed)) return;
+        if (OnConfirm(builds[selectedIndex].Id, difficulties[difficultyIndex].Id, seed)) return;
         confirming = false;
-        comps.btnContinue.interactable = true;
+        RefreshDifficulty();
         TipHelper.Show(LanguageHelper.Get("tip_beginbuild_deck_invalid"));
     }
 }

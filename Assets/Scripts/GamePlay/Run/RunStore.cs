@@ -11,6 +11,7 @@ public class RunStore : StoreBase<RunStore>
 {
     /// <summary>已确认初始牌组或成功读档，允许保存本局。</summary>
     public bool hasStarted;
+    public string difficultyId;
 
     /// <summary>本局金币</summary>
     public int coin;
@@ -32,6 +33,7 @@ public class RunStore : StoreBase<RunStore>
     public void Reset()
     {
         hasStarted = false;
+        difficultyId = null;
         coin = 0;
         deck.Clear();
         // 以后：临时 buff 等

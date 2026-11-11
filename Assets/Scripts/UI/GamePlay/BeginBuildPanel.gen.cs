@@ -13,6 +13,7 @@ public partial class BeginBuildPanel
     [System.Serializable]
     public class CompsData : CompsDataBase
     {
+        public TMP_InputField iptSeed;
         public Image imgLayout;
         public Button btnLeft;
         public Button btnRight;
@@ -21,7 +22,7 @@ public partial class BeginBuildPanel
         public Button btnDifLeft;
         public Button btnDifRight;
         public TMP_Text txtDif;
+        public TMP_Text txtDifDesc;
         public Button btnContinue;
-        public TMP_InputField iptSeed;
     }
 }

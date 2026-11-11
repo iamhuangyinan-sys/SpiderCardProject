@@ -108,7 +108,8 @@ public class CardGameModule : ManagerBase<CardGameModule>
         }
 
         var data = SaveManager.Instance.Load<RunSaveData>(E_SaveCustomEnum.RunData);
-        if (data == null)
+        if (data == null || string.IsNullOrEmpty(data.difficultyId)
+            || ConfigHelper.Get<DifficultyConfig>(data.difficultyId) == null)
         {
             return false;
         }

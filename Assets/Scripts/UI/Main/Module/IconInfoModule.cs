@@ -86,6 +86,9 @@ public partial class IconInfoModule : BaseModule
         _feedback = null;
         _info = null;
         _interactable = null;
+        dynamicTip = false;
+        dynamicTitle = null;
+        dynamicContent = null;
     }
 
     /// <summary>设置右侧信息文字（控件还没绑定时先缓存，绑定后自动补上）</summary>
@@ -94,6 +97,15 @@ public partial class IconInfoModule : BaseModule
         _info = text;
 
         if (comps.txtInfo != null) comps.txtInfo.text = text;
+    }
+
+    /// <summary>设置已本地化的动态提示，优先于固定提示。语言变化时由调用方重新设置。</summary>
+    public void SetTip(string title, string content)
+    {
+        dynamicTip = true;
+        dynamicTitle = title;
+        dynamicContent = content;
+        if (_feedback != null && _feedback.IsHovered) ShowTip();
     }
 
     /// <summary>信息文字显隐（只留图标）</summary>
@@ -113,16 +125,15 @@ public partial class IconInfoModule : BaseModule
 
     // ==================== 悬停提示 ====================
 
-    /// <summary>弹固定提示（没勾 fixedTip / 文案为空时什么都不做）</summary>
+    /// <summary>显示动态提示或固定提示；空内容由提示工具收起。</summary>
     public void ShowTip()
     {
-        if (!fixedTip) return;
-        if (string.IsNullOrEmpty(tipTitle) && string.IsNullOrEmpty(tipContent)) return;
+        if (!dynamicTip && !fixedTip) return;
 
-        // 字段里存的是多语言 Id，显示时才转成当前语言的文案
+        // 固定字段保存多语言 Id，动态内容由调用方完成本地化。
         HoverTipHelper.Show(this,
-            string.IsNullOrEmpty(tipTitle) ? null : LanguageHelper.Get(tipTitle),
-            string.IsNullOrEmpty(tipContent) ? null : LanguageHelper.Get(tipContent),
+            dynamicTip ? dynamicTitle : string.IsNullOrEmpty(tipTitle) ? null : LanguageHelper.Get(tipTitle),
+            dynamicTip ? dynamicContent : string.IsNullOrEmpty(tipContent) ? null : LanguageHelper.Get(tipContent),
             _button != null && _button.image != null ? _button.image.rectTransform : (RectTransform)transform,
             tipDirection, tipExtraGap);
     }
@@ -157,4 +168,7 @@ public partial class IconInfoModule : BaseModule
 
     /// <summary>待显示的文字（控件绑定前 SetInfo 的缓存）</summary>
     private string _info;
+    private bool dynamicTip;
+    private string dynamicTitle;
+    private string dynamicContent;
 }
