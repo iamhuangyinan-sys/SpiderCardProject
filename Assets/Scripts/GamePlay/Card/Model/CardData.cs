@@ -3,7 +3,7 @@ using System.Collections.Generic;
 /// <summary>
 /// 场上单张卡牌的数据（纯数据，不引用任何 UnityEngine 对象）
 ///
-/// = 牌定义（CardDef：花色 / 点数 / 落牌技能 / 自带属性）
+/// = 牌定义（CardDef：花色 / 点数 / 落牌技能 / 翻牌技能 / 自带属性）
 /// + 关卡内状态（朝向 / 临时属性）
 ///
 /// 牌组、商店、存档里的「静态牌数据」用 CardDef，不要用这个类
@@ -32,6 +32,9 @@ public class CardData
 
     /// <summary>落牌技能（转发牌定义）</summary>
     public E_PlaceSkillEnum placeSkill => def.placeSkill;
+
+    /// <summary>翻牌技能（转发牌定义）</summary>
+    public E_FlipSkillEnum flipSkill => def.flipSkill;
 
     /// <summary>
     /// 最近一次解析出来的「显示用」花色（列对齐的结果；null = 还没算过，用原始列表）。

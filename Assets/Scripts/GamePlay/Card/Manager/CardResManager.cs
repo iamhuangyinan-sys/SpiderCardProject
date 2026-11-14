@@ -6,10 +6,11 @@ using UnityEngine;
 /// 卡牌资源管理器 —— 加载牌底 / 图案 / 花色 / 点数等素材
 /// 素材都放在 Resources/GamePlay/Card/ 下：
 ///   Bg/cardBack · Bg/cardEmpty         牌背 / 空牌底
-///   Image/{配表 Image}                  图案（唯一读配表的素材）
+///   Image/{配表 Image}                  图案
 ///   Suit/{hearts|clubs|spades|diamonds}  花色小图
 ///   Rank/{Red|Black}/{A..K|S}            点数小图
 ///   Attribute/{配表 Icon}                属性小图
+///   PlaceSkill/{配表 Icon}               落牌技能小图
 /// </summary>
 public class CardResManager : ManagerBase<CardResManager>
 {
@@ -18,6 +19,7 @@ public class CardResManager : ManagerBase<CardResManager>
     private const string SUIT_DIR = CARD_DIR + "Suit/";
     private const string RANK_DIR = CARD_DIR + "Rank/";
     private const string ATTRIBUTE_DIR = CARD_DIR + "Attribute/";
+    private const string PLACE_SKILL_DIR = CARD_DIR + "PlaceSkill/";
 
     /// <summary>sprite 缓存：完整资源路径 → sprite</summary>
     private readonly Dictionary<string, Sprite> _spriteCache = new();
@@ -82,24 +84,45 @@ public class CardResManager : ManagerBase<CardResManager>
         return string.IsNullOrEmpty(cfg.Icon) ? null : LoadSprite(ATTRIBUTE_DIR + cfg.Icon);
     }
 
+    public Sprite GetPlaceSkillIcon(E_PlaceSkillEnum skill)
+    {
+        if (skill == E_PlaceSkillEnum.None) return null;
+
+        var cfg = ConfigHelper.Get<PlaceSkillConfig>(((int)skill).ToString());
+        return string.IsNullOrEmpty(cfg?.Icon) ? null : LoadSprite(PLACE_SKILL_DIR + cfg.Icon);
+    }
+
+    public Sprite GetFlipSkillIcon(E_FlipSkillEnum skill)
+    {
+        var cfg = GetFlipSkillConfig(skill);
+        return string.IsNullOrEmpty(cfg?.Icon) ? null : LoadSprite(CARD_DIR + "FlipSkill/" + cfg.Icon);
+    }
+
+    private static FlipSkillConfig GetFlipSkillConfig(E_FlipSkillEnum skill)
+    {
+        return skill == E_FlipSkillEnum.None ? null : ConfigHelper.Get<FlipSkillConfig>(((int)skill).ToString());
+    }
+
     // ==================== 整张牌图案（自动推导） ====================
 
     /// <summary>
     /// 取一张牌正面的图案：
-    ///   带落牌技能（以前的特殊牌）→ PlaceSkillConfig.Image
-    ///   否则（含技能没配图）→ 按「主花色 + 主点数」自动推导（cardHeartsA / cardHeartsSpider…）
-    ///   都推不出来（没有花色 / 没有可显示的点数）→ null（不显示图案）
+    ///   优先加载「主花色 + 主点数」对应的图案（cardHeartsA / cardHeartsSpider…）
+    ///   没有对应图案时依次尝试 PlaceSkillConfig.Image 和 FlipSkillConfig.Image
+    ///   两者都没有素材时返回 null
     ///
     /// 传进来的列表就是「显示用」列表：多重花色 / 多重点数也推得出来（取排在最前的那一个当主花色主点数），
     /// 被收敛过的牌传收敛后的列表 → 图案跟着一起换
     /// </summary>
     public Sprite GetFaceSprite(CardDef def, IReadOnlyList<int> suits, IReadOnlyList<int> ranks)
     {
-        string imageName = GetSkillImage(def);
+        var face = GetCardImage(GetFaceImageName(suits, ranks));
+        if (face != null) return face;
 
-        if (string.IsNullOrEmpty(imageName)) imageName = GetFaceImageName(suits, ranks);
+        var placeImage = GetCardImage(GetSkillImage(def));
+        if (placeImage != null) return placeImage;
 
-        return string.IsNullOrEmpty(imageName) ? null : GetCardImage(imageName);
+        return def.IsValid ? GetCardImage(GetFlipSkillConfig(def.flipSkill)?.Image) : null;
     }
 
     /// <summary>只给牌定义时取图案（列表 / 预览用）</summary>

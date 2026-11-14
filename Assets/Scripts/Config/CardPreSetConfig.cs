@@ -11,4 +11,5 @@ public class CardPreSetConfig
     public int PlaceSkill;
     public List<int> Attribute;
     public int Price;
+    public int FlipSkill;
 }

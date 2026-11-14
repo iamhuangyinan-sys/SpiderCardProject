@@ -1,6 +1,6 @@
 ﻿{
   "items": [
-    {"Id": "10001", "Name": "skill_name_10001", "Description": "skill_desc_10001", "Image": "cardRecycle"},
-    {"Id": "10002", "Name": "skill_name_10002", "Description": "skill_desc_10002", "Image": "cardCopy"}
+    {"Id": "10001", "Name": "place_skill_name_10001", "Description": "place_skill_desc_10001", "Image": "cardRecycle", "Icon": "recycle"},
+    {"Id": "10002", "Name": "place_skill_name_10002", "Description": "place_skill_desc_10002", "Image": "cardCopy", "Icon": "copy"}
   ]
 }

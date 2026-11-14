@@ -7,4 +7,5 @@ public class PlaceSkillConfig
     public string Name;
     public string Description;
     public string Image;
+    public string Icon;
 }

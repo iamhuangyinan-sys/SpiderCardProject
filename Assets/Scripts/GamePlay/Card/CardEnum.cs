@@ -59,6 +59,13 @@ public enum E_PlaceSkillEnum
     Copy = 10002,
 }
 
+/// <summary>翻开卡牌时触发的技能。</summary>
+public enum E_FlipSkillEnum
+{
+    None = 0,
+    ForceDeal = 20001,
+}
+
 /// <summary>
 /// 卡牌 tip 类型 —— Id 就是配表 CardTipConfig 的主键（改这里要同步改表）
 /// 1xx = 点数相关，2xx = 花色相关；牌的状态类描述（沉底 / 毒）走 E_CardAttributeEnum + CardAttributeConfig

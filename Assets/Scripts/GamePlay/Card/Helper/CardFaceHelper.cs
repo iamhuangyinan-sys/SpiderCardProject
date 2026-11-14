@@ -6,7 +6,7 @@ using UnityEngine;
 /// 2D 牌（CardModule / uGUI Image）共用同一套规则，两边只负责把结果画出来。
 ///
 /// 规则：
-///   图案   ：带落牌技能的牌读 PlaceSkillConfig.Image，否则按「主花色 + 主点数」自动推导
+///   图案   ：优先显示主花色和主点数对应的图案，缺图时尝试 PlaceSkillConfig.Image
 ///   花色   ：花色列表第一个（排序最前），其余进图标行；没有花色 → Suit/none 占位
 ///   点数   ：点数列表第一个「可显示」的点数（跳过 -1），其余进图标行；红黑跟主花色；
 ///            一个可显示点数都没有 → 有 -1 画 Rank/M，否则画 Rank/none
@@ -44,6 +44,31 @@ public static class CardFaceHelper
     public static bool IsAttributeVisibleInGame(E_CardAttributeEnum attribute)
     {
         return ConfigHelper.Get<CardAttributeConfig>(((int)attribute).ToString())?.IsShowInGame == true;
+    }
+
+    /// <summary>填充属性栏图标，落牌技能排在属性前面。</summary>
+    public static void FillAttributeSprites(CardDef def, IReadOnlyList<E_CardAttributeEnum> attributes,
+        List<Sprite> sprites, bool useInGameAttributes, int maxIcons = int.MaxValue)
+    {
+        sprites.Clear();
+
+        var res = CardResManager.Instance;
+        var skillIcon = def.IsValid ? res.GetPlaceSkillIcon(def.placeSkill) : null;
+        if (skillIcon != null) sprites.Add(skillIcon);
+
+        var flipIcon = def.IsValid ? res.GetFlipSkillIcon(def.flipSkill) : null;
+        if (flipIcon != null && sprites.Count < maxIcons) sprites.Add(flipIcon);
+
+        if (attributes == null) return;
+
+        for (int i = 0; i < attributes.Count && sprites.Count < maxIcons; i++)
+        {
+            var attribute = attributes[i];
+            if (useInGameAttributes && !IsAttributeVisibleInGame(attribute)) continue;
+
+            var sprite = res.GetAttributeSprite((int)attribute);
+            if (sprite != null) sprites.Add(sprite);
+        }
     }
 
     /// <summary>按牌定义算（花色 / 点数取定义里的）</summary>

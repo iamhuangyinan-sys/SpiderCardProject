@@ -323,7 +323,7 @@ public class CardView : MonoBehaviour
     {
         var face = CardFaceHelper.Build(def, suits, ranks);
 
-        // 对齐后的图案素材不存在（画得少）则退回原始列表，不至于整张图都消失
+        // 对齐后的花色点数图案和技能图案都取不到时，退回原始列表
         if (face.Face == null && IsConverged(suits, ranks))
         {
             face = CardFaceHelper.Build(data.def, data.suits, data.ranks);
@@ -343,7 +343,7 @@ public class CardView : MonoBehaviour
         _multiRankLayout?.SetItems(face.ExtraRanks);
 
         // 属性图标行（和 2D 牌一样：数据 → 图标，没属性就整行关掉）
-        FillAttributeSprites(attributes);
+        CardFaceHelper.FillAttributeSprites(def, attributes, _attributeSprites, useInGameAttributes: true);
         if (_attributeGo != null) _attributeGo.SetActive(_attributeLayout != null && _attributeSprites.Count > 0);
         _attributeLayout?.SetItems(_attributeSprites);
 
@@ -351,22 +351,6 @@ public class CardView : MonoBehaviour
         SetImageY(_attributeSprites.Count > 0
             ? AttributeImageY
             : (face.HasMultiSuit ? MultiSuitImageY : 0f));
-    }
-
-    /// <summary>属性列表 → 图标（查表 / 加载在 CardResManager 里；没图跳过，不留空槽）</summary>
-    private void FillAttributeSprites(IReadOnlyList<E_CardAttributeEnum> attributes)
-    {
-        _attributeSprites.Clear();
-        if (attributes == null) return;
-
-        for (int i = 0; i < attributes.Count; i++)
-        {
-            var attribute = attributes[i];
-            if (!CardFaceHelper.IsAttributeVisibleInGame(attribute)) continue;
-
-            var sprite = CardResManager.Instance.GetAttributeSprite((int)attribute);
-            if (sprite != null) _attributeSprites.Add(sprite);
-        }
     }
 
     /// <summary>显示用列表和原始列表不是同一个（= 对齐过）。临时牌没有 data，按没对齐算</summary>

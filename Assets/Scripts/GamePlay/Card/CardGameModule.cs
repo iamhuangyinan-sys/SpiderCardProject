@@ -65,6 +65,7 @@ public class CardGameModule : ManagerBase<CardGameModule>
     public bool CanCardInput =>
         CardsManager.Instance.IsPlaying
         && !CardsManager.Instance.IsSettling
+        && !CardsManager.Instance.IsResolvingBoard
         && !CardViewManager.Instance.IsAnimating
         && !SceneInputLock.IsLocked;
 

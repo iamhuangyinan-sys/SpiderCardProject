@@ -13,6 +13,7 @@ using UnityEngine;
 ///   点数（1xx）→ 花色（2xx）→ 落牌技能 → 属性
 /// 其中「任意放下 / 蜘蛛 / 无点数 / 无花色」四条带图标，图标直接复用牌面上画的那个
 /// （都走 CardResManager，不另外配图）
+/// 落牌技能和属性也复用属性栏的图标。
 /// </summary>
 public static class CardTipHelper
 {
@@ -65,7 +66,16 @@ public static class CardTipHelper
         }
 
         // ===== 3. 落牌技能（带技能的牌 = 以前的特殊牌，文案读 PlaceSkillConfig）=====
-        if (def.HasSkill) AddSkillTip(tips, (int)def.placeSkill);
+        if (def.HasSkill) AddSkillTip(tips, def.placeSkill);
+        if (def.flipSkill != E_FlipSkillEnum.None)
+        {
+            var cfg = ConfigHelper.Get<FlipSkillConfig>(((int)def.flipSkill).ToString());
+            if (cfg != null)
+            {
+                tips.Add(new HoverTipData(LanguageHelper.Get(cfg.Name), LanguageHelper.Get(cfg.Description),
+                    res.GetFlipSkillIcon(def.flipSkill)));
+            }
+        }
 
         // ===== 4. 牌状态（沉底 / 毒等，文案读 CardAttributeConfig）=====
         AddAttributeTips(tips, attributes);
@@ -99,10 +109,13 @@ public static class CardTipHelper
     }
 
     /// <summary>按落牌技能查技能描述表（Id = 枚举值）；查不到就跳过</summary>
-    private static void AddSkillTip(List<HoverTipData> tips, int placeSkill)
+    private static void AddSkillTip(List<HoverTipData> tips, E_PlaceSkillEnum placeSkill)
     {
-        var cfg = ConfigHelper.Get<PlaceSkillConfig>(placeSkill.ToString());
-        if (cfg != null) tips.Add(new HoverTipData(LanguageHelper.Get(cfg.Name), LanguageHelper.Get(cfg.Description)));
+        var cfg = ConfigHelper.Get<PlaceSkillConfig>(((int)placeSkill).ToString());
+        if (cfg == null) return;
+
+        var icon = CardResManager.Instance.GetPlaceSkillIcon(placeSkill);
+        tips.Add(new HoverTipData(LanguageHelper.Get(cfg.Name), LanguageHelper.Get(cfg.Description), icon));
     }
 
     /// <summary>点数列表里有没有这个值</summary>

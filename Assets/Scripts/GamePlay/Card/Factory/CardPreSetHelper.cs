@@ -122,7 +122,13 @@ public static class CardPreSetHelper
             return false;
         }
 
+        if (!Enum.IsDefined(typeof(E_FlipSkillEnum), cfg.FlipSkill))
+        {
+            error = $"未知翻牌技能 {cfg.FlipSkill}";
+            return false;
+        }
+
         return CardDef.TryCreate(cfg.Suit, cfg.Rank, (E_PlaceSkillEnum)cfg.PlaceSkill, attributes,
-            out def, out error);
+            out def, out error, (E_FlipSkillEnum)cfg.FlipSkill);
     }
 }

@@ -7,17 +7,18 @@ using System.Text;
 /// （游戏逻辑、存档里都是结构化数据，不经过字符串）
 ///
 /// 格式（用 _ 分隔，后面几段可省，但第一个下划线一定要写）：
-///   {花色}_{点数}[_{技能}[_{属性}]]
+///   {花色}_{点数}[_{落牌技能}[_{翻牌技能}[_{属性}]]]
 ///
 /// 例：
 ///   0123_123                   花色 红心/方块/黑桃/梅花 + 点数 A/2/3
 ///   _m                         无花色 + 点数 -1（万能放下）
-///   0123_s_10002_10001;10002   蜘蛛 + 复制技能 + 沉底&毒
+///   0123_s_10002_20001_10001;10002   蜘蛛 + 复制技能 + 沉底&毒
 ///
 /// 字符表：
 ///   花色：0 红心 / 1 方块 / 2 黑桃 / 3 梅花，空 = 无花色
 ///   点数：1-9 = A-9、0 = 10、j/q/k、s = -2、m = -1，空 = 无点数
 ///   技能：E_PlaceSkillEnum 的数值（10001 回收 / 10002 复制），空 = 无技能
+///   翻牌技能：E_FlipSkillEnum 的数值（20001 强制发牌）
 ///   属性：E_CardAttributeEnum 的数值，多个用分号隔开
 /// </summary>
 public static class CardDefCodec
@@ -38,13 +39,14 @@ public static class CardDefCodec
             ? ((int)def.placeSkill).ToString()
             : string.Empty;
 
-        int attributeCount = def.attributes?.Count ?? 0;
-        if (attributeCount == 0)
-        {
-            return skill.Length > 0 ? head + "_" + skill : head;
-        }
+        string flipSkill = def.flipSkill != E_FlipSkillEnum.None
+            ? ((int)def.flipSkill).ToString()
+            : string.Empty;
 
-        return head + "_" + skill + "_" + EncodeAttributes(def.attributes);
+        if ((def.attributes?.Count ?? 0) > 0)
+            return head + "_" + skill + "_" + flipSkill + "_" + EncodeAttributes(def.attributes);
+        if (flipSkill.Length > 0) return head + "_" + skill + "_" + flipSkill;
+        return skill.Length > 0 ? head + "_" + skill : head;
     }
 
     /// <summary>花色列表 → 字符（0-3 连写）</summary>
@@ -100,13 +102,13 @@ public static class CardDefCodec
         string[] parts = text.Split(Separator);
         if (parts.Length < 2)
         {
-            error = "缺少下划线（格式：花色_点数[_技能[_属性]]）";
+            error = "缺少下划线（格式：花色_点数[_落牌技能[_翻牌技能[_属性]]]）";
             return false;
         }
 
-        if (parts.Length > 4)
+        if (parts.Length > 5)
         {
-            error = "段数太多（格式：花色_点数[_技能[_属性]]）";
+            error = "段数太多（格式：花色_点数[_落牌技能[_翻牌技能[_属性]]]）";
             return false;
         }
 
@@ -127,18 +129,30 @@ public static class CardDefCodec
             placeSkill = (E_PlaceSkillEnum)skillValue;
         }
 
-        // 第 4 段：属性（可空）
+        var flipSkill = E_FlipSkillEnum.None;
         List<E_CardAttributeEnum> attributes = null;
         if (parts.Length > 3 && parts[3].Length > 0)
         {
-            if (!CardAttributeHelper.TryParse(parts[3], out attributes))
+            string value = parts[3];
+            if (int.TryParse(value, out int skillValue) && Enum.IsDefined(typeof(E_FlipSkillEnum), skillValue))
             {
-                error = $"非法属性「{parts[3]}」（用分号隔开的枚举值，如 10001;10002）";
+                flipSkill = (E_FlipSkillEnum)skillValue;
+            }
+            else if (parts.Length != 4 || !CardAttributeHelper.TryParse(value, out attributes))
+            {
+                error = $"非法翻牌技能「{value}」（可用 20001 强制发牌）";
                 return false;
             }
         }
 
-        if (!CardDef.TryCreate(suits, ranks, placeSkill, attributes, out def, out error)) return false;
+        if (parts.Length == 5 && parts[4].Length > 0 &&
+            !CardAttributeHelper.TryParse(parts[4], out attributes))
+        {
+            error = $"非法属性「{parts[4]}」（用分号隔开的枚举值，如 10001;10002）";
+            return false;
+        }
+
+        if (!CardDef.TryCreate(suits, ranks, placeSkill, attributes, out def, out error, flipSkill)) return false;
 
         return true;
     }

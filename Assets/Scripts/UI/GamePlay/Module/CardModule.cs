@@ -187,8 +187,10 @@ public partial class CardModule : BaseModule, IPointerEnterHandler, IPointerExit
         SetSlots(face?.ExtraSuits, comps.imgSuit1, comps.imgSuit2, comps.imgSuit3);
         SetSlots(face?.ExtraRanks, comps.imgRank1, comps.imgRank2, comps.imgRank3, comps.imgRank4);
 
-        // 属性图标行（槽位固定 5 个，多出来的属性不显示）
-        SetSlots(BuildAttributeSprites(), comps.imgAttribute1, comps.imgAttribute2,
+        // 属性图标行（技能优先，槽位固定 5 个）
+        CardFaceHelper.FillAttributeSprites(Def, _attributes, _attributeSprites,
+            useInGameAttributes: false, maxIcons: AttributeSlotCount);
+        SetSlots(_attributeSprites, comps.imgAttribute1, comps.imgAttribute2,
                  comps.imgAttribute3, comps.imgAttribute4, comps.imgAttribute5);
 
         // 图案下沉：有属性让出属性行，否则多重花色让出花色行
@@ -201,27 +203,13 @@ public partial class CardModule : BaseModule, IPointerEnterHandler, IPointerExit
         }
     }
 
-    /// <summary>属性 → 图标（查表 / 加载在 CardResManager 里；没图跳过，不留空槽）</summary>
-    private List<Sprite> BuildAttributeSprites()
-    {
-        _attributeSprites.Clear();
-
-        for (int i = 0; i < _attributes.Count && i < AttributeSlotCount; i++)
-        {
-            var sprite = CardResManager.Instance.GetAttributeSprite((int)_attributes[i]);
-            if (sprite != null) _attributeSprites.Add(sprite);
-        }
-
-        return _attributeSprites;
-    }
-
     /// <summary>
-    /// 图案下沉规则：有属性 → 让出属性行（优先级最高）；
+    /// 图案下沉规则：有技能或属性图标 → 让出属性行；
     /// 否则有多重花色 → 让出花色行；都没有就不动
     /// </summary>
     private float CalcFaceOffsetY(CardFace face)
     {
-        if (_attributes.Count > 0) return imageOffsetYOnAttribute;
+        if (_attributeSprites.Count > 0) return imageOffsetYOnAttribute;
         if (face != null && face.HasMultiSuit) return imageOffsetYOnMultiSuit;
 
         return 0f;

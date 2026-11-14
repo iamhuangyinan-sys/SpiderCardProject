@@ -29,6 +29,8 @@ public struct CardDef : IEquatable<CardDef>
     /// <summary>落牌技能（None = 普通牌；不是 None 的牌就是以前的「特殊牌」）</summary>
     public E_PlaceSkillEnum placeSkill;
 
+    public E_FlipSkillEnum flipSkill;
+
     /// <summary>
     /// 牌自带属性（预留：以后「毒」这类固有属性配在这里）。
     /// 建场上的牌时会复制进 CardData.attributes，和关卡内临时属性共存
@@ -49,15 +51,15 @@ public struct CardDef : IEquatable<CardDef>
     /// </summary>
     public static CardDef Create(IReadOnlyList<int> suits, IReadOnlyList<int> ranks,
         E_PlaceSkillEnum placeSkill = E_PlaceSkillEnum.None,
-        IReadOnlyList<E_CardAttributeEnum> attributes = null)
+        IReadOnlyList<E_CardAttributeEnum> attributes = null, E_FlipSkillEnum flipSkill = E_FlipSkillEnum.None)
     {
-        return TryCreate(suits, ranks, placeSkill, attributes, out var def) ? def : default;
+        return TryCreate(suits, ranks, placeSkill, attributes, out var def, out _, flipSkill) ? def : default;
     }
 
     /// <summary>同 Create，但用返回值表示成功；失败原因写进 error</summary>
     public static bool TryCreate(IReadOnlyList<int> suits, IReadOnlyList<int> ranks,
         E_PlaceSkillEnum placeSkill, IReadOnlyList<E_CardAttributeEnum> attributes,
-        out CardDef def, out string error)
+        out CardDef def, out string error, E_FlipSkillEnum flipSkill = E_FlipSkillEnum.None)
     {
         def = default;
 
@@ -69,6 +71,7 @@ public struct CardDef : IEquatable<CardDef>
             suits = suitList,
             ranks = rankList,
             placeSkill = placeSkill,
+            flipSkill = flipSkill,
             attributes = attributes != null
                 ? new List<E_CardAttributeEnum>(attributes)
                 : new List<E_CardAttributeEnum>(),
@@ -107,7 +110,7 @@ public struct CardDef : IEquatable<CardDef>
     /// <summary>按内容比较（花色 / 点数已规范化，顺序是确定的；属性不看顺序）</summary>
     public bool Equals(CardDef other)
     {
-        if (placeSkill != other.placeSkill) return false;
+        if (placeSkill != other.placeSkill || flipSkill != other.flipSkill) return false;
         if (!SameSequence(suits, other.suits)) return false;
         if (!SameSequence(ranks, other.ranks)) return false;
 
@@ -127,7 +130,7 @@ public struct CardDef : IEquatable<CardDef>
 
     public override int GetHashCode()
     {
-        int hash = (int)placeSkill;
+        int hash = (int)placeSkill * 31 + (int)flipSkill;
 
         if (suits != null)
         {

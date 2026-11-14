@@ -13,7 +13,15 @@ public class CardsManager : ManagerBase<CardsManager>
 {
     private readonly System.Random _random = new System.Random();
 
-    /// <summary>沉底概率：牌收入弃牌堆时被打上沉底标记的概率（后续可移入配表）</summary>
+    private readonly Queue<E_FlipSkillEnum> _flipSkills = new();
+    private bool _dealing;
+    private bool _resolvingFlipSkills;
+    private bool _shufflingBack;
+    private int _activeRecycles;
+
+    public bool IsResolvingBoard => _dealing || _resolvingFlipSkills || _activeRecycles > 0 || _shufflingBack;
+
+    /// <summary>牌收入弃牌堆时被打上沉底标记的概率。</summary>
     private const float SunkProbability = 0.8f;
 
     /// <summary>测试模式：跳过洗牌直接发牌（仅编辑器下生效）</summary>
@@ -35,6 +43,8 @@ public class CardsManager : ManagerBase<CardsManager>
         store.straightCount = 0;
         IsSettling = false;
         IsPlaying = true;
+        _flipSkills.Clear();
+        _dealing = true;
         _washInQueue.Clear();   // 丢掉上一局残留的洗入队列
 
         // 设置本局列数与牌包数，再清空（重建结构）
@@ -141,6 +151,11 @@ public class CardsManager : ManagerBase<CardsManager>
         {
             for (int col = 0; col < columnCount; col++)
             {
+                if (IsSettling)
+                {
+                    _dealing = false;
+                    yield break;
+                }
                 if (round >= quota[col]) continue;
 
                 if (store.drawPile.Count == 0)
@@ -156,6 +171,12 @@ public class CardsManager : ManagerBase<CardsManager>
 
                 yield return new WaitForSeconds(CardAnimationHelper.FlyInterval);
 
+                if (IsSettling)
+                {
+                    _dealing = false;
+                    yield break;
+                }
+
                 // 该列已发满：及时翻该列顶牌（翻牌动画与后续发牌重叠，不额外等待）
                 if (store.columns[col].Count >= quota[col])
                 {
@@ -165,11 +186,14 @@ public class CardsManager : ManagerBase<CardsManager>
         }
 
         EventManager.Instance.Dispatch<int>(E_EventEnum.OnDiscardPileChanged, store.discardPile.Count);
+        yield return new WaitForSeconds(Mathf.Max(CardAnimationHelper.FlyDuration, 2 * CardAnimationHelper.FlipDuration));
+        _dealing = false;
     }
 
     /// <summary>从发牌堆给每列顶部逐张发一张牌（翻开），发牌堆数量逐张减少</summary>
     public void DealFromDrawPile()
     {
+        if (IsSettling || IsResolvingBoard) return;
         if (CardsStore.Instance.drawPile.Count == 0)
         {
             TipHelper.Show(LanguageHelper.Get("tip_draw_empty"));
@@ -182,40 +206,57 @@ public class CardsManager : ManagerBase<CardsManager>
             return;
         }
 
-        MonoManager.Instance.StartCoroutine(DealFromDrawPileRoutine());
+        _dealing = true;
+        MonoManager.Instance.StartCoroutine(ResolveManualDealRoutine());
+    }
+
+    private IEnumerator ResolveManualDealRoutine()
+    {
+        yield return DealFromDrawPileRoutine();
+        _dealing = false;
+        TryShuffleBack();
     }
 
     private IEnumerator DealFromDrawPileRoutine()
     {
         var store = CardsStore.Instance;
+        int dealtColumnCount = 0;
 
-        for (int col = 0; col < store.columns.Count; col++)
+        for (; dealtColumnCount < store.columns.Count; dealtColumnCount++)
         {
             if (IsSettling) yield break;
             if (store.drawPile.Count == 0) break;
 
             var card = store.drawPile.Pop();
-            PlaceDealtCard(col, card, faceUp: true);
+            PlaceDealtCard(dealtColumnCount, card, faceUp: true);
 
             EventManager.Instance.Dispatch<int>(E_EventEnum.OnDrawPileChanged, store.drawPile.Count);
 
             yield return new WaitForSeconds(CardAnimationHelper.FlyInterval);
         }
 
-        // 等最后一张落地，再检查顺子（顺子的回收动画与数据更新由 RecycleToDiscardRoutine 处理）
+        // 等最后一张落地。沉底牌如果发到了空列，就是这一列的顶牌，需要翻开。
         yield return new WaitForSeconds(CardAnimationHelper.FlyDuration);
+        if (IsSettling) yield break;
 
-        bool anyRecycled = false;
+        bool flippedCard = false;
+        for (int col = 0; col < dealtColumnCount; col++)
+        {
+            var column = store.columns[col];
+            if (column.Count == 1 && !column[0].isFaceUp)
+            {
+                FlipCardUp(column[0]);
+                flippedCard = true;
+            }
+        }
+
+        if (flippedCard) yield return new WaitForSeconds(2 * CardAnimationHelper.FlipDuration);
+
+        // 翻面完成后检查顺子，回收动画与数据更新由 RecycleFromColumnRoutine 处理。
         for (int col = 0; col < store.columns.Count; col++)
         {
             if (IsSettling) break;
-            if (CheckAndDiscard(col)) anyRecycled = true;
-        }
-
-        // 没有触发回收时，检查洗回（洗回动画与数量派发由洗回协程内部完成）
-        if (!anyRecycled && !IsSettling)
-        {
-            TryShuffleBack();
+            CheckAndDiscard(col);
         }
     }
 
@@ -240,6 +281,7 @@ public class CardsManager : ManagerBase<CardsManager>
         }
 
         store.columns[columnIndex].Add(card);
+        if (faceUp) EnqueueFlipSkill(card);
         EventManager.Instance.Dispatch<int>(E_EventEnum.OnColumnAppend, columnIndex);
     }
 
@@ -248,7 +290,44 @@ public class CardsManager : ManagerBase<CardsManager>
     {
         if (card == null || card.isFaceUp) return;
         card.isFaceUp = true;
+        EnqueueFlipSkill(card);
         EventManager.Instance.Dispatch<CardData>(E_EventEnum.OnCardChanged, card);
+    }
+
+    private void EnqueueFlipSkill(CardData card)
+    {
+        var skill = card.flipSkill;
+        if (IsSettling || skill == E_FlipSkillEnum.None) return;
+        if (skill == E_FlipSkillEnum.ForceDeal && CardsStore.Instance.drawPile.Count == 0) return;
+
+        _flipSkills.Enqueue(skill);
+        if (_resolvingFlipSkills) return;
+
+        _resolvingFlipSkills = true;
+        MonoManager.Instance.StartCoroutine(ResolveFlipSkillsRoutine());
+    }
+
+    private IEnumerator ResolveFlipSkillsRoutine()
+    {
+        while (!IsSettling && _flipSkills.Count > 0)
+        {
+            // 发牌和回收都可能翻出更多技能。等当前流程收尾后再处理队首。
+            while (!IsSettling && (_dealing || _activeRecycles > 0 || _shufflingBack)) yield return null;
+            if (IsSettling) break;
+
+            yield return new WaitForSeconds(2 * CardAnimationHelper.FlipDuration);
+            if (IsSettling) break;
+
+            var skill = _flipSkills.Dequeue();
+            if (skill == E_FlipSkillEnum.ForceDeal && CardsStore.Instance.drawPile.Count > 0)
+            {
+                // 技能发牌直接走发牌流程，允许给空列发牌。
+                yield return DealFromDrawPileRoutine();
+            }
+        }
+
+        _resolvingFlipSkills = false;
+        TryShuffleBack();
     }
 
     /// <summary>
@@ -275,6 +354,19 @@ public class CardsManager : ManagerBase<CardsManager>
     /// <param name="columnIndex">目标列</param>
     /// <param name="count">收几张（从堆顶往下数）</param>
     /// <param name="countAsStraight">是否计入接龙次数（顺子回收 = true，回收技能 = false）</param>
+    private void StartRecycleFromColumn(int columnIndex, int count, bool countAsStraight)
+    {
+        _activeRecycles++;
+        MonoManager.Instance.StartCoroutine(ResolveRecycleRoutine(columnIndex, count, countAsStraight));
+    }
+
+    private IEnumerator ResolveRecycleRoutine(int columnIndex, int count, bool countAsStraight)
+    {
+        yield return RecycleFromColumnRoutine(columnIndex, count, countAsStraight);
+        _activeRecycles--;
+        TryShuffleBack();
+    }
+
     private IEnumerator RecycleFromColumnRoutine(int columnIndex, int count, bool countAsStraight)
     {
         var store = CardsStore.Instance;
@@ -285,6 +377,7 @@ public class CardsManager : ManagerBase<CardsManager>
         // 逐张从堆顶往下收
         for (int i = 0; i < count; i++)
         {
+            if (IsSettling) yield break;
             if (column.Count == 0) break;
 
             var card = column[column.Count - 1];
@@ -296,6 +389,8 @@ public class CardsManager : ManagerBase<CardsManager>
 
         // 等最后一张飞到弃牌堆
         yield return new WaitForSeconds(CardAnimationHelper.FlyDuration);
+
+        if (IsSettling) yield break;
 
         // 整列重建（剩余牌重新摆位）
         EventManager.Instance.Dispatch<int>(E_EventEnum.OnColumnChanged, columnIndex);
@@ -325,9 +420,6 @@ public class CardsManager : ManagerBase<CardsManager>
             // （后续含洗回交给顺子回收协程收尾）
             yield break;
         }
-
-        // 发牌堆空了则把弃牌堆洗回（洗回动画与数量派发由洗回协程内部完成）
-        TryShuffleBack();
     }
 
     /// <summary>
@@ -408,7 +500,7 @@ public class CardsManager : ManagerBase<CardsManager>
         {
             case E_PlaceSkillEnum.Recycle:
                 // 自己 + 自己下面紧邻的 1 张一起进弃牌堆（不计接龙次数）
-                MonoManager.Instance.StartCoroutine(RecycleFromColumnRoutine(columnIndex, 2, false));
+                StartRecycleFromColumn(columnIndex, 2, false);
                 break;
 
             case E_PlaceSkillEnum.Copy:
@@ -445,7 +537,7 @@ public class CardsManager : ManagerBase<CardsManager>
         if (seq == null) return false;
 
         // 先播回收动画：列数据、接龙计数、达标结算都在动画播完后统一处理
-        MonoManager.Instance.StartCoroutine(RecycleFromColumnRoutine(columnIndex, seq.Count, countAsStraight: true));
+        StartRecycleFromColumn(columnIndex, seq.Count, countAsStraight: true);
         return true;
     }
 
@@ -486,6 +578,7 @@ public class CardsManager : ManagerBase<CardsManager>
     {
         if (IsSettling) return;
         IsSettling = true;
+        _flipSkills.Clear();
         MonoManager.Instance.StartCoroutine(CollectAllRoutine());
     }
 
@@ -563,8 +656,9 @@ public class CardsManager : ManagerBase<CardsManager>
     private void TryShuffleBack()
     {
         var store = CardsStore.Instance;
-        if (IsSettling) return;
+        if (IsSettling || IsResolvingBoard) return;
         if (store.drawPile.Count != 0 || store.discardPile.Count == 0) return;
+        _shufflingBack = true;
         MonoManager.Instance.StartCoroutine(ShuffleBackRoutine());
     }
 
@@ -578,6 +672,12 @@ public class CardsManager : ManagerBase<CardsManager>
         // 等动画播完再更新数据
         yield return new WaitForSeconds(CardAnimationHelper.FlyDuration);
 
+        if (IsSettling)
+        {
+            _shufflingBack = false;
+            yield break;
+        }
+
         // 洗牌 + 全部压回发牌堆
         Shuffle(store.discardPile);
         foreach (var card in store.discardPile)
@@ -585,6 +685,7 @@ public class CardsManager : ManagerBase<CardsManager>
             store.drawPile.Push(card);
         }
         store.discardPile.Clear();
+        _shufflingBack = false;
 
         // 数量更新
         EventManager.Instance.Dispatch<int>(E_EventEnum.OnDrawPileChanged, store.drawPile.Count);
@@ -672,6 +773,12 @@ public class CardsManager : ManagerBase<CardsManager>
     private IEnumerator StartWithLevelEventRoutine(LevelEventRegistry.LevelEventRoutine routine)
     {
         yield return routine();
+
+        if (IsSettling)
+        {
+            _dealing = false;
+            yield break;
+        }
 
         Deal();
     }

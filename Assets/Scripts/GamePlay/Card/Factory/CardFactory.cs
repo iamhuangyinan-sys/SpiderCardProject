@@ -4,7 +4,7 @@ using System.Collections.Generic;
 /// 建牌工厂 —— 按牌定义（CardDef）构造场上的 CardData
 ///
 /// 不再区分普通牌 / 特殊牌：带落牌技能（placeSkill != None）的牌就是以前说的「特殊牌」，
-/// 它的整图由 PlaceSkillConfig.Image 提供；不带技能就按主花色 + 主点数推导图案
+/// 主图优先按主花色和主点数推导，缺图时使用技能配图
 /// </summary>
 public static class CardFactory
 {

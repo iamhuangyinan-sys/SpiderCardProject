@@ -912,18 +912,21 @@ public class CardViewManager : ManagerBase<CardViewManager>
     /// 一张牌下面该留多少间距（取决于这张牌自己）：
     ///   牌背 → 固定 FaceDownSpacing；
     ///   普通正面牌 → 本列压缩后的 faceUpSpacing；
-    ///   带属性的正面牌 → 再多让 FaceUpAttributeExtraSpacing（把属性图标行露出来）
+    ///   有属性图标行的正面牌 → 再多让 FaceUpAttributeExtraSpacing（把图标行露出来）
     /// </summary>
     private static float GetCardSpacing(CardData card, float faceUpSpacing)
     {
         if (!card.isFaceUp) return FaceDownSpacing;
 
-        return HasVisibleAttribute(card) ? faceUpSpacing + FaceUpAttributeExtraSpacing : faceUpSpacing;
+        return HasAttributeRow(card) ? faceUpSpacing + FaceUpAttributeExtraSpacing : faceUpSpacing;
     }
 
-    /// <summary>有可见属性时为属性图标行预留列间距</summary>
-    private static bool HasVisibleAttribute(CardData card)
+    /// <summary>有技能图标或可见属性时为图标行预留列间距</summary>
+    private static bool HasAttributeRow(CardData card)
     {
+        var res = CardResManager.Instance;
+        if (card.def.IsValid && (res.GetPlaceSkillIcon(card.placeSkill) != null ||
+            res.GetFlipSkillIcon(card.flipSkill) != null)) return true;
         if (card.attributes == null) return false;
 
         foreach (var attribute in card.attributes)
@@ -985,7 +988,7 @@ public class CardViewManager : ManagerBase<CardViewManager>
             var card = column[i];
 
             if (!card.isFaceUp) faceDownHeight += FaceDownSpacing;
-            else if (HasVisibleAttribute(card)) attributeGaps++;
+            else if (HasAttributeRow(card)) attributeGaps++;
             else faceUpGaps++;
         }
 

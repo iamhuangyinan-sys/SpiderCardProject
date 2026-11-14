@@ -44,10 +44,6 @@
     {"Id": "card_attr_desc_10002", "Chinese": "不能放入额外牌包中", "English": "Cannot be put into the extra pocket"},
     {"Id": "card_attr_name_10003", "Chinese": "无法删除", "English": "Cannot be deleted"},
     {"Id": "card_attr_desc_10003", "Chinese": "不可以在商店主动删除", "English": "Cannot be removed in the shop"},
-    {"Id": "skill_name_10001", "Chinese": "回收", "English": "Recycle"},
-    {"Id": "skill_desc_10001", "Chinese": "移动后，将自己和上面那张牌放入弃牌堆", "English": "After moving, it and the card above go to the discard pile"},
-    {"Id": "skill_name_10002", "Chinese": "复制", "English": "Copy"},
-    {"Id": "skill_desc_10002", "Chinese": "移动后，将自己变成上面那张牌", "English": "After moving, it becomes the card above"},
     {"Id": "level_event_desc_11001", "Chinese": "开始时往发牌堆中洗入一张万能蜘蛛牌", "English": "At the start, shuffle one wild Spider card into the draw pile"},
     {"Id": "level_event_desc_11002", "Chinese": "开始时往发牌堆中洗入3张随机花色点数牌+一张空白牌", "English": "At the start, shuffle 3 random cards plus 1 blank card into the draw pile"},
     {"Id": "build_name_101", "Chinese": "蜘蛛", "English": "Spider"},
@@ -74,6 +70,12 @@
     {"Id": "difficulty_name", "Chinese": "难度{0}", "English": "Difficulty{0}"},
     {"Id": "difficulty_desc_002", "Chinese": "开始时往牌组中增加一张不可删除的空白牌", "English": "Add one blank card that cannot be removed to the deck at the start"},
     {"Id": "difficulty_desc_003", "Chinese": "关卡开局难度增加", "English": "Levels are harder at the start"},
-    {"Id": "difficulty_desc_004", "Chinese": "获得的金币减少", "English": "Earn fewer coins"}
+    {"Id": "difficulty_desc_004", "Chinese": "获得的金币减少", "English": "Earn fewer coins"},
+    {"Id": "place_skill_name_10001", "Chinese": "回收", "English": "Recycle"},
+    {"Id": "place_skill_desc_10001", "Chinese": "移动后，将自己和上面那张牌放入弃牌堆", "English": "After moving, it and the card above go to the discard pile"},
+    {"Id": "place_skill_name_10002", "Chinese": "复制", "English": "Copy"},
+    {"Id": "place_skill_desc_10002", "Chinese": "移动后，将自己变成上面那张牌", "English": "After moving, it becomes the card above"},
+    {"Id": "flip_skill_name_20001", "Chinese": "强制发牌", "English": "Forced Deal"},
+    {"Id": "flip_skill_desc_20001", "Chinese": "翻开时，强制额外发一次牌", "English": "When flipped face up, force an extra round of dealing."}
   ]
 }
