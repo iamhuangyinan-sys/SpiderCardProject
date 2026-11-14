@@ -40,6 +40,12 @@ public class CardFace
 
 public static class CardFaceHelper
 {
+    /// <summary>该属性是否在牌桌和局内牌堆中显示</summary>
+    public static bool IsAttributeVisibleInGame(E_CardAttributeEnum attribute)
+    {
+        return ConfigHelper.Get<CardAttributeConfig>(((int)attribute).ToString())?.IsShowInGame == true;
+    }
+
     /// <summary>按牌定义算（花色 / 点数取定义里的）</summary>
     public static CardFace Build(CardDef def)
     {

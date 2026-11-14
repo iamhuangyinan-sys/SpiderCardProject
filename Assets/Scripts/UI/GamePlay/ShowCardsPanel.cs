@@ -21,6 +21,7 @@ public partial class ShowCardsPanel : NormalPanel, ISceneInputBlockPanel
     }
 
     private readonly List<CardShow> _cards = new();
+    private bool _useInGameAttributes;
 
     /// <summary>选牌模式下的回调（null = 纯展示）</summary>
     private Func<CardDef, bool> _onPick;
@@ -82,6 +83,7 @@ public partial class ShowCardsPanel : NormalPanel, ISceneInputBlockPanel
     /// <summary>设置要展示的场上牌（带属性）</summary>
     public void SetCards(IReadOnlyList<CardData> cards)
     {
+        _useInGameAttributes = true;
         _cards.Clear();
 
         if (cards != null)
@@ -98,6 +100,7 @@ public partial class ShowCardsPanel : NormalPanel, ISceneInputBlockPanel
     /// <summary>设置要展示的牌定义及其属性</summary>
     public void SetDefs(IReadOnlyList<CardDef> defs)
     {
+        _useInGameAttributes = false;
         _cards.Clear();
 
         if (defs != null)
@@ -119,7 +122,7 @@ public partial class ShowCardsPanel : NormalPanel, ISceneInputBlockPanel
             var cell = item as ShowCardItem;
             if (cell == null) return;
 
-            cell.Bind(_cards[index].def, _cards[index].attributes);
+            cell.Bind(_cards[index].def, _cards[index].attributes, _useInGameAttributes);
 
             // 选牌模式：点一下就算选中；纯展示模式保持不可点
             if (_onPick != null) cell.SetClickable(() => OnPickCard(index));

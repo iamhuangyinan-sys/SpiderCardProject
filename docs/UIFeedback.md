@@ -43,7 +43,7 @@ btn_Feedback  [Image 透明点击区域、UIFeedbackButton、Controller、各效
 | UIShadowEffect | 指向独立 Image；offset 是该阴影的 anchoredPosition，extraSize 加在初始 sizeDelta 上，color 是绝对颜色 |
 | UIBreathingEffect | 只有 Attention 为 true 且状态为 Normal 时播放；Min / Max 是相对于初始缩放的倍率，Half Cycle 是半个周期 |
 | UIColorEffect | 与 Graphic 初始颜色相乘，白色保留原色；可以挂多个组件，分别调背景、文字和图标 |
-| UIRaiseEffect | 悬停/按下时把 Target 容器提到同级最后；Duration 后恢复排序；父节点带 LayoutGroup 时不提层 |
+| UIRaiseEffect | 悬停/按下时把 Target 容器提到同级最后；同父节点的新项提层前会立即复位上一项；移出且无新项接替时等 Duration 后复位；父节点带 LayoutGroup 时不提层 |
 
 各组件的 Duration / Ease 仅控制自身状态过渡，时间默认不受 Time.timeScale 影响。呼吸循环使用 InOutSine，周期单独设置。
 

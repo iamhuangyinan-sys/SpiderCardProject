@@ -29,9 +29,9 @@ public partial class ShowCardItem : BaseListItem
     private void OnCardHover(bool hovering) => _feedback?.SetHovered(hovering);
 
     /// <summary>按牌定义 + 属性显示牌图（有 Sunk 属性会染黄）</summary>
-    public void Bind(CardDef def, IReadOnlyList<E_CardAttributeEnum> attributes = null)
+    public void Bind(CardDef def, IReadOnlyList<E_CardAttributeEnum> attributes = null, bool useInGameAttributes = false)
     {
-        comps.modCard.Bind(def, attributes);
+        comps.modCard.Bind(def, attributes, useInGameAttributes);
     }
 
     /// <summary>设置点击回调；传 null 表示不可点击（删牌选牌等场合用）</summary>

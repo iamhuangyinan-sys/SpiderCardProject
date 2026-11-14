@@ -83,13 +83,14 @@ public partial class CardModule : BaseModule, IPointerEnterHandler, IPointerExit
     /// <summary>绑定一张牌：记录牌定义 / 属性 + 刷新牌面</summary>
     /// <param name="def">牌定义（花色 / 点数 / 技能 / 自带属性）</param>
     /// <param name="attributes">额外的状态属性（null / 空 = 没有；会拷贝一份）</param>
-    public void Bind(CardDef def, IReadOnlyList<E_CardAttributeEnum> attributes = null)
+    /// <param name="useInGameAttributes">按配表过滤局内隐藏的属性</param>
+    public void Bind(CardDef def, IReadOnlyList<E_CardAttributeEnum> attributes = null, bool useInGameAttributes = false)
     {
         Def = def;
 
         _attributes.Clear();
-        AddAttributes(def.attributes);   // 牌自带属性
-        AddAttributes(attributes);       // 外部传入的状态属性
+        AddAttributes(def.attributes, useInGameAttributes);
+        AddAttributes(attributes, useInGameAttributes);
 
         RefreshFace();
     }
@@ -233,13 +234,16 @@ public partial class CardModule : BaseModule, IPointerEnterHandler, IPointerExit
     }
 
     /// <summary>追加属性（重复的不重复加）</summary>
-    private void AddAttributes(IReadOnlyList<E_CardAttributeEnum> attributes)
+    private void AddAttributes(IReadOnlyList<E_CardAttributeEnum> attributes, bool useInGameAttributes)
     {
         if (attributes == null) return;
 
         for (int i = 0; i < attributes.Count; i++)
         {
-            if (!_attributes.Contains(attributes[i])) _attributes.Add(attributes[i]);
+            var attribute = attributes[i];
+            if (useInGameAttributes && !CardFaceHelper.IsAttributeVisibleInGame(attribute)) continue;
+
+            if (!_attributes.Contains(attribute)) _attributes.Add(attribute);
         }
     }
 

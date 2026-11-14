@@ -361,7 +361,10 @@ public class CardView : MonoBehaviour
 
         for (int i = 0; i < attributes.Count; i++)
         {
-            var sprite = CardResManager.Instance.GetAttributeSprite((int)attributes[i]);
+            var attribute = attributes[i];
+            if (!CardFaceHelper.IsAttributeVisibleInGame(attribute)) continue;
+
+            var sprite = CardResManager.Instance.GetAttributeSprite((int)attribute);
             if (sprite != null) _attributeSprites.Add(sprite);
         }
     }

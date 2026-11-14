@@ -12,7 +12,7 @@ public static class BeginBuildHelper
 
         if (difficulty >= 2)
         {
-            if (!CardPreSetHelper.TryGetDef("710001", out var blank, out _)) return false;
+            if (!CardPreSetHelper.TryGetDef("710003", out var blank, out _)) return false;
             cards.Add(blank.Clone());
         }
 

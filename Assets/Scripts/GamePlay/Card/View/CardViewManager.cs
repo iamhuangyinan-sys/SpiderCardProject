@@ -918,13 +918,20 @@ public class CardViewManager : ManagerBase<CardViewManager>
     {
         if (!card.isFaceUp) return FaceDownSpacing;
 
-        return HasAttribute(card) ? faceUpSpacing + FaceUpAttributeExtraSpacing : faceUpSpacing;
+        return HasVisibleAttribute(card) ? faceUpSpacing + FaceUpAttributeExtraSpacing : faceUpSpacing;
     }
 
-    /// <summary>这张牌带属性吗（属性图标行会占掉牌面下半部，间距要多让）</summary>
-    private static bool HasAttribute(CardData card)
+    /// <summary>有可见属性时为属性图标行预留列间距</summary>
+    private static bool HasVisibleAttribute(CardData card)
     {
-        return card.attributes != null && card.attributes.Count > 0;
+        if (card.attributes == null) return false;
+
+        foreach (var attribute in card.attributes)
+        {
+            if (CardFaceHelper.IsAttributeVisibleInGame(attribute)) return true;
+        }
+
+        return false;
     }
 
     // ============ 列内自适应间距（防出屏） ============
@@ -978,7 +985,7 @@ public class CardViewManager : ManagerBase<CardViewManager>
             var card = column[i];
 
             if (!card.isFaceUp) faceDownHeight += FaceDownSpacing;
-            else if (HasAttribute(card)) attributeGaps++;
+            else if (HasVisibleAttribute(card)) attributeGaps++;
             else faceUpGaps++;
         }
 

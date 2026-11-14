@@ -72,7 +72,7 @@
     {"Id": "ui_settings_video", "Chinese": "视频", "English": "Video"},
     {"Id": "ui_settings_full_screen", "Chinese": "全屏模式", "English": "Full screen"},
     {"Id": "difficulty_name", "Chinese": "难度{0}", "English": "Difficulty{0}"},
-    {"Id": "difficulty_desc_002", "Chinese": "开始时往牌组中增加一张空白牌", "English": "Add one blank card to the deck at the start"},
+    {"Id": "difficulty_desc_002", "Chinese": "开始时往牌组中增加一张不可删除的空白牌", "English": "Add one blank card that cannot be removed to the deck at the start"},
     {"Id": "difficulty_desc_003", "Chinese": "关卡开局难度增加", "English": "Levels are harder at the start"},
     {"Id": "difficulty_desc_004", "Chinese": "获得的金币减少", "English": "Earn fewer coins"}
   ]

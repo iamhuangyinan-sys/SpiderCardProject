@@ -8,6 +8,8 @@ using UnityEngine.UI;
 [AddComponentMenu("UI/Feedback/Effects/Raise On Hover")]
 public sealed class UIRaiseEffect : UIFeedbackEffect
 {
+    private static readonly Dictionary<Transform, UIRaiseEffect> RaisedByParent = new();
+
     [SerializeField, Tooltip("要提层的外层容器；留空使用当前节点")]
     private Transform target = null;
     [SerializeField, Tooltip("不可交互时也允许悬停提层，配合缩放组件的同名开关")]
@@ -31,13 +33,7 @@ public sealed class UIRaiseEffect : UIFeedbackEffect
         if (context.State == E_UIFeedbackState.Hovered || context.State == E_UIFeedbackState.Pressed ||
             (context.State == E_UIFeedbackState.Disabled && hoverWhenDisabled && context.IsPointerHovered))
         {
-            if (raised) return;
-            var parent = capturedTarget.parent;
-            if (parent == null || parent.GetComponent<LayoutGroup>() != null) return;
-            originalParent = parent;
-            originalSibling = capturedTarget.GetSiblingIndex();
-            capturedTarget.SetAsLastSibling();
-            raised = true;
+            Raise();
         }
         else if (raised)
         {
@@ -46,14 +42,38 @@ public sealed class UIRaiseEffect : UIFeedbackEffect
         }
     }
 
+    private void Raise()
+    {
+        var parent = capturedTarget.parent;
+        if (raised && parent != originalParent) RestoreSibling();
+        if (parent == null || parent.GetComponent<LayoutGroup>() != null) return;
+
+        if (!raised)
+        {
+            // 先取消上一项的延迟回位并恢复其顺序，再记录当前项的索引。
+            if (RaisedByParent.TryGetValue(parent, out var previous)) previous.Restore();
+
+            originalParent = parent;
+            originalSibling = capturedTarget.GetSiblingIndex();
+            RaisedByParent[parent] = this;
+            raised = true;
+        }
+
+        capturedTarget.SetAsLastSibling();
+    }
+
     private void RestoreSibling()
     {
         if (!raised) return;
         raised = false;
+        var parent = originalParent;
+        originalParent = null;
+        RaisedByParent.Remove(parent);
+
         // 批量失活期间 Unity 禁止调整兄弟顺序；重新挂父节点后也不回写旧索引。
         if (capturedTarget == null || !capturedTarget.gameObject.activeInHierarchy ||
-            capturedTarget.parent != originalParent || originalParent == null ||
-            originalParent.GetComponent<LayoutGroup>() != null) return;
+            parent == null || capturedTarget.parent != parent ||
+            parent.GetComponent<LayoutGroup>() != null) return;
         capturedTarget.SetSiblingIndex(originalSibling);
     }
 
