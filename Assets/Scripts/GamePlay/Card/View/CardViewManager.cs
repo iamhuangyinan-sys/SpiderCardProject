@@ -17,7 +17,7 @@ public class CardViewManager : ManagerBase<CardViewManager>
     private readonly Vector3 _startPos = new Vector3(0f, 0f, 0f);
 
     /// <summary>列间隔（向右 +X）</summary>
-    private const float ColumnSpacing = 1.7f;
+    private const float ColumnSpacing = 1.6f;
 
     /// <summary>
     /// 正面牌（翻开）的「自然」向下间隔 —— 未被压缩时用这个值

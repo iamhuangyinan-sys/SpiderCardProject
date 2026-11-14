@@ -17,7 +17,7 @@ public class CardsManager : ManagerBase<CardsManager>
     private const float SunkProbability = 0.8f;
 
     /// <summary>测试模式：跳过洗牌直接发牌（仅编辑器下生效）</summary>
-    public bool isTestMode = false;
+    public bool isTestMode = true;
 
     /// <summary>是否正在结算收牌（收牌期间锁输入、不再触发新的回收/洗回）</summary>
     public bool IsSettling { get; private set; }

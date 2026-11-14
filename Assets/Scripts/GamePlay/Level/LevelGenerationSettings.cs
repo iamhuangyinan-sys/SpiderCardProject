@@ -12,8 +12,10 @@ public static class LevelGenerationSettings
     public const float Difficulty3TargetBonus = 8;
     public const int Difficulty3ExtraDealCards = 6;
     public const float FirstScoreLimit = 80;
-    public const int MinimumColumns = 11;
-    public const int MinimumPockets = 2;
+    public const int MinimumColumns = 10;
+    public const int MaximumColumns = 13;
+    public const int MinimumPockets = 1;
+    public const int MaximumPockets = 3;
     public const int MaximumStraightGoal = 5;
     public const float BossTarget = 160;
     public const float BossMinimumGap = 12;

@@ -482,6 +482,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 84e679019dd68a245bd6467171f1bdb5, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ShowCardsPanel
+  fadeTarget: {fileID: 0}
 --- !u!114 &5621538257560833814
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -540,7 +541,7 @@ RectTransform:
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 1, y: 1}
   m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 0, y: 720}
+  m_SizeDelta: {x: 0, y: 860}
   m_Pivot: {x: 0, y: 1}
 --- !u!1 &4811771192774379944
 GameObject:
@@ -576,7 +577,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0.000039101, y: -355.30475}
+  m_AnchoredPosition: {x: 0, y: -450}
   m_SizeDelta: {x: 1500, y: 55}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &992146403915484412
@@ -641,7 +642,7 @@ MonoBehaviour:
   m_fontSizeMin: 18
   m_fontSizeMax: 72
   m_fontStyle: 0
-  m_HorizontalAlignment: 1
+  m_HorizontalAlignment: 2
   m_VerticalAlignment: 512
   m_textAlignment: 65535
   m_characterSpacing: 0
@@ -791,8 +792,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0, y: 31}
-  m_SizeDelta: {x: 1500, y: 720}
+  m_AnchoredPosition: {x: 0.000061035, y: 31}
+  m_SizeDelta: {x: 1500, y: 860}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &8591356146163402150
 CanvasRenderer:
@@ -877,13 +878,13 @@ MonoBehaviour:
   _scrollRect: {fileID: 1815940782686879600}
   _content: {fileID: 4090654850423112748}
   _cellPrefab: {fileID: 1371024226807795366, guid: 0655d7b05ad17b248b27b1ab500735da, type: 3}
-  _itemWidth: 100
-  _itemHeight: 130
+  _itemWidth: 120
+  _itemHeight: 156
   _columnGap: 10
   _rowGap: 20
-  _columns: 13
-  _paddingTop: 30
-  _paddingBottom: 30
+  _columns: 10
+  _paddingTop: 50
+  _paddingBottom: 50
   _paddingLeft: 40
   _paddingRight: 40
 --- !u!1 &8330951281675809981

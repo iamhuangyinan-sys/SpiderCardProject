@@ -88,15 +88,23 @@ public partial class BeginBuildPanel : NormalPanel, ISceneInputBlockPanel
         string description = config != null ? DifficultyHelper.GetDescription(config) : string.Empty;
         comps.txtDifDesc.text = description;
         comps.txtDifDesc.gameObject.SetActive(!string.IsNullOrWhiteSpace(description));
-        comps.btnDifLeft.interactable = !confirming && difficultyIndex > 0;
-        comps.btnDifRight.interactable = !confirming && difficultyIndex < difficulties.Count - 1;
+        SetArrow(comps.btnDifLeft, difficultyIndex > 0);
+        SetArrow(comps.btnDifRight, difficultyIndex < difficulties.Count - 1);
+        SetArrow(comps.btnLeft, selectedIndex > 0);
+        SetArrow(comps.btnRight, selectedIndex < builds.Count - 1);
         comps.btnContinue.interactable = !confirming && preview != null && config != null;
+    }
+
+    private void SetArrow(UnityEngine.UI.Button button, bool visible)
+    {
+        button.interactable = !confirming && visible;
+        button.gameObject.SetActive(visible);
     }
 
     private void SwitchBuild(int direction)
     {
         if (confirming || builds.Count == 0) return;
-        selectedIndex = (selectedIndex + direction + builds.Count) % builds.Count;
+        selectedIndex = Mathf.Clamp(selectedIndex + direction, 0, builds.Count - 1);
         RefreshBuild();
     }
 
@@ -105,8 +113,6 @@ public partial class BeginBuildPanel : NormalPanel, ISceneInputBlockPanel
         var cfg = builds.Count > 0 ? builds[selectedIndex] : null;
         RefreshBuildName();
         RefreshDeckPreview();
-        comps.btnLeft.interactable = builds.Count > 1;
-        comps.btnRight.interactable = builds.Count > 1;
         int count = cfg?.Image?.Count ?? 0;
         while (items.Count < count && itemPrefab != null)
         {

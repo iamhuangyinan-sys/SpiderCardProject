@@ -142,8 +142,10 @@ public static class LevelGenerationHelper
         bool early = progress <= 0.25f;
         bool late = progress > 0.5f;
         // 枚举目标/列/槽，避免随机重试碰不到合法组合；发牌轮廓做有限采样。
-        for (int c = first ? 12 : LevelGenerationSettings.MinimumColumns; c <= (boss ? 12 : 13); c++)
-        for (int p = first ? 3 : LevelGenerationSettings.MinimumPockets; p <= (boss ? 3 : 4); p++)
+        for (int c = first ? LevelGenerationSettings.MaximumColumns : LevelGenerationSettings.MinimumColumns;
+             c <= LevelGenerationSettings.MaximumColumns; c++)
+        for (int p = first ? LevelGenerationSettings.MaximumPockets : LevelGenerationSettings.MinimumPockets;
+             p <= LevelGenerationSettings.MaximumPockets; p++)
         for (int goal = first ? 1 : boss ? 4 : 2; goal <= (first ? 2 : boss ? LevelGenerationSettings.MaximumStraightGoal : 4); goal++)
         {
             if (previous.Any(n => Math.Abs(n.ColumnNum - c) > 1 || Math.Abs(n.PocketNum - p) > 1)) continue;
@@ -169,8 +171,10 @@ public static class LevelGenerationHelper
                 if (first && candidate.difficulty > firstScoreLimit) continue;
                 if (boss && candidate.difficulty < maxNormal + LevelGenerationSettings.BossMinimumGap) continue;
                 double distance = (candidate.difficulty - target) / LevelGenerationSettings.DifficultyTolerance;
-                int baseColumn = first || early ? 13 : boss || late ? 11 : 12;
-                int basePocket = first ? 4 : boss || late ? 2 : 3;
+                int baseColumn = !first && !early && (boss || late)
+                    ? LevelGenerationSettings.MinimumColumns : LevelGenerationSettings.MaximumColumns;
+                int basePocket = !first && (boss || late)
+                    ? LevelGenerationSettings.MinimumPockets : LevelGenerationSettings.MaximumPockets;
                 double weight = goalWeight * (c == baseColumn ? 0.7 : 0.15) * (p == basePocket ? 0.7 : 0.15)
                     * Math.Exp(-0.5 * distance * distance);
                 candidates.Add(candidate);

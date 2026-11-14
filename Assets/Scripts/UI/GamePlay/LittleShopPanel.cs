@@ -8,6 +8,7 @@ using UnityEngine.UI;
 public partial class LittleShopPanel : NormalPanel, ISceneInputBlockPanel
 {
     private const string ItemPath = "Prefab/UI/GamePlay/Item/ShopCardItem";
+    private const float ItemScale = 1.15f;
     private readonly List<ShopCardItem> items = new();
     private GameObject itemPrefab;
     private bool choosing;
@@ -50,8 +51,8 @@ public partial class LittleShopPanel : NormalPanel, ISceneInputBlockPanel
             var item = Instantiate(itemPrefab, comps.imgLayout.transform).GetComponent<ShopCardItem>();
             var rect = item.RectTransform;
             rect.anchorMin = rect.anchorMax = rect.pivot = new Vector2(0.5f, 0.5f);
-            rect.localScale = Vector3.one * 1.5f;
-            float spacing = rect.sizeDelta.x * 1.5f + 80f;
+            rect.localScale = new Vector3(ItemScale, ItemScale, 1f);
+            float spacing = rect.sizeDelta.x * ItemScale + (layout != null ? layout.spacing : 80f);
             rect.anchoredPosition = new Vector2((i - (goods.Count - 1) * 0.5f) * spacing, 0f);
             item.OnActivate();
             item.Bind(i, goods[i], () => Buy(index), () => OnFinished?.Invoke());

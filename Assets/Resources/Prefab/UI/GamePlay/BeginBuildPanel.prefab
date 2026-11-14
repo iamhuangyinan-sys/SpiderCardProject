@@ -2118,7 +2118,7 @@ MonoBehaviour:
     extraSize: {x: 0, y: 0}
   disabled:
     color: {r: 0, g: 0, b: 0, a: 0}
-    offset: {x: 2, y: -2}
+    offset: {x: 4, y: -4}
     extraSize: {x: 0, y: 0}
 --- !u!114 &940000000000000009
 MonoBehaviour:
@@ -2155,7 +2155,7 @@ MonoBehaviour:
   hovered: {r: 1, g: 1, b: 1, a: 1}
   pressed: {r: 1, g: 1, b: 1, a: 1}
   focused: {r: 1, g: 1, b: 1, a: 1}
-  disabled: {r: 0.8, g: 0.8, b: 0.8, a: 1}
+  disabled: {r: 1, g: 1, b: 1, a: 1}
 --- !u!1 &2042363671776062268
 GameObject:
   m_ObjectHideFlags: 0
@@ -3104,8 +3104,8 @@ MonoBehaviour:
     offset: {x: 4, y: -4}
     extraSize: {x: 0, y: 0}
   disabled:
-    color: {r: 0, g: 0, b: 0, a: 0.12}
-    offset: {x: 2, y: -2}
+    color: {r: 0, g: 0, b: 0, a: 0}
+    offset: {x: 4, y: -4}
     extraSize: {x: 0, y: 0}
 --- !u!114 &920000000000000015
 MonoBehaviour:
@@ -3142,7 +3142,7 @@ MonoBehaviour:
   hovered: {r: 1, g: 1, b: 1, a: 1}
   pressed: {r: 0.9, g: 0.9, b: 0.9, a: 1}
   focused: {r: 1, g: 1, b: 1, a: 1}
-  disabled: {r: 0.8, g: 0.8, b: 0.8, a: 1}
+  disabled: {r: 1, g: 1, b: 1, a: 1}
 --- !u!1 &6014135463500934614
 GameObject:
   m_ObjectHideFlags: 0
@@ -3730,7 +3730,7 @@ MonoBehaviour:
     extraSize: {x: 0, y: 0}
   disabled:
     color: {r: 0, g: 0, b: 0, a: 0}
-    offset: {x: 2, y: -2}
+    offset: {x: 4, y: -4}
     extraSize: {x: 0, y: 0}
 --- !u!114 &940000000000000035
 MonoBehaviour:
@@ -3767,7 +3767,7 @@ MonoBehaviour:
   hovered: {r: 1, g: 1, b: 1, a: 1}
   pressed: {r: 1, g: 1, b: 1, a: 1}
   focused: {r: 1, g: 1, b: 1, a: 1}
-  disabled: {r: 0.8, g: 0.8, b: 0.8, a: 1}
+  disabled: {r: 1, g: 1, b: 1, a: 1}
 --- !u!1 &7176171356981155011
 GameObject:
   m_ObjectHideFlags: 0
@@ -4095,8 +4095,8 @@ MonoBehaviour:
     offset: {x: 4, y: -4}
     extraSize: {x: 0, y: 0}
   disabled:
-    color: {r: 0, g: 0, b: 0, a: 0.12}
-    offset: {x: 2, y: -2}
+    color: {r: 0, g: 0, b: 0, a: 0}
+    offset: {x: 4, y: -4}
     extraSize: {x: 0, y: 0}
 --- !u!114 &920000000000000030
 MonoBehaviour:
@@ -4133,7 +4133,7 @@ MonoBehaviour:
   hovered: {r: 1, g: 1, b: 1, a: 1}
   pressed: {r: 0.9, g: 0.9, b: 0.9, a: 1}
   focused: {r: 1, g: 1, b: 1, a: 1}
-  disabled: {r: 0.8, g: 0.8, b: 0.8, a: 1}
+  disabled: {r: 1, g: 1, b: 1, a: 1}
 --- !u!1 &8304037024019705777
 GameObject:
   m_ObjectHideFlags: 0
