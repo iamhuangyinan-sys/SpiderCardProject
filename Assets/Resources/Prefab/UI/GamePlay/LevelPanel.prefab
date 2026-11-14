@@ -479,6 +479,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 02b2d0202fec5d7438235c8a2d94c9b9, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LevelPanel
+  fadeTarget: {fileID: 0}
   _lineIdleColor: {r: 1, g: 1, b: 1, a: 0.18}
   _lineClearedColor: {r: 1, g: 1, b: 1, a: 1}
   _lineFadeDuration: 0.15
@@ -771,7 +772,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: de2c2bbabbfc2ff45b3df0e5b8613b6f, type: 3}
+  m_Sprite: {fileID: 21300000, guid: 4e88cf47dde536c4880e14673a5ecca4, type: 3}
   m_Type: 0
   m_PreserveAspect: 0
   m_FillCenter: 1
