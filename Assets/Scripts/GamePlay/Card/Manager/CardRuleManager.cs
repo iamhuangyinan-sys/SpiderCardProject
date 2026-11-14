@@ -179,6 +179,7 @@ public class CardRuleManager : ManagerBase<CardRuleManager>
     /// <summary>
     /// 检查某列末尾 13 张是否形成 A-K 同花顺（13 张、同花、点数 K→A），
     /// 是则返回该顺子（K 到 A 共 13 张），否则返回 null。
+    /// 这 13 张牌必须全部翻开。
     /// 花色：整段花色列表的交集非空（多重花色的牌能顶替它含的任一花色）
     /// 点数：必须真的是 13→1，每张牌的点数列表里要真的有这个点数（-1 / -2 都不算）
     /// </summary>
@@ -188,12 +189,13 @@ public class CardRuleManager : ManagerBase<CardRuleManager>
 
         int start = column.Count - 13;
 
-        if (!HasCommonSuitOfRange(column, start, 13)) return null;
-
         for (int i = 0; i < 13; i++)
         {
-            if (!column[start + i].ranks.Contains(13 - i)) return null;
+            var card = column[start + i];
+            if (!card.isFaceUp || !card.ranks.Contains(13 - i)) return null;
         }
+
+        if (!HasCommonSuitOfRange(column, start, 13)) return null;
 
         return column.GetRange(start, 13);
     }
