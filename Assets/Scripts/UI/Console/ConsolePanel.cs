@@ -51,6 +51,11 @@ public partial class ConsolePanel : NormalPanel, ISceneInputBlockPanel
         comps.iptConsole.text = string.Empty;
         comps.iptConsole.ActivateInputField();
 
+        ExecuteCommand(input);
+    }
+
+    internal static void ExecuteCommand(string input)
+    {
         if (ConsoleCommandManager.Instance.Execute(input, out string output))
         {
             Debug.Log($"[Console] > {input}\n{output}");
