@@ -1,0 +1,5 @@
+﻿{
+  "items": [
+    {"Id": "10001", "Name": "buff_name_10001", "Description": "buff_desc_10001", "Icon": "freeDrag", "IsCount": true, "CanActivate": true}
+  ]
+}

@@ -1,6 +1,6 @@
 ﻿{
   "items": [
-    {"Id": "10001", "Name": "place_skill_name_10001", "Description": "place_skill_desc_10001", "Image": "cardRecycle", "Icon": "recycle"},
-    {"Id": "10002", "Name": "place_skill_name_10002", "Description": "place_skill_desc_10002", "Image": "cardCopy", "Icon": "copy"}
+    {"Id": "20001", "Type": 1, "Name": "place_skill_name_20001", "Description": "place_skill_desc_20001", "Image": "cardRecycle", "Icon": "recycle", "RelatedBuff": []},
+    {"Id": "20002", "Type": 1, "Name": "place_skill_name_20002", "Description": "place_skill_desc_20002", "Image": "cardCopy", "Icon": "copy", "RelatedBuff": []}
   ]
 }

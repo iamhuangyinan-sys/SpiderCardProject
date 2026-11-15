@@ -6,7 +6,7 @@ using UnityEngine;
 ///
 /// 使用方式：
 ///   ConfigHelper.LoadAll();                                    // 游戏启动时调用一次
-///   var skill = ConfigHelper.Get<PlaceSkillConfig>("10001");    // 按 Id（string）查
+///   var skill = ConfigHelper.Get<PlaceSkillConfig>("20001");    // 按 Id（string）查
 ///   var allSkills = ConfigHelper.GetAll<PlaceSkillConfig>();    // 拿全部
 /// </summary>
 public static class ConfigHelper

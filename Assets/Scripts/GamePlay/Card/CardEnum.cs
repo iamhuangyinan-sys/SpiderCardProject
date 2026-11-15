@@ -53,17 +53,18 @@ public enum E_PlaceSkillEnum
     None = 0,
 
     /// <summary>回收：放下后，自己和自己下面紧邻的 1 张牌一起进弃牌堆</summary>
-    Recycle = 10001,
+    Recycle = 20001,
 
     /// <summary>复制：放下后，自己变成这列自己下面紧邻的那张牌</summary>
-    Copy = 10002,
+    Copy = 20002,
 }
 
 /// <summary>翻开卡牌时触发的技能。</summary>
 public enum E_FlipSkillEnum
 {
     None = 0,
-    ForceDeal = 20001,
+    ForceDeal = 30001,
+    AddDrag = 30002,
 }
 
 /// <summary>

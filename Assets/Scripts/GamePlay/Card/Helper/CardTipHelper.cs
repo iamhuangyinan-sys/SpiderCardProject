@@ -66,7 +66,9 @@ public static class CardTipHelper
         }
 
         // ===== 3. 落牌技能（带技能的牌 = 以前的特殊牌，文案读 PlaceSkillConfig）=====
-        if (def.HasSkill) AddSkillTip(tips, def.placeSkill);
+        // 技能表里的 RelatedBuff：把关联 Buff 的描述紧跟在技能 tip 之后（repeatBuffIds 用来跨技能去重）
+        var repeatedBuffIds = new HashSet<string>();
+        if (def.HasSkill) AddSkillTip(tips, def.placeSkill, repeatedBuffIds);
         if (def.flipSkill != E_FlipSkillEnum.None)
         {
             var cfg = ConfigHelper.Get<FlipSkillConfig>(((int)def.flipSkill).ToString());
@@ -74,6 +76,7 @@ public static class CardTipHelper
             {
                 tips.Add(new HoverTipData(LanguageHelper.Get(cfg.Name), LanguageHelper.Get(cfg.Description),
                     res.GetFlipSkillIcon(def.flipSkill)));
+                AddRelatedBuffTips(tips, cfg.RelatedBuff, repeatedBuffIds);
             }
         }
 
@@ -108,14 +111,37 @@ public static class CardTipHelper
         if (cfg != null) tips.Add(new HoverTipData(LanguageHelper.Get(cfg.Name), LanguageHelper.Get(cfg.Description), icon));
     }
 
-    /// <summary>按落牌技能查技能描述表（Id = 枚举值）；查不到就跳过</summary>
-    private static void AddSkillTip(List<HoverTipData> tips, E_PlaceSkillEnum placeSkill)
+    /// <summary>按落牌技能查技能描述表（Id = 枚举值）；查不到就跳过。技能 tip 后面紧跟它的关联 Buff 描述</summary>
+    private static void AddSkillTip(List<HoverTipData> tips, E_PlaceSkillEnum placeSkill, HashSet<string> repeatedBuffIds)
     {
         var cfg = ConfigHelper.Get<PlaceSkillConfig>(((int)placeSkill).ToString());
         if (cfg == null) return;
 
         var icon = CardResManager.Instance.GetPlaceSkillIcon(placeSkill);
         tips.Add(new HoverTipData(LanguageHelper.Get(cfg.Name), LanguageHelper.Get(cfg.Description), icon));
+        AddRelatedBuffTips(tips, cfg.RelatedBuff, repeatedBuffIds);
+    }
+
+    /// <summary>
+    /// 技能表 RelatedBuff 列里的 Buff 描述 —— 紧跟在技能 tip 之下作为「关联描述」。
+    /// 空 id / 配表查不到 / 已在前面出现过的 Buff 直接跳过（落牌技能和翻牌技能可能引用同一个 Buff）。
+    /// </summary>
+    private static void AddRelatedBuffTips(List<HoverTipData> tips, List<string> relatedBuff,
+        HashSet<string> repeatedBuffIds)
+    {
+        if (relatedBuff == null) return;
+
+        for (int i = 0; i < relatedBuff.Count; i++)
+        {
+            string id = relatedBuff[i];
+            if (string.IsNullOrEmpty(id) || !repeatedBuffIds.Add(id)) continue;
+
+            var cfg = ConfigHelper.Get<BuffConfig>(id);
+            if (cfg == null) continue;
+
+            // 与 BuffItem 的 tip 保持一致：只显示名字 + 描述，不带图标
+            tips.Add(new HoverTipData(LanguageHelper.Get(cfg.Name), LanguageHelper.Get(cfg.Description)));
+        }
     }
 
     /// <summary>点数列表里有没有这个值</summary>

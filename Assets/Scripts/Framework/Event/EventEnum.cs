@@ -44,5 +44,6 @@
 
         // ---- 玩家设置 ----
         OnLanguageChanged,       // 无参数：当前语言改变，刷新界面文案
+        OnBuffChanged,           // 无参数：当前关卡的 Buff 状态发生变化
     }
 }

@@ -18,6 +18,7 @@ public class CardController : MonoBehaviour
     private Camera _camera;
 
     private bool _dragging;
+    private bool _usedFreeDrag;
 
     /// <summary>被拖的牌（锚点牌及其同列下方所有牌）</summary>
     private List<CardData> _draggedCards;
@@ -109,6 +110,7 @@ public class CardController : MonoBehaviour
     {
         _dragFromPocket = false;
         _dragPocketIndex = -1;
+        _usedFreeDrag = false;
 
         CardData blockedCard = null;
 
@@ -121,7 +123,7 @@ public class CardController : MonoBehaviour
         }
         else
         {
-            _draggedCards = CardRuleManager.Instance.GetDraggableCards(_view.data, out blockedCard);
+            _draggedCards = CardRuleManager.Instance.GetDraggableCards(_view.data, out blockedCard, out _usedFreeDrag);
         }
 
         if (_draggedCards == null || _draggedCards.Count == 0)
@@ -235,9 +237,8 @@ public class CardController : MonoBehaviour
                 CardsManager.Instance.MoveToPocket(_draggedCards[0], targetPocket);
                 moved = true;
             }
-            else if (targetColumn >= 0 && CardRuleManager.Instance.CanMove(_draggedCards, targetColumn))
+            else if (targetColumn >= 0 && CardsManager.Instance.MoveCards(_draggedCards, targetColumn, _usedFreeDrag))
             {
-                CardsManager.Instance.MoveCards(_draggedCards, targetColumn);
                 moved = true;
             }
             else if (targetPocket >= 0 && _draggedCards.Count == 1 &&
@@ -290,6 +291,7 @@ public class CardController : MonoBehaviour
     private void ResetDragState()
     {
         _dragging = false;
+        _usedFreeDrag = false;
         _draggedCards = null;
         _dragStartPositions = null;
         _dragStartSortingOrders = null;

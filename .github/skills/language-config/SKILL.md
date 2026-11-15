@@ -7,9 +7,11 @@ description: 查询和修改 SpiderCard 的 LanguageConfig.xlsx。用于按 ID �
 
 从项目根目录运行 `python tools/language_config.py --help`。工具只需 Python 3 标准库。
 
+英文游戏文案与中文使用相同的句号约定。英文句中和句末都不加句号，按语义使用逗号、换行或重写为一整句。保留小数点等有实际含义的点号。
+
 1. 用 `show --id <Id>` 查单条，或用 `show --contains <关键词>` 在 ID 和中英文中查找上下文。无参数的 `show` 输出全表 JSON。
 2. 将变更写成 UTF-8 JSON 数组。每项含 `Id` 和 `op`。`update` 只改补丁提供的字段。`add` 追加新 ID，需同时提供 `Chinese` 和 `English`。`delete` 只提供现有 `Id`，会删除整行。参考附近文案统一术语，保留格式占位符、富文本标签和有意义的换行。
-3. 用 `edit <patch.json>` 预览，核对 ID、语言和前后文本，再用 `edit <patch.json> --write` 写回。补丁文件可放在临时目录。
+3. 用 `edit <patch.json>` 预览，核对 ID、语言和前后文本，确认英文文案符合句号约定，再用 `edit <patch.json> --write` 写回。补丁文件可放在临时目录。
 4. 用 `check` 校验表结构和 ID，并检查 Unity 运行时 JSON 是否与 Excel 一致。需要同步时可在 Unity 选择 **Tools > Export All Configs**，随后再次检查。该菜单会导出所有配表，执行前检查是否有其他未完成的配表改动。若本次只修改 Excel，报告运行时 JSON 的同步状态。
 
 ```json

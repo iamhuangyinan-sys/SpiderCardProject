@@ -19,6 +19,7 @@ public class CardGameEntry : MonoBehaviour
     private BeginBuildPanel _beginBuildPanel;
     private LevelPanel _levelPanel;
     private MainTopPanel _mainTopPanel;
+    private BuffPanel _buffPanel;
     private ShopPanel _shopPanel;
     private LittleShopPanel littleShopPanel;
 
@@ -102,11 +103,13 @@ public class CardGameEntry : MonoBehaviour
         }
 
         CardViewManager.Instance.SetTableVisible(true);
+        _buffPanel = UIManager.Instance.Show<BuffPanel>();
     }
 
     /// <summary>收牌结束（关卡结束）：弹选关面板，等它飞入挡住牌桌后再隐藏牌桌物件</summary>
     private void OnLevelEnd()
     {
+        if (_buffPanel != null) UIManager.Instance.Hide(_buffPanel);
         if (LittleShopManager.Instance.IsPending) ShowLittleShop();
         else ShowLevelSelect();
         _hideTableRoutine = MonoManager.Instance.StartCoroutine(HideTableRoutine());
@@ -210,6 +213,7 @@ public class CardGameEntry : MonoBehaviour
         if (_beginBuildPanel != null) UIManager.Instance.Close(_beginBuildPanel);
         if (_levelPanel != null) UIManager.Instance.Close(_levelPanel);
         if (_mainTopPanel != null) UIManager.Instance.Close(_mainTopPanel);
+        if (_buffPanel != null) UIManager.Instance.Close(_buffPanel);
         if (_shopPanel != null) UIManager.Instance.Close(_shopPanel);
         if (littleShopPanel != null) UIManager.Instance.Close(littleShopPanel);
 

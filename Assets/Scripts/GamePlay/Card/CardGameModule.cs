@@ -19,6 +19,7 @@ public class CardGameModule : ManagerBase<CardGameModule>
         LittleShopStore.Instance.Init();
         ShopStore.Instance.Init();       // 商店数据
         CardsStore.Instance.Init();      // 牌局数据
+        BuffStore.Instance.Init();
 
         // ===== 业务逻辑层 =====
         LevelManager.Instance.Init();    // 关卡逻辑（依赖 LevelStore + ConfigHelper）
@@ -32,6 +33,8 @@ public class CardGameModule : ManagerBase<CardGameModule>
         CardPoolManager.Instance.Init();
         CardViewManager.Instance.Init();
         CardRuleManager.Instance.Init();
+        BuffManager.Instance.Init();
+        BuffResManager.Instance.Init();
         CardsManager.Instance.Init();
     }
 
@@ -39,6 +42,8 @@ public class CardGameModule : ManagerBase<CardGameModule>
     {
         // 按依赖反序销毁
         CardsManager.Instance.Dispose();
+        BuffResManager.Instance.Dispose();
+        BuffManager.Instance.Dispose();
         CardRuleManager.Instance.Dispose();
         CardViewManager.Instance.Dispose();
         CardPoolManager.Instance.Dispose();
@@ -50,6 +55,7 @@ public class CardGameModule : ManagerBase<CardGameModule>
         RunManager.Instance.Dispose();
         LevelManager.Instance.Dispose();
 
+        BuffStore.Instance.Dispose();
         CardsStore.Instance.Dispose();
         LittleShopStore.Instance.Dispose();
         ShopStore.Instance.Dispose();
@@ -72,6 +78,7 @@ public class CardGameModule : ManagerBase<CardGameModule>
     /// <summary>开始一局新游戏（指定列数与牌包数）</summary>
     public void StartNewGame(int columnCount, int pocketCount)
     {
+        BuffManager.Instance.Clear();
         CardsManager.Instance.StartNewGame(columnCount, pocketCount);
     }
 

@@ -1,7 +1,7 @@
 ﻿{
   "items": [
-    {"Id": "110001", "Type": 1, "Rank": [-1], "Suit": [], "PlaceSkill": 10001, "Attribute": [], "Price": 70, "FlipSkill": 0},
-    {"Id": "110002", "Type": 1, "Rank": [-1], "Suit": [], "PlaceSkill": 10002, "Attribute": [], "Price": 220, "FlipSkill": 0},
+    {"Id": "110001", "Type": 1, "Rank": [-1], "Suit": [], "PlaceSkill": 20001, "Attribute": [], "Price": 70, "FlipSkill": 0},
+    {"Id": "110002", "Type": 1, "Rank": [-1], "Suit": [], "PlaceSkill": 20002, "Attribute": [], "Price": 220, "FlipSkill": 0},
     {"Id": "710001", "Type": 0, "Rank": [], "Suit": [], "Attribute": [], "PlaceSkill": 0, "Price": 0, "FlipSkill": 0},
     {"Id": "710002", "Type": 0, "Rank": [], "Suit": [], "Attribute": [10002], "PlaceSkill": 0, "Price": 0, "FlipSkill": 0},
     {"Id": "210001", "Type": 2, "Rank": [-2], "Suit": [0], "Attribute": [], "Price": 200, "PlaceSkill": 0, "FlipSkill": 0},

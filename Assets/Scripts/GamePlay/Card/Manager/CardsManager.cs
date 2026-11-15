@@ -318,11 +318,15 @@ public class CardsManager : ManagerBase<CardsManager>
             yield return new WaitForSeconds(2 * CardAnimationHelper.FlipDuration);
             if (IsSettling) break;
 
-            var skill = _flipSkills.Dequeue();
-            if (skill == E_FlipSkillEnum.ForceDeal && CardsStore.Instance.drawPile.Count > 0)
+            switch (_flipSkills.Dequeue())
             {
-                // 技能发牌直接走发牌流程，允许给空列发牌。
-                yield return DealFromDrawPileRoutine();
+                case E_FlipSkillEnum.ForceDeal when CardsStore.Instance.drawPile.Count > 0:
+                    // 技能发牌直接走发牌流程，允许给空列发牌。
+                    yield return DealFromDrawPileRoutine();
+                    break;
+                case E_FlipSkillEnum.AddDrag:
+                    BuffManager.Instance.Add(E_BuffEnum.FreeDrag);
+                    break;
             }
         }
 
@@ -423,43 +427,37 @@ public class CardsManager : ManagerBase<CardsManager>
     }
 
     /// <summary>
-    /// 把一串牌从原列移动到目标列（调用前需先通过 CardRuleManager 判定）
+    /// 按落牌规则移动牌串；成功移动后结算实际使用的自由抓取次数。
     /// 移动后：原列若还有牌且新顶牌为反面，则翻开
     /// </summary>
-    public void MoveCards(List<CardData> draggedCards, int targetColumnIndex)
+    public bool MoveCards(List<CardData> draggedCards, int targetColumnIndex, bool usedFreeDrag)
     {
         var store = CardsStore.Instance;
-        if (IsSettling) return;
-        if (draggedCards == null || draggedCards.Count == 0) return;
-        if (targetColumnIndex < 0 || targetColumnIndex >= store.columns.Count) return;
+        var rules = CardRuleManager.Instance;
+        if (IsSettling || !rules.CanMove(draggedCards, targetColumnIndex)) return false;
 
-        // 找原列
-        int fromColumnIndex = -1;
-        for (int i = 0; i < store.columns.Count; i++)
-        {
-            if (store.columns[i].Contains(draggedCards[0]))
-            {
-                fromColumnIndex = i;
-                break;
-            }
-        }
-
-        if (fromColumnIndex < 0 || fromColumnIndex == targetColumnIndex) return;
+        int fromColumnIndex = rules.FindColumnIndex(draggedCards[0]);
+        if (fromColumnIndex < 0) return false;
 
         var fromColumn = store.columns[fromColumnIndex];
         var targetColumn = store.columns[targetColumnIndex];
 
-        // 从原列移除被拖的牌
-        foreach (var card in draggedCards)
+        // 落牌时确认抓起的牌仍是原列末尾同一组正面牌。
+        int start = fromColumn.Count - draggedCards.Count;
+        if (start < 0) return false;
+        for (int i = 0; i < draggedCards.Count; i++)
         {
-            fromColumn.Remove(card);
+            var card = fromColumn[start + i];
+            if (card != draggedCards[i] || !card.isFaceUp) return false;
         }
 
-        // 加入目标列
-        foreach (var card in draggedCards)
-        {
-            targetColumn.Add(card);
-        }
+        var buffs = BuffManager.Instance;
+        if (usedFreeDrag && (!buffs.IsActivated(E_BuffEnum.FreeDrag) || buffs.GetCount(E_BuffEnum.FreeDrag) == 0))
+            return false;
+
+        fromColumn.RemoveRange(start, draggedCards.Count);
+        targetColumn.AddRange(draggedCards);
+        if (usedFreeDrag) buffs.TryConsume(E_BuffEnum.FreeDrag);
 
         // 先整列重建（原列新顶牌此时仍是背面）
         EventManager.Instance.Dispatch<int>(E_EventEnum.OnColumnChanged, fromColumnIndex);
@@ -476,6 +474,8 @@ public class CardsManager : ManagerBase<CardsManager>
         {
             TryApplyPlaceSkill(targetColumnIndex);
         }
+
+        return true;
     }
 
     // ==================== 落牌技能 ====================
@@ -649,6 +649,7 @@ public class CardsManager : ManagerBase<CardsManager>
         // 关卡进度 + 金币落盘（正在进行中的关不存牌局，重进后重开）
         CardGameModule.Instance.SaveRun();
 
+        BuffManager.Instance.Clear();
         EventManager.Instance.Dispatch(E_EventEnum.OnCardsCollected);
     }
 

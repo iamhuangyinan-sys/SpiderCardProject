@@ -73,15 +73,13 @@ public class CardRuleManager : ManagerBase<CardRuleManager>
     }
 
     /// <summary>
-    /// 获取能被整体拖动的牌串：
-    /// 锚点牌及其同列下方所有牌，必须整串「翻开、同花、逐张减 1」才可拖，
-    /// 任何一张不满足则整体不可拖（返回空），并通过 blockedCard 返回导致不可拖的那张牌。
-    ///
-    /// 没有花色 / 没有点数的牌与下方连不上 → 自然就只能单独拖（旧 SingleGrab 字段已删）
+    /// 整串必须翻开。自由抓取激活时，允许拖起花色或点数连不上的牌串。
+    /// usedFreeDrag 表示这次抓取实际绕过了连接限制。
     /// </summary>
-    public List<CardData> GetDraggableCards(CardData anchor, out CardData blockedCard)
+    public List<CardData> GetDraggableCards(CardData anchor, out CardData blockedCard, out bool usedFreeDrag)
     {
         blockedCard = null;
+        usedFreeDrag = false;
         var result = new List<CardData>();
         if (!CanDrag(anchor)) return result;
 
@@ -98,19 +96,23 @@ public class CardRuleManager : ManagerBase<CardRuleManager>
                 result.Add(column[i]);
             }
 
-            // 整串必须「翻开、能连接（同花 + 点数相连）」，任何一张不满足则整体不可拖
-            // （没有花色 / 没有点数的牌连不上下一张 → 自然就只能单独拖起）
+            var buffs = BuffManager.Instance;
+            bool canUseFreeDrag = buffs.IsActivated(E_BuffEnum.FreeDrag) && buffs.GetCount(E_BuffEnum.FreeDrag) > 0;
+            bool needsFreeDrag = false;
             for (int i = 1; i < result.Count; i++)
             {
                 var prev = result[i - 1];
                 var cur = result[i];
-                if (!(cur.isFaceUp && CanConnect(prev, cur)))
+                bool connects = cur.isFaceUp && CanConnect(prev, cur);
+                if (!cur.isFaceUp || (!connects && !canUseFreeDrag))
                 {
                     blockedCard = cur;   // 阻塞点：这张牌导致整串不可拖
                     result.Clear();
                     return result;
                 }
+                if (!connects) needsFreeDrag = true;
             }
+            usedFreeDrag = needsFreeDrag;
             break;
         }
 

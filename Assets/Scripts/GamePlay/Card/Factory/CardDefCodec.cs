@@ -12,13 +12,13 @@ using System.Text;
 /// 例：
 ///   0123_123                   花色 红心/方块/黑桃/梅花 + 点数 A/2/3
 ///   _m                         无花色 + 点数 -1（万能放下）
-///   0123_s_10002_20001_10001;10002   蜘蛛 + 复制技能 + 沉底&毒
+///   0123_s_20002_30001_10001;10002   蜘蛛 + 复制 + 强制发牌 + 沉底&毒
 ///
 /// 字符表：
 ///   花色：0 红心 / 1 方块 / 2 黑桃 / 3 梅花，空 = 无花色
 ///   点数：1-9 = A-9、0 = 10、j/q/k、s = -2、m = -1，空 = 无点数
-///   技能：E_PlaceSkillEnum 的数值（10001 回收 / 10002 复制），空 = 无技能
-///   翻牌技能：E_FlipSkillEnum 的数值（20001 强制发牌）
+///   落牌技能：E_PlaceSkillEnum 的数值（20001 回收 / 20002 复制），空 = 无技能
+///   翻牌技能：E_FlipSkillEnum 的数值（30001 强制发牌 / 30002 获得抓取）
 ///   属性：E_CardAttributeEnum 的数值，多个用分号隔开
 /// </summary>
 public static class CardDefCodec
@@ -122,7 +122,7 @@ public static class CardDefCodec
             if (!int.TryParse(parts[2], out int skillValue) ||
                 !Enum.IsDefined(typeof(E_PlaceSkillEnum), skillValue))
             {
-                error = $"非法落牌技能「{parts[2]}」（可用 10001 回收 / 10002 复制）";
+                error = $"非法落牌技能「{parts[2]}」（可用 20001 回收 / 20002 复制）";
                 return false;
             }
 
@@ -140,7 +140,7 @@ public static class CardDefCodec
             }
             else if (parts.Length != 4 || !CardAttributeHelper.TryParse(value, out attributes))
             {
-                error = $"非法翻牌技能「{value}」（可用 20001 强制发牌）";
+                error = $"非法翻牌技能「{value}」（可用 30001 强制发牌 / 30002 获得抓取）";
                 return false;
             }
         }

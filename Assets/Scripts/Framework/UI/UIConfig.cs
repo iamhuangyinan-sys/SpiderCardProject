@@ -52,6 +52,7 @@ namespace Framework.UI
             Register<LittleShopPanel>("GamePlay/LittleShopPanel", E_UILayerEnum.Normal);
             Register<ShopPanel>("GamePlay/ShopPanel", E_UILayerEnum.Normal);
             Register<ShowCardsPanel>("GamePlay/ShowCardsPanel", E_UILayerEnum.Normal);
+            Register<BuffPanel>("GamePlay/BuffPanel", E_UILayerEnum.Normal);
             // ===== 控制台（调试工具，置顶层避免被遮挡）=====
             Register<ConsoleEntryPanel>("Console/ConsoleEntryPanel", E_UILayerEnum.Top);
             Register<ConsolePanel>("Console/ConsolePanel", E_UILayerEnum.Top);

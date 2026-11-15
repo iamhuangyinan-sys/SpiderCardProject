@@ -100,6 +100,8 @@ GameObject:
   m_Component:
   - component: {fileID: 5958778965471466849}
   - component: {fileID: -1384820021144630060}
+  - component: {fileID: 7554873181257885669}
+  - component: {fileID: 1948356433600369237}
   m_Layer: 5
   m_Name: BuffPanel
   m_TagString: Untagged
@@ -139,6 +141,35 @@ CanvasGroup:
   m_Interactable: 1
   m_BlocksRaycasts: 1
   m_IgnoreParentGroups: 0
+--- !u!114 &7554873181257885669
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1767824909306962847}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6fa606169902eb846911578fe9aca075, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::BuffPanel
+--- !u!114 &1948356433600369237
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1767824909306962847}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 773e91988e8b681449ac06a79b4603b6, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Framework.UI.UIBinder
+  uiComps:
+  - prefix: list
+    fieldName: listBuff
+    typeName: 
+    component: {fileID: 7822295340235574595}
 --- !u!1 &5259260433893727687
 GameObject:
   m_ObjectHideFlags: 0
@@ -149,11 +180,10 @@ GameObject:
   m_Component:
   - component: {fileID: 7175207055731079396}
   - component: {fileID: 1135107842070375435}
-  - component: {fileID: 328844486549323583}
   - component: {fileID: 9070385385158897136}
   - component: {fileID: 7822295340235574595}
   m_Layer: 5
-  m_Name: list_Scroll
+  m_Name: list_Buff
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -174,10 +204,10 @@ RectTransform:
   - {fileID: 3649877959788146408}
   m_Father: {fileID: 5958778965471466849}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 1, y: 1}
-  m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: 9, y: -45}
-  m_SizeDelta: {x: 60, y: 990}
+  m_AnchorMin: {x: 0.5, y: 0.5}
+  m_AnchorMax: {x: 0.5, y: 0.5}
+  m_AnchoredPosition: {x: 905, y: -45}
+  m_SizeDelta: {x: 110, y: 990}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &1135107842070375435
 CanvasRenderer:
@@ -187,36 +217,6 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 5259260433893727687}
   m_CullTransparentMesh: 1
---- !u!114 &328844486549323583
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 5259260433893727687}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
-  m_Material: {fileID: 0}
-  m_Color: {r: 1, g: 1, b: 1, a: 0}
-  m_RaycastTarget: 1
-  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
-  m_Maskable: 1
-  m_OnCullStateChanged:
-    m_PersistentCalls:
-      m_Calls: []
-  m_Sprite: {fileID: 10907, guid: 0000000000000000f000000000000000, type: 0}
-  m_Type: 1
-  m_PreserveAspect: 0
-  m_FillCenter: 1
-  m_FillMethod: 4
-  m_FillAmount: 1
-  m_FillClockwise: 1
-  m_FillOrigin: 0
-  m_UseSpriteMesh: 0
-  m_PixelsPerUnitMultiplier: 1
 --- !u!114 &9070385385158897136
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -261,16 +261,16 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Framework.UI.ScrollList
   _scrollRect: {fileID: 9070385385158897136}
   _content: {fileID: 5807455689917696939}
-  _cellPrefab: {fileID: 0}
-  _itemWidth: 200
-  _itemHeight: 80
+  _cellPrefab: {fileID: 1702028096792137944, guid: d66b509fa64d4b149a297d0d557bf0e9, type: 3}
+  _itemWidth: 70
+  _itemHeight: 70
   _columnGap: 10
   _rowGap: 10
   _columns: 1
-  _paddingTop: 0
-  _paddingBottom: 0
-  _paddingLeft: 0
-  _paddingRight: 0
+  _paddingTop: 20
+  _paddingBottom: 20
+  _paddingLeft: 20
+  _paddingRight: 20
 --- !u!1 &9167541713286562704
 GameObject:
   m_ObjectHideFlags: 0
