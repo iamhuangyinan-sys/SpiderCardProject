@@ -18,3 +18,17 @@
 过渡中再次 Show 会打断旧退场并取消旧完成回调。场景输入锁保持到交接完成。框架退出时 CloseAll 立即清理，不等待动画。
 
 `UIManager.Show<T>(configure)` 在面板打开和动画开始前执行配置。SettingsPanel 用它按来源选择自己的黑底是否显示。
+
+## 展示牌面板与单牌详情
+
+两个面板都是 `NormalPanel + ISceneInputBlockPanel`，内容淡入淡出 0.2 秒；黑底交给 `PanelBackdrop` 管理（运行时把 `bg` 独立到面板同级，面板隐藏时黑底可以留着）。
+
+- `ShowCardsPanel`：黑底单独淡入；`OnPanelClosing` 时除非在给详情面板交接（`KeepBackground()`），否则黑底一起淡出。
+- `ShowOneCardPanel` 有两个入口，过渡方式不同：
+
+| 入口 | 黑底 | 过渡 | 左右切换 |
+|------|------|------|------|
+| 展示牌面板点格子 `OpenFrom(source, index)` | 复用来源面板的黑底（自己的 `bg` 保持关闭） | 先淡出列表内容（黑底不动）→ 淡入详情内容；关闭时淡出详情 → 重新显示列表并淡入 | 有（`btn_Left` / `btn_Right`，首尾隐藏） |
+| 场上牌右键 `ShowOne(...)` | 自己的黑底 | 整个界面（黑底 + 内容）一起淡入淡出 | 无（两个按钮都隐藏） |
+
+交接细节（与菜单 / 设置一致）：`source.KeepBackground()` 必须在 `HideSelf` 之前调用，否则退场时 `OnPanelClosing` 会把黑底一起收掉；详情面板关闭用 `CloseSelf(returnAction)`，淡出播完再 `UIManager.Show<ShowCardsPanel>()`；重新显示时 `PanelBackdrop.Show` 发现黑底已完全不透明会跳过重复淡入，不会闪一下。

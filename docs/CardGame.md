@@ -397,6 +397,20 @@ public class RunSaveData
 ShowCardsPanel.ShowCards(cardIds);   // 打开面板并展示（静态入口，内部 Show + SetCards）
 ```
 
+纯展示模式下点任意一格会打开 `ShowOneCardPanel`，把这张牌放大 2.1 倍显示（悬停再放大到 1.2 倍）；悬停动效与 tip 照常，详情里的牌不可点击，关掉详情回到列表。选牌模式（`PickCard`，商店删牌）下点击仍然是选牌，不弹详情。
+
+详情面板左右有 `btn_Left` / `btn_Right`，可在同一个列表里翻看上一张 / 下一张（第一张没有左、最后一张没有右，按钮直接隐藏）；从场上牌右键打开时没有列表，两个按钮都隐藏。
+
+```csharp
+ShowOneCardPanel.OpenFrom(showCardsPanel, index);        // 从列表打开：可左右翻页，关闭后回列表
+ShowOneCardPanel.ShowOne(def, attributes, useInGameAttributes);   // 场上牌单张：无翻页，自带黑底
+```
+
+- 详情面板的牌是运行时生成的 `ShowCardItem`（挂在 `img_CardContent` 下），和列表复用同一套显示 / 悬停逻辑；属性与「局内隐藏属性」过滤规则原样透传，牌图与列表格完全一致。
+- `ShowCardItem.Bind` 的第 4 个参数是点击回调，传 `null` 即不可点击。
+- 场上牌（`CardController`）也支持右键打开同一个详情面板：只在正面朝上、非拖拽中、`CardGameModule.CanCardInput` 为真时响应；牌背朝上的牌不弹（不泄露牌面）。
+- 过渡：从列表打开时复用列表的黑底，只淡出 / 淡入牌面内容，关闭后自动回到列表；从场上牌打开时整个界面（含黑底）一起淡入淡出（细节见 `docs/UIPanelTransitions.md`）。
+
 牌堆查看的两个控制器（挂场景物体，需 Collider，用新 Input System 点击）：
 
 | 脚本 | 行为 |

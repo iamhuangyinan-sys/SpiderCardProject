@@ -6,12 +6,18 @@ using Framework.UI;
 /// 展示牌面板 —— 用一批牌定义在列表里铺开显示
 /// 牌组查看、奖励预览等需要展示若干张牌的地方都用它
 /// 也可进「选牌模式」：回调成功后关闭面板（商店删牌等）
+/// 黑底由 PanelBackdrop 独立保存，打开单牌详情时留给详情面板复用
 /// 遮挡场景输入（实现 ISceneInputBlockPanel）
 /// </summary>
 public partial class ShowCardsPanel : NormalPanel, ISceneInputBlockPanel
 {
     protected override bool FadeInOnOpen => true;
     protected override bool FadeOutOnClose => true;
+
+    /// <summary>黑底交给单牌详情复用时，本面板退场不收黑底</summary>
+    private bool _keepBackground;
+
+    private PanelBackdrop Backdrop => GetComponent<PanelBackdrop>();
 
     /// <summary>列表里一格的内容（牌定义 + 要显示的属性）</summary>
     private struct CardShow
@@ -63,22 +69,37 @@ public partial class ShowCardsPanel : NormalPanel, ISceneInputBlockPanel
     protected override void OnOpen()
     {
         comps.btnClose.onClick.AddListener(OnClickClose);
+        _keepBackground = false;
+        Backdrop.Show(true);      // 黑底独立淡入（内容走面板淡入）
         RefreshList();
     }
 
     protected override void OnShow()
     {
+        _keepBackground = false;
+        Backdrop.Show(true);      // 从详情返回时黑底已经在，内部会跳过重复淡入
         RefreshList();
     }
 
     protected override void OnHide() { }
+
+    protected override bool OnPanelClosing()
+    {
+        // 交给详情复用时保留黑底，否则和内容一起淡出
+        if (!_keepBackground) Backdrop.Hide(true);
+        return base.OnPanelClosing();
+    }
 
     protected override void OnClose()
     {
         comps.btnClose.onClick.RemoveListener(OnClickClose);
         _cards.Clear();
         _onPick = null;
+        _keepBackground = false;
     }
+
+    /// <summary>打开单牌详情前调用：本面板隐藏时保留黑底给详情面板用</summary>
+    public void KeepBackground() => _keepBackground = true;
 
     /// <summary>设置要展示的场上牌（带属性）</summary>
     public void SetCards(IReadOnlyList<CardData> cards)
@@ -114,6 +135,25 @@ public partial class ShowCardsPanel : NormalPanel, ISceneInputBlockPanel
         RefreshList();
     }
 
+    /// <summary>详情面板翻页用：当前可展示的牌数量</summary>
+    public int CardCount => _cards.Count;
+
+    /// <summary>详情面板翻页用：列表是否按「局内属性」口径展示</summary>
+    public bool UseInGameAttributes => _useInGameAttributes;
+
+    /// <summary>详情面板翻页用：取第 index 张牌的定义与属性</summary>
+    public bool TryGetCard(int index, out CardDef def, out IReadOnlyList<E_CardAttributeEnum> attributes)
+    {
+        def = default;
+        attributes = null;
+
+        if (index < 0 || index >= _cards.Count) return false;
+
+        def = _cards[index].def;
+        attributes = _cards[index].attributes;
+        return true;
+    }
+
     /// <summary>刷新列表</summary>
     private void RefreshList()
     {
@@ -122,11 +162,18 @@ public partial class ShowCardsPanel : NormalPanel, ISceneInputBlockPanel
             var cell = item as ShowCardItem;
             if (cell == null) return;
 
-            cell.Bind(_cards[index].def, _cards[index].attributes, _useInGameAttributes);
+            var card = _cards[index];
 
-            // 选牌模式：点一下就算选中；纯展示模式保持不可点
-            if (_onPick != null) cell.SetClickable(() => OnPickCard(index));
-            else cell.SetClickable(null);
+            // 选牌模式：点一下就算选中；纯展示模式：点一下打开单张详情
+            if (_onPick != null)
+            {
+                cell.Bind(card.def, card.attributes, _useInGameAttributes, () => OnPickCard(index));
+            }
+            else
+            {
+                cell.Bind(card.def, card.attributes, _useInGameAttributes,
+                    () => ShowOneCardPanel.OpenFrom(this, index));
+            }
         };
 
         comps.listCard.ItemCount = _cards.Count;

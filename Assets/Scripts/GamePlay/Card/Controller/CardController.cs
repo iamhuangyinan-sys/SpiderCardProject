@@ -58,6 +58,14 @@ public class CardController : MonoBehaviour
         bool pressed = Mouse.current.leftButton.wasPressedThisFrame;
         bool released = Mouse.current.leftButton.wasReleasedThisFrame;
 
+        // 右键：单牌详情（只看正面朝上的牌；拖拽中不响应）
+        if (Mouse.current.rightButton.wasPressedThisFrame && _activeDrag == null && !_dragging
+            && _view.data != null && _view.data.isFaceUp && IsTopmostHit())
+        {
+            ShowOneCardPanel.ShowOne(_view.data.def, _view.data.attributes, true);
+            return;
+        }
+
         // 按下：无人拖拽，且本牌是鼠标命中的最上面的牌 → 开始拖拽
         if (pressed && _activeDrag == null && IsTopmostHit())
         {

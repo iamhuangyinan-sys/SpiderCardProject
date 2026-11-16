@@ -51,6 +51,17 @@ public sealed class UIScaleEffect : UIFeedbackEffect
         if (capturedTarget != null) capturedTarget.localScale = baseScale;
     }
 
+    /// <summary>
+    /// 运行时改悬停倍率（同一个预制体在不同场合需要不同幅度时用，如放大展示的牌）。
+    /// 立即生效；当前处于悬停状态时会按新倍率重新应用一次。
+    /// </summary>
+    public void SetHoveredScale(float factor)
+    {
+        hovered = Mathf.Max(0f, factor);
+        if (!isActiveAndEnabled) return;
+        GetComponent<UIFeedbackController>().RefreshEffects(true);
+    }
+
     public override void CollectBindings(List<UIFeedbackBinding> bindings)
     {
         if (target != null) bindings.Add(new UIFeedbackBinding(target, "m_LocalScale"));
