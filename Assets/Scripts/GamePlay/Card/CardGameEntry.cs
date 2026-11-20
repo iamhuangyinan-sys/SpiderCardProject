@@ -68,7 +68,9 @@ public class CardGameEntry : MonoBehaviour
         SceneController.Instance.NotifySceneReady();
 
         // 编辑器模式：控制台入口（面板会被切场景的 DestroyAll 清掉，每个场景入口重新显示）
+#if UNITY_EDITOR
         ConsoleEntryPanel.ShowInEditor();
+#endif
     }
 
     private bool OnConfirmBeginBuild(string id, string difficultyId, int? seed)

@@ -1,3 +1,4 @@
+#if UNITY_EDITOR
 using System;
 using System.Collections.Generic;
 using Framework.Mgr;
@@ -136,3 +137,4 @@ public class ConsoleCommandManager : ManagerBase<ConsoleCommandManager>
         return true;
     }
 }
+#endif

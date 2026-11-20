@@ -108,6 +108,7 @@ public class CardViewManager : ManagerBase<CardViewManager>
         EventManager.Instance.AddListener<CardData>(E_EventEnum.OnCardToDiscard, OnCardToDiscard);
         EventManager.Instance.AddListener(E_EventEnum.OnShuffleBack, OnShuffleBack);
         EventManager.Instance.AddListener<CardData>(E_EventEnum.OnCardWashIn, OnCardWashIn);
+        EventManager.Instance.AddListener<CardData>(E_EventEnum.OnCardShowAndAddToDiscard, OnCardShowAndAddToDiscard);
         EventManager.Instance.AddListener(E_EventEnum.OnDiscardToDrawPile, OnDiscardToDrawPile);
         EventManager.Instance.AddListener<CardData>(E_EventEnum.OnCardToDrawPile, OnCardToDrawPile);
         EventManager.Instance.AddListener<int>(E_EventEnum.OnDrawPileChanged, OnDrawPileChanged);
@@ -134,6 +135,7 @@ public class CardViewManager : ManagerBase<CardViewManager>
         EventManager.Instance.RemoveListener<CardData>(E_EventEnum.OnCardToDiscard, OnCardToDiscard);
         EventManager.Instance.RemoveListener(E_EventEnum.OnShuffleBack, OnShuffleBack);
         EventManager.Instance.RemoveListener<CardData>(E_EventEnum.OnCardWashIn, OnCardWashIn);
+        EventManager.Instance.RemoveListener<CardData>(E_EventEnum.OnCardShowAndAddToDiscard, OnCardShowAndAddToDiscard);
         EventManager.Instance.RemoveListener(E_EventEnum.OnDiscardToDrawPile, OnDiscardToDrawPile);
         EventManager.Instance.RemoveListener<CardData>(E_EventEnum.OnCardToDrawPile, OnCardToDrawPile);
         EventManager.Instance.RemoveListener<int>(E_EventEnum.OnDrawPileChanged, OnDrawPileChanged);
@@ -250,14 +252,35 @@ public class CardViewManager : ManagerBase<CardViewManager>
     /// <summary>单张牌回收：从当前位置飞到弃牌堆，落地后回收 View</summary>
     private void OnCardToDiscard(CardData cardData)
     {
-        if (!_viewDict.TryGetValue(cardData, out var view)) return;
-        _viewDict.Remove(cardData);
+        if (_viewDict.TryGetValue(cardData, out var view))
+        {
+            _viewDict.Remove(cardData);
+        }
+        else
+        {
+            // 新生成的牌没有场上 View，从生成点直接飞入弃牌堆。
+            view = CardPoolManager.Instance.GetCard();
+            if (view == null) return;
+            view.ShowFace(cardData);
+            view.transform.position = GetCardSpawnPosition();
+        }
 
         FlyViewAndRecycle(view, view.transform.position, GetDiscardPilePosition());
     }
 
     /// <summary>洗入发牌堆：在 CardSpawnPos 生成一张正面牌，停留展示一下再飞到发牌堆，落地回收</summary>
     private void OnCardWashIn(CardData cardData)
+    {
+        ShowCardAndFlyToPile(cardData, GetDrawPilePosition());
+    }
+
+    /// <summary>中央展示新牌，再飞入弃牌堆，复用洗入发牌堆的展示节奏。</summary>
+    private void OnCardShowAndAddToDiscard(CardData cardData)
+    {
+        ShowCardAndFlyToPile(cardData, GetDiscardPilePosition());
+    }
+
+    private void ShowCardAndFlyToPile(CardData cardData, Vector3 target)
     {
         var view = CardPoolManager.Instance.GetCard();
         if (view == null)
@@ -269,7 +292,7 @@ public class CardViewManager : ManagerBase<CardViewManager>
         // 用 CardData 而不是裸 id：临时牌也要把属性（毒 / 沉底）画出来
         view.ShowFace(cardData);
 
-        var tween = CardAnimationHelper.WashInTo(view, GetCardSpawnPosition(), GetDrawPilePosition());
+        var tween = CardAnimationHelper.WashInTo(view, GetCardSpawnPosition(), target);
         PlayAndRecycle(tween, view);
     }
 

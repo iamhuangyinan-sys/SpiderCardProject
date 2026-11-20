@@ -82,11 +82,14 @@ public class CardGameModule : ManagerBase<CardGameModule>
         CardsManager.Instance.StartNewGame(columnCount, pocketCount);
     }
 
+#if UNITY_EDITOR
     /// <summary>【测试】直接完成当前关卡（达成接龙次数 + 收牌结算）</summary>
     public void DebugCompleteLevel()
     {
         CardsManager.Instance.DebugCompleteLevel();
     }
+
+#endif
 
     // ==================== 存档 ====================
 

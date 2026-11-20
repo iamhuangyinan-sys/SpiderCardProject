@@ -45,6 +45,7 @@
     {"Id": "220061", "Type": 3, "Rank": [-9, -9, -9], "Suit": [0], "Attribute": [], "Price": 80, "PlaceSkill": 0, "FlipSkill": 0},
     {"Id": "220062", "Type": 3, "Rank": [-9, -9, -9], "Suit": [1], "Attribute": [], "Price": 80, "PlaceSkill": 0, "FlipSkill": 0},
     {"Id": "220063", "Type": 3, "Rank": [-9, -9, -9], "Suit": [2], "Attribute": [], "Price": 80, "PlaceSkill": 0, "FlipSkill": 0},
-    {"Id": "220064", "Type": 3, "Rank": [-9, -9, -9], "Suit": [3], "Attribute": [], "Price": 80, "PlaceSkill": 0, "FlipSkill": 0}
+    {"Id": "220064", "Type": 3, "Rank": [-9, -9, -9], "Suit": [3], "Attribute": [], "Price": 80, "PlaceSkill": 0, "FlipSkill": 0},
+    {"Id": "110003", "Type": 1, "Rank": [-1], "Suit": [], "PlaceSkill": 20003, "Attribute": [], "Price": 85, "FlipSkill": 0}
   ]
 }

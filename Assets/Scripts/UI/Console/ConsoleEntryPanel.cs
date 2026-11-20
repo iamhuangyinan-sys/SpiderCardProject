@@ -6,12 +6,11 @@ using Framework.UI;
 /// </summary>
 public partial class ConsoleEntryPanel : NormalPanel
 {
-    /// <summary>编辑器模式下显示控制台入口（各场景入口调用；非编辑器下为空实现）</summary>
+#if UNITY_EDITOR
+    /// <summary>编辑器模式下显示控制台入口（各场景入口仅在编辑器下调用）</summary>
     public static void ShowInEditor()
     {
-#if UNITY_EDITOR
         UIManager.Instance.Show<ConsoleEntryPanel>();
-#endif
     }
 
     protected override void OnOpen()
@@ -34,4 +33,10 @@ public partial class ConsoleEntryPanel : NormalPanel
         UIManager.Instance.Hide(this);
         UIManager.Instance.Show<ConsolePanel>();
     }
+#else
+    protected override void OnOpen() { }
+    protected override void OnShow() { }
+    protected override void OnHide() { }
+    protected override void OnClose() { }
+#endif
 }

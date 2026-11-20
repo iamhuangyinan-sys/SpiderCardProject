@@ -57,6 +57,9 @@ public enum E_PlaceSkillEnum
 
     /// <summary>复制：放下后，自己变成这列自己下面紧邻的那张牌</summary>
     Copy = 20002,
+
+    /// <summary>超级回收：自己和本列所有翻开的牌进弃牌堆，然后向弃牌堆加入一张空白牌</summary>
+    SuperRecycle = 20003,
 }
 
 /// <summary>翻开卡牌时触发的技能。</summary>

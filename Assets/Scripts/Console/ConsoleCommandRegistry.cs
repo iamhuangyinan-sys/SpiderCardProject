@@ -1,3 +1,15 @@
+#if UNITY_EDITOR
+using Framework;
+
+/// <summary>控制台加牌表单的目标位置。</summary>
+public enum E_ConsoleCardTarget
+{
+    DrawPile,
+    Deck,
+    DiscardPile,
+    Pocket,
+}
+
 /// <summary>
 /// 控制台命令注册表 —— 所有命令集中在此注册（由 ConsoleCommandManager 初始化时调用）
 ///
@@ -15,17 +27,6 @@ public static class ConsoleCommandRegistry
 
         // level skip —— 直接完成当前关卡（走正常收牌结算流程）
         cmd.Register("skip", CmdLevelSkip, "直接完成当前关卡");
-
-        // add <牌定义> —— 往发牌堆随机位置洗入一张牌
-        //   写法：花色_点数[_落牌技能[_翻牌技能[_属性]]]（用 _ 隔开，第一个下划线必写，后面可省）
-        //   花色 0红心 1方块 2黑桃 3梅花；点数 1-9 A-9、0=10、j/q/k、s=-2、m=-1
-        //   落牌技能 20001 回收 / 20002 复制；翻牌技能 30001 强制发牌 / 30002 获得抓取
-        //   例：add 0123_123 / add _m_20002 / add 0123_s_20002_30001_10002
-        cmd.Register("add *", CmdAddCard, "往发牌堆洗入一张牌（* = 花色_点数[_落牌技能[_翻牌技能[_属性]]]，如 0123_123）");
-
-        // add_build <牌定义> —— 往本局牌组加入一张牌
-        cmd.Register("add_build *", CmdAddBuildCard, "往牌组加入一张牌（* = 花色_点数[_落牌技能[_翻牌技能[_属性]]]）");
-        cmd.Register("add_build", args => "执行失败：缺少参数（用法：add_build <牌定义>）");
 
         // ===== 资源 =====
 
@@ -48,43 +49,33 @@ public static class ConsoleCommandRegistry
         return "已跳过当前关卡";
     }
 
-    /// <summary>add &lt;牌定义&gt; —— 往发牌堆随机位置洗入一张牌</summary>
-    private static string CmdAddCard(string[] args)
+    /// <summary>加牌表单入口：直接接收结构化牌定义。</summary>
+    public static string AddCard(CardDef def, E_ConsoleCardTarget target)
     {
         if (!CardGameEntry.IsInCardScene) return "执行失败：当前不在卡牌场景";
-        if (!CardsManager.Instance.IsPlaying) return "执行失败：当前没有进行中的对局";
+        if (target != E_ConsoleCardTarget.Deck && !CardsManager.Instance.IsPlaying) return "执行失败：当前没有进行中的对局";
         if (CardsManager.Instance.IsSettling) return "执行失败：正在结算收牌";
+        if (!def.IsValid) return "添加失败：牌定义不合法";
 
-        string text = args.Length > 1 ? args[1] : string.Empty;
-
-        if (!CardDefCodec.TryParse(text, out var def, out string error))
+        if (target == E_ConsoleCardTarget.Deck)
         {
-            return $"添加失败：{error}（{text}）";
+            RunManager.Instance.AddCardToDeck(def);
+            CardGameModule.Instance.SaveRun();
+            return "已加入牌组";
         }
 
-        if (!CardsManager.Instance.WashInCard(def))
+        switch (target)
         {
-            return $"添加失败：牌定义不合法（{text}）";
+            case E_ConsoleCardTarget.DrawPile:
+                return CardsManager.Instance.WashInCard(def) ? "已洗入发牌堆" : "添加失败：牌定义不合法";
+            case E_ConsoleCardTarget.DiscardPile:
+                MonoManager.Instance.StartCoroutine(CardsManager.Instance.ShowAndAddToDiscard(def, rollSunk: false));
+                return "已加入弃牌堆";
+            case E_ConsoleCardTarget.Pocket:
+                return CardsManager.Instance.DebugAddCardToPocket(def, out string error) ? "已加入牌包" : $"添加失败：{error}";
+            default:
+                return "添加失败：未知目标位置";
         }
-
-        return $"已洗入发牌堆：{CardDefCodec.ToText(def)}";
-    }
-
-    /// <summary>add_build &lt;牌定义&gt; —— 往本局牌组加入一张牌</summary>
-    private static string CmdAddBuildCard(string[] args)
-    {
-        if (!CardGameEntry.IsInCardScene) return "执行失败：当前不在卡牌场景";
-        if (CardsManager.Instance.IsSettling) return "执行失败：正在结算收牌";
-
-        string text = args.Length > 1 ? args[1] : string.Empty;
-        if (!CardDefCodec.TryParse(text, out var def, out string error))
-        {
-            return $"添加失败：{error}（{text}）";
-        }
-
-        RunManager.Instance.AddCardToDeck(def);
-        CardGameModule.Instance.SaveRun();
-        return $"已加入牌组：{CardDefCodec.ToText(def)}";
     }
 
     /// <summary>coin &lt;数量&gt; —— 增加金币</summary>
@@ -104,3 +95,4 @@ public static class ConsoleCommandRegistry
         return $"已增加金币：{amount}（当前 {RunManager.Instance.Coin}）";
     }
 }
+#endif

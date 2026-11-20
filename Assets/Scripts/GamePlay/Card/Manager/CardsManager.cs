@@ -24,8 +24,10 @@ public class CardsManager : ManagerBase<CardsManager>
     /// <summary>牌收入弃牌堆时被打上沉底标记的概率。</summary>
     private const float SunkProbability = 0.8f;
 
+#if UNITY_EDITOR
     /// <summary>测试模式：跳过洗牌直接发牌（仅编辑器下生效）</summary>
     public bool isTestMode = true;
+#endif
 
     /// <summary>是否正在结算收牌（收牌期间锁输入、不再触发新的回收/洗回）</summary>
     public bool IsSettling { get; private set; }
@@ -338,16 +340,23 @@ public class CardsManager : ManagerBase<CardsManager>
     /// 把一张牌收进弃牌堆（全项目唯一入口）：按概率打沉底标记 → 移入弃牌堆 → 派发表现事件。
     /// 顺子回收 / 回收技能 / 以后任何「牌进弃牌堆」都走这里，保证沉底规则只有一处
     /// </summary>
-    private void TakeToDiscard(CardData card)
+    /// <param name="card">要加入弃牌堆的牌，由调用方先从原位置移除</param>
+    /// <param name="rollSunk">是否概率判定沉底；false 保留现有属性</param>
+    /// <param name="playAnimation">是否派发入堆动画事件；测试直接加牌时关闭</param>
+    public void TakeToDiscard(CardData card, bool rollSunk = true, bool playAnimation = true)
     {
         var store = CardsStore.Instance;
 
-        // 沉底属性：进弃牌堆就按概率 roll（每次入堆重新 roll，发出时生效、发完即清）
-        card.SetAttribute(E_CardAttributeEnum.Sunk, _random.NextDouble() < SunkProbability);
+        if (card == null) return;
+
+        // 关闭概率判定时保留牌现有的属性，新生成的无沉底牌不会被额外标记。
+        if (rollSunk)
+            card.SetAttribute(E_CardAttributeEnum.Sunk, _random.NextDouble() < SunkProbability);
 
         store.discardPile.Add(card);
 
-        EventManager.Instance.Dispatch<CardData>(E_EventEnum.OnCardToDiscard, card);
+        if (playAnimation)
+            EventManager.Instance.Dispatch<CardData>(E_EventEnum.OnCardToDiscard, card);
         EventManager.Instance.Dispatch<int>(E_EventEnum.OnDiscardPileChanged, store.discardPile.Count);
     }
 
@@ -358,15 +367,23 @@ public class CardsManager : ManagerBase<CardsManager>
     /// <param name="columnIndex">目标列</param>
     /// <param name="count">收几张（从堆顶往下数）</param>
     /// <param name="countAsStraight">是否计入接龙次数（顺子回收 = true，回收技能 = false）</param>
-    private void StartRecycleFromColumn(int columnIndex, int count, bool countAsStraight)
+    /// <param name="addBlankToDiscard">回收完成后是否向弃牌堆加入一张空白牌</param>
+    private void StartRecycleFromColumn(int columnIndex, int count, bool countAsStraight, bool addBlankToDiscard = false)
     {
         _activeRecycles++;
-        MonoManager.Instance.StartCoroutine(ResolveRecycleRoutine(columnIndex, count, countAsStraight));
+        MonoManager.Instance.StartCoroutine(ResolveRecycleRoutine(columnIndex, count, countAsStraight, addBlankToDiscard));
     }
 
-    private IEnumerator ResolveRecycleRoutine(int columnIndex, int count, bool countAsStraight)
+    private IEnumerator ResolveRecycleRoutine(int columnIndex, int count, bool countAsStraight, bool addBlankToDiscard)
     {
         yield return RecycleFromColumnRoutine(columnIndex, count, countAsStraight);
+
+        // 回收后展示空白牌再飞入弃牌堆，不判定沉底；整段动画结束前保持回收状态。
+        if (addBlankToDiscard && !IsSettling && CardHelper.TryGetDef("710001", out var blank, out _))
+        {
+            yield return ShowAndAddToDiscard(blank, rollSunk: false);
+        }
+
         _activeRecycles--;
         TryShuffleBack();
     }
@@ -481,7 +498,7 @@ public class CardsManager : ManagerBase<CardsManager>
     // ==================== 落牌技能 ====================
 
     /// <summary>
-    /// 落牌技能：牌放下到列上之后触发（回收 / 复制）。
+    /// 落牌技能：牌放下到列上之后触发（回收 / 复制 / 超级回收）。
     /// 放在空列上不触发（放下后该列只有它一张，没有"下面的牌"）。
     /// </summary>
     private void TryApplyPlaceSkill(int columnIndex)
@@ -505,6 +522,16 @@ public class CardsManager : ManagerBase<CardsManager>
 
             case E_PlaceSkillEnum.Copy:
                 ApplyCopy(columnIndex, anchor);
+                break;
+
+            case E_PlaceSkillEnum.SuperRecycle:
+                // 固定落牌时连续明牌的数量，不回收随后新翻开的顶牌。
+                int faceUpCount = 0;
+                for (int i = column.Count - 1; i >= 0 && column[i].isFaceUp; i--)
+                {
+                    faceUpCount++;
+                }
+                StartRecycleFromColumn(columnIndex, faceUpCount, false, addBlankToDiscard: true);
                 break;
         }
     }
@@ -556,6 +583,7 @@ public class CardsManager : ManagerBase<CardsManager>
         return true;
     }
 
+#if UNITY_EDITOR
     /// <summary>【测试】直接达成接龙次数 → 关卡完成 + 收牌结算（供后续测试使用）</summary>
     public void DebugCompleteLevel()
     {
@@ -570,6 +598,8 @@ public class CardsManager : ManagerBase<CardsManager>
         CheckWin();
         StartCollectAll();   // 测试接口：没有顺子回收动画，直接进结算
     }
+
+#endif
 
     // ==================== 结算收牌 ====================
 
@@ -765,6 +795,44 @@ public class CardsManager : ManagerBase<CardsManager>
         EventManager.Instance.Dispatch<int>(E_EventEnum.OnPocketChanged, toIndex);
     }
 
+#if UNITY_EDITOR
+    /// <summary>控制台测试：直接生成正面牌加入第一个空牌包，只检查空位，不走移动规则或动画。</summary>
+    public bool DebugAddCardToPocket(CardDef def, out string error)
+    {
+        error = null;
+        if (!IsPlaying || IsSettling)
+        {
+            error = "当前没有可操作的对局";
+            return false;
+        }
+        if (!def.IsValid)
+        {
+            error = "牌定义不合法";
+            return false;
+        }
+
+        var pockets = CardsStore.Instance.pockets;
+        int index = pockets.FindIndex(card => card == null);
+        if (index < 0)
+        {
+            error = "牌包没有空位";
+            return false;
+        }
+
+        var card = CardFactory.Create(def);
+        if (card == null)
+        {
+            error = "牌定义不合法";
+            return false;
+        }
+        card.isFaceUp = true;
+        pockets[index] = card;
+        EventManager.Instance.Dispatch<int>(E_EventEnum.OnPocketChanged, index);
+        return true;
+    }
+
+#endif
+
     // ==================== 开局事件 ====================
 
     /// <summary>
@@ -786,18 +854,22 @@ public class CardsManager : ManagerBase<CardsManager>
 
     // ==================== 洗入发牌堆 ====================
 
-    /// <summary>一条待洗入发牌堆的记录（牌定义；属性已经在定义里）</summary>
+    /// <summary>一条待展示并入堆的记录（发牌堆洗入 / 弃牌堆直接加入）</summary>
     private readonly struct WashInRequest
     {
         public readonly CardDef def;
+        public readonly bool toDiscardPile;
+        public readonly bool rollSunk;
 
-        public WashInRequest(CardDef def)
+        public WashInRequest(CardDef def, bool toDiscardPile = false, bool rollSunk = false)
         {
             this.def = def;
+            this.toDiscardPile = toDiscardPile;
+            this.rollSunk = rollSunk;
         }
     }
 
-    /// <summary>待洗入发牌堆的牌队列（连续调用时排队，逐张错开飞入）</summary>
+    /// <summary>待展示并入堆的牌队列（共用生成点，逐张错开飞入）</summary>
     private readonly Queue<WashInRequest> _washInQueue = new();
 
     /// <summary>洗入协程是否在跑（保证同一时刻只有一个队列在出队）</summary>
@@ -837,6 +909,19 @@ public class CardsManager : ManagerBase<CardsManager>
         while (_washingIn) yield return null;   // 等队列排空
     }
 
+    /// <summary>展示一张新牌，再飞入弃牌堆，并等待队列全部动画完成。</summary>
+    /// <param name="def">要生成的牌定义</param>
+    /// <param name="rollSunk">是否概率判定沉底，默认保留生成牌的原有属性</param>
+    public IEnumerator ShowAndAddToDiscard(CardDef def, bool rollSunk = false)
+    {
+        if (!def.IsValid || IsSettling) yield break;
+
+        _washInQueue.Enqueue(new WashInRequest(def, toDiscardPile: true, rollSunk: rollSunk));
+        if (!_washingIn) MonoManager.Instance.StartCoroutine(WashInRoutine());
+
+        while (_washingIn) yield return null;
+    }
+
     private IEnumerator WashInRoutine()
     {
         _washingIn = true;
@@ -850,10 +935,18 @@ public class CardsManager : ManagerBase<CardsManager>
             var card = CardFactory.Create(request.def);
             if (card == null) continue;   // 定义不合法：跳过
 
-            InsertIntoDrawPileRandom(card);
-
-            EventManager.Instance.Dispatch<int>(E_EventEnum.OnDrawPileChanged, CardsStore.Instance.drawPile.Count);
-            EventManager.Instance.Dispatch<CardData>(E_EventEnum.OnCardWashIn, card);
+            if (request.toDiscardPile)
+            {
+                // 入堆规则仍走唯一入口，单独派发展示动画，避免同时播放普通回收动画。
+                TakeToDiscard(card, rollSunk: request.rollSunk, playAnimation: false);
+                EventManager.Instance.Dispatch<CardData>(E_EventEnum.OnCardShowAndAddToDiscard, card);
+            }
+            else
+            {
+                InsertIntoDrawPileRandom(card);
+                EventManager.Instance.Dispatch<int>(E_EventEnum.OnDrawPileChanged, CardsStore.Instance.drawPile.Count);
+                EventManager.Instance.Dispatch<CardData>(E_EventEnum.OnCardWashIn, card);
+            }
 
             // 队列还有牌 → 到下一张该出场的时刻就走；队列空了 → 等到这张落地才收工
             // （等待期间若又有新牌入队，循环会继续，不会丢牌）

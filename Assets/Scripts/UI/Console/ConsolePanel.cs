@@ -8,6 +8,7 @@ using UnityEngine;
 /// </summary>
 public partial class ConsolePanel : NormalPanel, ISceneInputBlockPanel
 {
+#if UNITY_EDITOR
     protected override void OnOpen()
     {
         comps.btnOk.onClick.AddListener(OnClickOk);
@@ -79,4 +80,10 @@ public partial class ConsolePanel : NormalPanel, ISceneInputBlockPanel
         UIManager.Instance.Hide(this);
         UIManager.Instance.Show<ConsoleEntryPanel>();
     }
+#else
+    protected override void OnOpen() { }
+    protected override void OnShow() { }
+    protected override void OnHide() { }
+    protected override void OnClose() { }
+#endif
 }

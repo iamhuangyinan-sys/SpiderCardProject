@@ -2,7 +2,7 @@
   "items": [
     {"Id": "tip_card_poison_no_pocket", "Chinese": "毒：不能放入额外牌包", "English": "Poison: can't be put into the extra pocket"},
     {"Id": "tip_discard_empty", "Chinese": "弃牌堆没有牌", "English": "The discard pile is empty"},
-    {"Id": "title_discard_list", "Chinese": "弃牌堆中的牌（不按照弃牌顺序排列）", "English": "Cards in the discard pile (unsorted)"},
+    {"Id": "title_discard_list", "Chinese": "弃牌堆中的牌", "English": "Cards in the discard pile"},
     {"Id": "tip_draw_empty", "Chinese": "发牌堆没有牌", "English": "The draw pile is empty"},
     {"Id": "title_draw_list", "Chinese": "发牌堆中的牌（不按照发牌顺序排列）", "English": "Cards in the draw pile (unsorted)"},
     {"Id": "tip_deal_empty_column", "Chinese": "有空列时不能发牌", "English": "You can't deal while a column is empty"},
@@ -82,6 +82,8 @@
     {"Id": "buff_name_10001", "Chinese": "自由抓取", "English": "Free Grab"},
     {"Id": "buff_desc_10001", "Chinese": "可以无视限制抓起一次牌", "English": "Pick up cards once, ignoring the usual pickup restrictions"},
     {"Id": "buff_tip_activate", "Chinese": "点击激活", "English": "Click to activate"},
-    {"Id": "buff_tip_deactivate", "Chinese": "已激活，再次点击取消激活", "English": "Active, click again to deactivate"}
+    {"Id": "buff_tip_deactivate", "Chinese": "已激活，再次点击取消激活", "English": "Active, click again to deactivate"},
+    {"Id": "place_skill_name_20003", "Chinese": "超级回收", "English": "Super Recycle"},
+    {"Id": "place_skill_desc_20003", "Chinese": "移动后，将自己和本列所有翻开的牌放入弃牌堆，然后往弃牌堆加入一张空白牌", "English": "After moving, discard this card and all face-up cards in this column, then add a Blank Card to the discard pile"}
   ]
 }

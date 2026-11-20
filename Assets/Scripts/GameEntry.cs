@@ -27,7 +27,9 @@ public class GameEntry : MonoBehaviour
         });
 
         // ===== 2. 编辑器模式：控制台入口 =====
+#if UNITY_EDITOR
         ConsoleEntryPanel.ShowInEditor();
+#endif
 
         Debug.Log("[GameEntry] 游戏业务初始化完成");
     }

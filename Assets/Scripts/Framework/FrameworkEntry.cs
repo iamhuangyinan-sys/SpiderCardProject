@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 using Framework.Res;
 using Framework.Save;
 using Framework.Event;
@@ -109,7 +109,9 @@ namespace Framework
             SoundManager.Instance.Init();    // 音效管理器（依赖 ResManager + PoolManager）
             SceneController.Instance.Init(); // 场景控制器（依赖 PoolManager + MonoManager）
             UIManager.Instance.Init();       // UI 管理器（依赖 ResManager）
+#if UNITY_EDITOR
             ConsoleCommandManager.Instance.Init(); // 控制台命令（注册回调，执行时访问业务层）
+#endif
             // XxxManager.Instance.Init();
 
             // ===== 4. 注册各类配置 =====
@@ -127,7 +129,9 @@ namespace Framework
             _initialized = false;
 
             // 按依赖的反序销毁
+#if UNITY_EDITOR
             ConsoleCommandManager.Instance.Dispose();
+#endif
             PlayerSettingManager.Instance.Dispose();
             SceneController.Instance.Dispose();
             UIManager.Instance.Dispose();
