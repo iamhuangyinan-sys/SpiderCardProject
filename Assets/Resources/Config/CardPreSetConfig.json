@@ -2,8 +2,8 @@
   "items": [
     {"Id": "110001", "Type": 1, "Rank": [-1], "Suit": [], "PlaceSkill": 20001, "Attribute": [], "Price": 70, "FlipSkill": 0},
     {"Id": "110002", "Type": 1, "Rank": [-1], "Suit": [], "PlaceSkill": 20002, "Attribute": [], "Price": 220, "FlipSkill": 0},
-    {"Id": "710001", "Type": 0, "Rank": [], "Suit": [], "Attribute": [], "PlaceSkill": 0, "Price": 0, "FlipSkill": 0},
-    {"Id": "710002", "Type": 0, "Rank": [], "Suit": [], "Attribute": [10002], "PlaceSkill": 0, "Price": 0, "FlipSkill": 0},
+    {"Id": "710001", "Type": 0, "Rank": [], "Suit": [], "Attribute": [], "PlaceSkill": 0, "FlipSkill": 0, "Price": 0},
+    {"Id": "710002", "Type": 0, "Rank": [], "Suit": [], "Attribute": [10002], "PlaceSkill": 0, "FlipSkill": 0, "Price": 0},
     {"Id": "210001", "Type": 2, "Rank": [-2], "Suit": [0], "Attribute": [], "Price": 200, "PlaceSkill": 0, "FlipSkill": 0},
     {"Id": "210002", "Type": 2, "Rank": [-2], "Suit": [1], "Attribute": [], "Price": 200, "PlaceSkill": 0, "FlipSkill": 0},
     {"Id": "210003", "Type": 2, "Rank": [-2], "Suit": [2], "Attribute": [], "Price": 200, "PlaceSkill": 0, "FlipSkill": 0},
@@ -27,6 +27,24 @@
     {"Id": "220042", "Type": 3, "Rank": [8, 9, 10], "Suit": [1], "Attribute": [], "Price": 75, "PlaceSkill": 0, "FlipSkill": 0},
     {"Id": "220043", "Type": 3, "Rank": [8, 9, 10], "Suit": [2], "Attribute": [], "Price": 75, "PlaceSkill": 0, "FlipSkill": 0},
     {"Id": "220044", "Type": 3, "Rank": [8, 9, 10], "Suit": [3], "Attribute": [], "Price": 75, "PlaceSkill": 0, "FlipSkill": 0},
-    {"Id": "710003", "Type": 0, "Rank": [], "Suit": [], "Attribute": [10003], "PlaceSkill": 0, "Price": 0, "FlipSkill": 0}
+    {"Id": "710003", "Type": 0, "Rank": [], "Suit": [], "Attribute": [10003], "PlaceSkill": 0, "FlipSkill": 0, "Price": 0},
+    {"Id": "120001", "Type": 1, "Rank": [-9], "Suit": [0], "FlipSkill": 30002, "Attribute": [], "Price": 50, "PlaceSkill": 0},
+    {"Id": "120002", "Type": 1, "Rank": [-9], "Suit": [1], "FlipSkill": 30002, "Attribute": [], "Price": 50, "PlaceSkill": 0},
+    {"Id": "120003", "Type": 1, "Rank": [-9], "Suit": [2], "FlipSkill": 30002, "Attribute": [], "Price": 50, "PlaceSkill": 0},
+    {"Id": "120004", "Type": 1, "Rank": [-9], "Suit": [3], "FlipSkill": 30002, "Attribute": [], "Price": 50, "PlaceSkill": 0},
+    {"Id": "120005", "Type": 1, "Rank": [-9], "Suit": [-9], "FlipSkill": 30002, "Attribute": [], "Price": 50, "PlaceSkill": 0},
+    {"Id": "100001", "Type": 9, "Rank": [-9], "Suit": [0], "Attribute": [], "Price": 0, "PlaceSkill": 0, "FlipSkill": 0},
+    {"Id": "100002", "Type": 9, "Rank": [-9], "Suit": [1], "Attribute": [], "Price": 0, "PlaceSkill": 0, "FlipSkill": 0},
+    {"Id": "100003", "Type": 9, "Rank": [-9], "Suit": [2], "Attribute": [], "Price": 0, "PlaceSkill": 0, "FlipSkill": 0},
+    {"Id": "100004", "Type": 9, "Rank": [-9], "Suit": [3], "Attribute": [], "Price": 0, "PlaceSkill": 0, "FlipSkill": 0},
+    {"Id": "100005", "Type": 9, "Rank": [-9], "Suit": [-9], "Attribute": [], "Price": 0, "PlaceSkill": 0, "FlipSkill": 0},
+    {"Id": "220051", "Type": 3, "Rank": [-9, -9], "Suit": [0], "Attribute": [], "Price": 40, "PlaceSkill": 0, "FlipSkill": 0},
+    {"Id": "220052", "Type": 3, "Rank": [-9, -9], "Suit": [1], "Attribute": [], "Price": 40, "PlaceSkill": 0, "FlipSkill": 0},
+    {"Id": "220053", "Type": 3, "Rank": [-9, -9], "Suit": [2], "Attribute": [], "Price": 40, "PlaceSkill": 0, "FlipSkill": 0},
+    {"Id": "220054", "Type": 3, "Rank": [-9, -9], "Suit": [3], "Attribute": [], "Price": 40, "PlaceSkill": 0, "FlipSkill": 0},
+    {"Id": "220061", "Type": 3, "Rank": [-9, -9, -9], "Suit": [0], "Attribute": [], "Price": 80, "PlaceSkill": 0, "FlipSkill": 0},
+    {"Id": "220062", "Type": 3, "Rank": [-9, -9, -9], "Suit": [1], "Attribute": [], "Price": 80, "PlaceSkill": 0, "FlipSkill": 0},
+    {"Id": "220063", "Type": 3, "Rank": [-9, -9, -9], "Suit": [2], "Attribute": [], "Price": 80, "PlaceSkill": 0, "FlipSkill": 0},
+    {"Id": "220064", "Type": 3, "Rank": [-9, -9, -9], "Suit": [3], "Attribute": [], "Price": 80, "PlaceSkill": 0, "FlipSkill": 0}
   ]
 }

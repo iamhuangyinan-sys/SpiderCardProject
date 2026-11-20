@@ -63,10 +63,8 @@ public static class LevelEventRegistry
     /// <summary>洗入一张万能蜘蛛（4 花色 + 无视点数）</summary>
     private static IEnumerator AddSpider()
     {
-        var defs = new List<CardDef>
-        {
-            CardDef.Create(new[] { 0, 1, 2, 3 }, new[] { CardRankConst.Ignore }),
-        };
+        if (!CardHelper.TryGetDef("210007", out var spider, out _)) yield break;
+        var defs = new List<CardDef> { spider };
 
         yield return CardsManager.Instance.WashInAndWait(defs);
     }
@@ -74,13 +72,14 @@ public static class LevelEventRegistry
     /// <summary>洗入 3 张随机花色点数牌 + 一张空白牌（无花色无点数）</summary>
     private static IEnumerator AddRandom()
     {
-        var defs = new List<CardDef>
+        var defs = new List<CardDef>();
+        for (int i = 0; i < 3; i++)
         {
-            CardHelper.RandomDef(),
-            CardHelper.RandomDef(),
-            CardHelper.RandomDef(),
-            CardDef.Create(null, null),
-        };
+            if (!CardHelper.TryGetDef("100005", out var random, out _)) yield break;
+            defs.Add(random);
+        }
+        if (!CardHelper.TryGetDef("710001", out var blank, out _)) yield break;
+        defs.Add(blank);
 
         yield return CardsManager.Instance.WashInAndWait(defs);
     }

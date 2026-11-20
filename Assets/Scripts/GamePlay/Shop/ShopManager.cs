@@ -105,7 +105,7 @@ public class ShopManager : ManagerBase<ShopManager>
         store.goods.Clear();
 
         // 固定上架：回收牌
-        if (CardPreSetHelper.TryGetDef(FixedGoodsId, out var fixedDef, out int fixedPrice))
+        if (CardHelper.TryGetDef(FixedGoodsId, out var fixedDef, out int fixedPrice))
         {
             for (int i = 0; i < FixedGoodsCount; i++)
             {
@@ -116,9 +116,9 @@ public class ShopManager : ManagerBase<ShopManager>
         // 随机上架：逐类抽取（允许重复）
         foreach (var (type, count) in RandomGoodsPlan)
         {
-            foreach (var cfg in CardPreSetHelper.PickRandom(type, count))
+            foreach (var cfg in CardHelper.PickRandom(type, count))
             {
-                if (!CardPreSetHelper.TryToDef(cfg, out var def, out string error))
+                if (!CardHelper.TryToDef(cfg, out var def, out string error))
                 {
                     Debug.LogWarning($"[ShopManager] 预设 {cfg.Id} 无效：{error}");
                     continue;

@@ -11,6 +11,7 @@ public partial class ConsolePanel : NormalPanel, ISceneInputBlockPanel
     protected override void OnOpen()
     {
         comps.btnOk.onClick.AddListener(OnClickOk);
+        comps.btnSkip.onClick.AddListener(OnClickSkip);
         comps.btnClose.onClick.AddListener(OnClickClose);
         comps.iptConsole.onSubmit.AddListener(OnSubmit);
     }
@@ -26,6 +27,7 @@ public partial class ConsolePanel : NormalPanel, ISceneInputBlockPanel
     protected override void OnClose()
     {
         comps.btnOk.onClick.RemoveListener(OnClickOk);
+        comps.btnSkip.onClick.RemoveListener(OnClickSkip);
         comps.btnClose.onClick.RemoveListener(OnClickClose);
         comps.iptConsole.onSubmit.RemoveListener(OnSubmit);
     }
@@ -40,6 +42,11 @@ public partial class ConsolePanel : NormalPanel, ISceneInputBlockPanel
     private void OnClickOk()
     {
         ExecuteCurrentInput();
+    }
+
+    private void OnClickSkip()
+    {
+        ExecuteCommand("skip");
     }
 
     /// <summary>执行输入框中的命令，并清空输入框保持焦点</summary>

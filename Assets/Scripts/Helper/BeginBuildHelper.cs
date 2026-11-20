@@ -12,7 +12,7 @@ public static class BeginBuildHelper
 
         if (difficulty >= 2)
         {
-            if (!CardPreSetHelper.TryGetDef("710003", out var blank, out _)) return false;
+            if (!CardHelper.TryGetDef("710003", out var blank, out _)) return false;
             cards.Add(blank.Clone());
         }
 
@@ -28,7 +28,7 @@ public static class BeginBuildHelper
         switch (id)
         {
             case "101":
-                if (!CardPreSetHelper.TryGetDef("210001", out var spider, out _)) return false;
+                if (!CardHelper.TryGetDef("210001", out var spider, out _)) return false;
                 AddSuit(deck, E_CardSuitEnum.Hearts, 2);
                 AddSuit(deck, E_CardSuitEnum.Spades, 2);
                 deck.Add(spider.Clone());
@@ -48,7 +48,7 @@ public static class BeginBuildHelper
     /// <summary>只替换一份普通牌，保持牌组总张数不变。</summary>
     private static bool ReplaceWithPreset(List<CardDef> deck, E_CardSuitEnum suit, int rank, string presetId)
     {
-        if (!CardPreSetHelper.TryGetDef(presetId, out var replacement, out _)) return false;
+        if (!CardHelper.TryGetDef(presetId, out var replacement, out _)) return false;
         int index = deck.IndexOf(CardDef.Create((int)suit, rank));
         if (index < 0) return false;
         deck[index] = replacement.Clone();

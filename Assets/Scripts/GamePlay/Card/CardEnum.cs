@@ -128,5 +128,8 @@ public enum E_CardPreSetTypeEnum
 
     /// <summary>多重点数 / 花色类</summary>
     Multi = 3,
+
+    /// <summary>普通牌</summary>
+    Normal = 9,
 }
 

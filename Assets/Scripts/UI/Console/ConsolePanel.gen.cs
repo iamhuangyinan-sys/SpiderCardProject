@@ -15,6 +15,7 @@ public partial class ConsolePanel
     {
         public TMP_InputField iptConsole;
         public Button btnOk;
+        public Button btnSkip;
         public Button btnClose;
         public AddCardModule modAddCard;
     }

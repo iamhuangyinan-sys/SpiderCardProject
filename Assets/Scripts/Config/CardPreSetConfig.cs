@@ -9,7 +9,7 @@ public class CardPreSetConfig
     public List<int> Rank;
     public List<int> Suit;
     public int PlaceSkill;
+    public int FlipSkill;
     public List<int> Attribute;
     public int Price;
-    public int FlipSkill;
 }

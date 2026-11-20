@@ -16,9 +16,9 @@ public class LittleShopManager : ManagerBase<LittleShopManager>
     {
         if (IsPending || LevelManager.Instance.GetNextIds(levelId).Count == 0) return;
         var pool = new List<ShopGoods>();
-        foreach (var cfg in CardPreSetHelper.GetAll())
+        foreach (var cfg in CardHelper.GetAll())
             if (cfg != null && cfg.Type != (int)E_CardPreSetTypeEnum.Negative
-                && CardPreSetHelper.TryToDef(cfg, out var def, out _))
+                && CardHelper.TryToDef(cfg, out var def, out _))
                 pool.Add(new ShopGoods { def = def, price = cfg.Price });
         var store = LittleShopStore.Instance;
         store.goods.Clear();
