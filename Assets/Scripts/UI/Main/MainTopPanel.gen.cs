@@ -14,6 +14,11 @@ public partial class MainTopPanel
     public class CompsData : CompsDataBase
     {
         public TMP_Text txtLevelProgress;
+        public Image imgSuit;
+        public Image imgHearts;
+        public Image imgDiamonds;
+        public Image imgSpades;
+        public Image imgClubs;
         public IconInfoModule modMap;
         public IconInfoModule modCardBuild;
         public IconInfoModule modMenu;

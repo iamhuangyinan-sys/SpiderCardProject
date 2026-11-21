@@ -18,6 +18,7 @@ public class RunManager : ManagerBase<RunManager>
 
     public bool HasStarted => RunStore.Instance.hasStarted;
     public string DifficultyId => RunStore.Instance.difficultyId;
+    public IReadOnlyList<E_CardSuitEnum> MainSuits => RunStore.Instance.mainSuits;
 
     protected override void OnInit() { }
 
@@ -30,15 +31,31 @@ public class RunManager : ManagerBase<RunManager>
     {
         if (string.IsNullOrEmpty(difficultyId) || ConfigHelper.Get<DifficultyConfig>(difficultyId) == null) return false;
         if (!BeginBuildHelper.TryBuild(beginBuildId, difficultyId, out var deck)) return false;
+
+        var configuredSuits = ConfigHelper.Get<BeginBuildConfig>(beginBuildId).Suit;
+        var firstSuit = (E_CardSuitEnum)configuredSuits.x;
+        var secondSuit = (E_CardSuitEnum)configuredSuits.y;
+        if (!IsValidSuit(firstSuit) || !IsValidSuit(secondSuit))
+        {
+            UnityEngine.Debug.LogError($"[RunManager] 初始牌组 {beginBuildId} 的主要花色无效：{configuredSuits}");
+            return false;
+        }
+
         int difficulty = int.Parse(difficultyId, System.Globalization.CultureInfo.InvariantCulture);
         if (!LevelManager.Instance.TryCreateRunMap(deck.Count, difficulty, seed)) return false;
-        RunStore.Instance.Reset();
-        RunStore.Instance.difficultyId = difficultyId;
-        foreach (var def in deck) RunStore.Instance.deck.Add(def.Clone());
-        RunStore.Instance.hasStarted = true;
+        var store = RunStore.Instance;
+        store.Reset();
+        store.difficultyId = difficultyId;
+        store.mainSuits.Add(firstSuit);
+        if (secondSuit != firstSuit) store.mainSuits.Add(secondSuit);
+        foreach (var def in deck) store.deck.Add(def.Clone());
+        store.hasStarted = true;
         NotifyCoinChanged();
+        EventManager.Instance.Dispatch(E_EventEnum.OnRunStarted);
         return true;
     }
+
+    private static bool IsValidSuit(E_CardSuitEnum suit) => System.Enum.IsDefined(typeof(E_CardSuitEnum), suit);
 
     // ==================== 金币 ====================
 
@@ -108,11 +125,12 @@ public class RunManager : ManagerBase<RunManager>
 
         data.coin = store.coin;
         data.difficultyId = store.difficultyId;
+        data.mainSuits = new List<E_CardSuitEnum>(store.mainSuits);
         data.deck.Clear();
         data.deck.AddRange(store.deck);
     }
 
-    /// <summary>从存档恢复本局资产（金币 + 牌组）</summary>
+    /// <summary>从存档恢复本局资产。</summary>
     public void ImportFrom(RunSaveData data)
     {
         var store = RunStore.Instance;
@@ -120,6 +138,13 @@ public class RunManager : ManagerBase<RunManager>
 
         store.coin = data.coin;
         store.difficultyId = data.difficultyId;
+        if (data.mainSuits != null)
+        {
+            foreach (var suit in data.mainSuits)
+            {
+                if (IsValidSuit(suit) && !store.mainSuits.Contains(suit)) store.mainSuits.Add(suit);
+            }
+        }
         if (data.deck != null) store.deck.AddRange(data.deck);
         store.hasStarted = true;
 

@@ -57,11 +57,7 @@ public class CardGameEntry : MonoBehaviour
             _beginBuildPanel = UIManager.Instance.Show<BeginBuildPanel>();
             if (_beginBuildPanel != null) _beginBuildPanel.OnConfirm = OnConfirmBeginBuild;
             _mainTopPanel = UIManager.Instance.Show<MainTopPanel>();
-            if (_mainTopPanel != null)
-            {
-                _mainTopPanel.SetMapButtonVisible(false);
-                _mainTopPanel.SetCardBuildButtonVisible(false);
-            }
+            SetMapButtonVisible(false);
         }
 
         // 内容就绪：告知场景控制器可以淡出黑屏遮罩
@@ -80,12 +76,6 @@ public class CardGameEntry : MonoBehaviour
         // Hide 才会播放 NormalPanel 的退出动画；切场景时再 Close 释放资源。
         if (_beginBuildPanel != null) UIManager.Instance.Hide(_beginBuildPanel);
         _mainTopPanel = UIManager.Instance.Show<MainTopPanel>();
-        if (_mainTopPanel != null)
-        {
-            _mainTopPanel.SetCardBuildButtonVisible(true);
-            _mainTopPanel.RefreshLevelInfo();
-            _mainTopPanel.RefreshDifficultyInfo();
-        }
         ShowLevelSelect();
         return true;
     }

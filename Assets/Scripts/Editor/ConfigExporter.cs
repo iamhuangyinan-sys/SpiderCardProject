@@ -16,7 +16,8 @@ using UnityEngine;
 ///   第1行：字段名（也是 C# 字段名）
 ///   第2行：类型（int / string / float / bool，或 list<int> / list<string> / list<list<int>> …）
 ///          列表字段的单元格值写成 [值1;值2]，可嵌套：[[1;2];[3;4]]
-///          （方括号可省；; 分隔，中文 ；也行；连续 / 尾随分号产生的空项跳过）
+///          列表和整数向量都必须写方括号，用英文分号分隔
+///          vector2Int / vector3Int 的值分别写成 [1;2] / [1;2;3]
 ///   第3行：注释（可空，跳过）
 ///   第4行起：数据
 ///
@@ -71,6 +72,11 @@ public static class ConfigExporter
         {
             using var zip = ZipFile.OpenRead(filePath);
             return ProcessZip(zip, filePath, fileName);
+        }
+        catch (FormatException e)
+        {
+            Debug.LogError($"[ConfigExporter] {fileName}.xlsx 数据格式错误: {e.Message}");
+            return 0;
         }
         catch (Exception e)
         {
@@ -151,7 +157,16 @@ public static class ConfigExporter
 
                     object val = GetCellValue(cell, ns, sst);
                     string type = idx < types.Count ? types[idx] : "string";
-                    val = ConvertByType(val, type);
+                    try
+                    {
+                        val = ConvertByType(val, type);
+                    }
+                    catch (FormatException e)
+                    {
+                        throw new FormatException($"{sheetName}!{cell.Attribute("r")?.Value} ({headers[idx]}) {e.Message}", e);
+                    }
+
+                    if (val == null) continue;
                     dict[headers[idx]] = val;
                     if (HasValue(val)) hasData = true;
                 }
@@ -207,6 +222,8 @@ public static class ConfigExporter
             case "float":
             case "double": return 0f;
             case "bool": return false;
+            case "vector2int": return Vector2Int.zero;
+            case "vector3int": return Vector3Int.zero;
             default: return "";
         }
     }
@@ -333,6 +350,9 @@ public static class ConfigExporter
         if (val is double d) return d.ToString(System.Globalization.CultureInfo.InvariantCulture);
         if (val is long l) return l.ToString();
         if (val is bool b) return b ? "true" : "false";
+        // JsonUtility 将数据类中的整数向量读为坐标对象。
+        if (val is Vector2Int v2) return FormattableString.Invariant($"{{\"x\":{v2.x},\"y\":{v2.y}}}");
+        if (val is Vector3Int v3) return FormattableString.Invariant($"{{\"x\":{v3.x},\"y\":{v3.y},\"z\":{v3.z}}}");
         string s = val.ToString().Replace("\\", "\\\\").Replace("\"", "\\\"");
         return $"\"{s}\"";
     }
@@ -393,6 +413,8 @@ public static class ConfigExporter
             case "double": return "float";
             case "bool": return "bool";
             case "string": return "string";
+            case "vector2int": return "UnityEngine.Vector2Int";
+            case "vector3int": return "UnityEngine.Vector3Int";
             default: return "string";
         }
     }
@@ -435,6 +457,8 @@ public static class ConfigExporter
             case "bool":
                 if (val is bool b) return b;
                 return bool.TryParse(val?.ToString(), out bool bv) && bv;
+            case "vector2int": return ConvertToIntVector(val, 2);
+            case "vector3int": return ConvertToIntVector(val, 3);
             case "string":
             default:
                 return val?.ToString() ?? "";
@@ -443,25 +467,50 @@ public static class ConfigExporter
 
     /// <summary>
     /// 把 [值1;值2] 形式的单元格值解析成 List（每个元素按 elementType 转，可嵌套）。
-    /// 外层方括号可省；只按「最外层」的 ; 切分；英文 ; 与中文 ；都当分隔符；空项跳过
+    /// 外层方括号必填，只按最外层的英文分号切分，空项跳过。
     /// </summary>
     private static object ConvertToList(object val, string elementType)
     {
         var list = new List<object>();
         string text = val?.ToString()?.Trim() ?? "";
+        if (text.Length == 0) return list;
 
-        // 只有整串确实被一对配对括号包住时才剥（否则 [1;2];[3] 这种会被误剥开头那个 [）
-        if (HasWrappingBrackets(text)) text = text.Substring(1, text.Length - 2);
-
-        foreach (string part in SplitTopLevel(text))
+        foreach (string part in SplitTopLevel(GetBracketedContents(text)))
         {
             string item = part.Trim();
-            if (item.Length == 0) continue;      // 空项跳过（空的嵌套列表请写成 []）
-
-            list.Add(ConvertByType(item, elementType));
+            if (item.Length > 0) list.Add(ConvertByType(item, elementType));
         }
 
         return list;
+    }
+
+    private static object ConvertToIntVector(object val, int dimensions)
+    {
+        string text = val?.ToString()?.Trim() ?? "";
+        if (text.Length == 0) return null;
+
+        var parts = GetBracketedContents(text).Split(';');
+        string expected = dimensions == 2 ? "[1;2]" : "[1;2;3]";
+        if (parts.Length != dimensions)
+            throw new FormatException($"应填写 {dimensions} 个整数分量（例如 {expected}），实际为 {text}");
+
+        var components = new int[dimensions];
+        for (int i = 0; i < dimensions; i++)
+        {
+            if (!int.TryParse(parts[i], out components[i]))
+                throw new FormatException($"第 {i + 1} 个分量必须是 32 位整数，实际为 {parts[i]}");
+        }
+
+        if (dimensions == 2) return new Vector2Int(components[0], components[1]);
+        return new Vector3Int(components[0], components[1], components[2]);
+    }
+
+    private static string GetBracketedContents(string text)
+    {
+        if (!HasWrappingBrackets(text) || text.IndexOf('；') >= 0)
+            throw new FormatException($"必须用方括号包裹，并用英文分号分隔，例如 [1;2]，实际为 {text}");
+
+        return text.Substring(1, text.Length - 2);
     }
 
     /// <summary>整串是否被一对配对括号包住：开头的 [ 对应的 ] 正好是最后一个字符</summary>
@@ -512,7 +561,7 @@ public static class ConfigExporter
             {
                 if (depth > 0) depth--;
             }
-            else if ((c == ';' || c == '；') && depth == 0)
+            else if (c == ';' && depth == 0)
             {
                 yield return text.Substring(start, i - start);
                 start = i + 1;

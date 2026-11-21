@@ -1,6 +1,6 @@
 ﻿{
   "items": [
-    {"Id": "101", "Image": ["cardBuildHearts", "cardBuildSpades", "cardBuildSpider"], "Name": "build_name_101"},
-    {"Id": "102", "Image": ["cardBuildDiamonds", "cardBuildSpades", "cardBuildMutipleRank"], "Name": "build_name_102"}
+    {"Id": "101", "Image": ["cardBuildHearts", "cardBuildSpades", "cardBuildSpider"], "Name": "build_name_101", "Suit": {"x":0,"y":2}},
+    {"Id": "102", "Image": ["cardBuildDiamonds", "cardBuildSpades", "cardBuildMutipleRank"], "Name": "build_name_102", "Suit": {"x":1,"y":2}}
   ]
 }

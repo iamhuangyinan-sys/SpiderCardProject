@@ -1,3 +1,4 @@
+using System.Linq;
 using Framework.Event;
 using Framework.UI;
 using UnityEngine;
@@ -18,6 +19,7 @@ public partial class MainTopPanel : NormalPanel
         EventManager.Instance.AddListener(E_EventEnum.OnCardsCollected, OnLevelEnd);
         EventManager.Instance.AddListener(E_EventEnum.OnShopClosed, RefreshLevelInfo);
         EventManager.Instance.AddListener(E_EventEnum.OnCoinChanged, RefreshCoinInfo);
+        EventManager.Instance.AddListener(E_EventEnum.OnRunStarted, RefreshRunInfo);
         EventManager.Instance.AddListener(E_EventEnum.OnMapOpen, OnMapOpened);
         EventManager.Instance.AddListener(E_EventEnum.OnMapClose, OnMapClosed);
 
@@ -25,18 +27,16 @@ public partial class MainTopPanel : NormalPanel
         comps.modMenu.OnClick += OnClickMenu;
         comps.modMap.OnClick += OnClickMap;
 
-        RefreshLevelInfo();
+        RefreshRunInfo();
         RefreshCoinInfo();
-        RefreshDifficultyInfo();
         SetProgressVisible(false);   // 选关状态不显示进度
         SetMapButtonVisible(false);  // 选关界面本身就是地图，默认藏起来
     }
 
     protected override void OnShow()
     {
-        RefreshDifficultyInfo();
+        RefreshRunInfo();
         RefreshProgress();
-        RefreshLevelInfo();
         RefreshCoinInfo();
     }
 
@@ -53,6 +53,7 @@ public partial class MainTopPanel : NormalPanel
         EventManager.Instance.RemoveListener(E_EventEnum.OnCardsCollected, OnLevelEnd);
         EventManager.Instance.RemoveListener(E_EventEnum.OnShopClosed, RefreshLevelInfo);
         EventManager.Instance.RemoveListener(E_EventEnum.OnCoinChanged, RefreshCoinInfo);
+        EventManager.Instance.RemoveListener(E_EventEnum.OnRunStarted, RefreshRunInfo);
         EventManager.Instance.RemoveListener(E_EventEnum.OnMapOpen, OnMapOpened);
         EventManager.Instance.RemoveListener(E_EventEnum.OnMapClose, OnMapClosed);
 
@@ -96,10 +97,20 @@ public partial class MainTopPanel : NormalPanel
         if (comps.modMap != null) comps.modMap.gameObject.SetActive(visible);
     }
 
-    /// <summary>选择初始牌组时隐藏本局牌组入口，确认后恢复。</summary>
-    public void SetCardBuildButtonVisible(bool visible)
+    private void RefreshRunInfo()
     {
-        if (comps.modCardBuild != null) comps.modCardBuild.gameObject.SetActive(visible);
+        var run = RunManager.Instance;
+        bool started = run.HasStarted;
+        var suits = run.MainSuits;
+
+        comps.modCardBuild.gameObject.SetActive(started);
+        comps.imgSuit.gameObject.SetActive(started && suits.Count > 0);
+        comps.imgHearts.gameObject.SetActive(started && suits.Contains(E_CardSuitEnum.Hearts));
+        comps.imgDiamonds.gameObject.SetActive(started && suits.Contains(E_CardSuitEnum.Diamonds));
+        comps.imgSpades.gameObject.SetActive(started && suits.Contains(E_CardSuitEnum.Spades));
+        comps.imgClubs.gameObject.SetActive(started && suits.Contains(E_CardSuitEnum.Clubs));
+        RefreshLevelInfo();
+        RefreshDifficultyInfo();
     }
 
     /// <summary>开始一局：显示接龙进度并刷新</summary>
@@ -133,7 +144,7 @@ public partial class MainTopPanel : NormalPanel
     }
 
     /// <summary>刷新层数信息：未确认初始牌组时显示 0，开始本局后显示当前层。</summary>
-    public void RefreshLevelInfo()
+    private void RefreshLevelInfo()
     {
         comps.modLevelInfo.SetInfo(RunManager.Instance.HasStarted
             ? LevelStore.Instance.currentLayer.ToString()
@@ -146,7 +157,7 @@ public partial class MainTopPanel : NormalPanel
         comps.modCoinInfo.SetInfo(RunManager.Instance.Coin.ToString());
     }
 
-    public void RefreshDifficultyInfo()
+    private void RefreshDifficultyInfo()
     {
         bool visible = RunManager.Instance.HasStarted;
         comps.modDifficultyInfo.gameObject.SetActive(visible);

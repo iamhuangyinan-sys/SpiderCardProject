@@ -12,26 +12,14 @@ using UnityEngine.UI;
 ///   comps.modMap.Interactable = false;          // 置灰 + 不响应点击 / 悬停
 ///   comps.modMap.gameObject.SetActive(false);   // 整块显隐
 ///
-/// 悬停提示（跟 LevelBtnModule / CardModule 一个套路：提示内容就是本模组的序列化字段）：
-///   面板里选中某个 mod_Xxx 实例 → 勾上「固定提示」→ 填标题 / 正文 → 悬停直接弹，不用写代码。
-///   不勾就完全不弹（默认不勾，纯数字模块保持安静）。
-///   方向默认 Down（这几个图标在顶部，向下弹；靠近屏幕底边时 HoverTipPanel 会自动换方向）。
+/// 固定提示使用 LocalizedHoverTip。动态提示通过 SetTip 设置。
 ///
 /// 点击与交互状态由根节点的 UIFeedbackButton 处理，效果组件各自驱动内部视觉。
 /// 模组订阅 Controller.HoverChanged 显示提示，不再重复处理指针输入。
 /// </summary>
 public partial class IconInfoModule : BaseModule
 {
-    [Header("悬停提示")]
-    /// <summary>固定提示：勾上 = 悬停时直接显示下面填的文案（不勾没有任何提示）</summary>
-    [SerializeField] private bool fixedTip = false;
-
-    /// <summary>提示标题（填 LanguageConfig 的 Id；可空，空了只显示正文）</summary>
-    [SerializeField] private string tipTitle = string.Empty;
-
-    /// <summary>提示正文（填 LanguageConfig 的 Id；可多行）</summary>
-    [SerializeField, TextArea(2, 6)] private string tipContent = string.Empty;
-
+    [Header("动态悬停提示")]
     /// <summary>提示框首选方向（放不下会自动换方向）</summary>
     [SerializeField] private E_TipDirection tipDirection = E_TipDirection.Down;
 
@@ -86,7 +74,6 @@ public partial class IconInfoModule : BaseModule
         _feedback = null;
         _info = null;
         _interactable = null;
-        dynamicTip = false;
         dynamicTitle = null;
         dynamicContent = null;
     }
@@ -99,10 +86,9 @@ public partial class IconInfoModule : BaseModule
         if (comps.txtInfo != null) comps.txtInfo.text = text;
     }
 
-    /// <summary>设置已本地化的动态提示，优先于固定提示。语言变化时由调用方重新设置。</summary>
+    /// <summary>设置已本地化的动态提示。语言变化时由调用方重新设置。</summary>
     public void SetTip(string title, string content)
     {
-        dynamicTip = true;
         dynamicTitle = title;
         dynamicContent = content;
         if (_feedback != null && _feedback.IsHovered) ShowTip();
@@ -125,21 +111,16 @@ public partial class IconInfoModule : BaseModule
 
     // ==================== 悬停提示 ====================
 
-    /// <summary>显示动态提示或固定提示；空内容由提示工具收起。</summary>
-    public void ShowTip()
+    /// <summary>显示动态提示，标题和正文都为空时收起。</summary>
+    private void ShowTip()
     {
-        if (!dynamicTip && !fixedTip) return;
-
-        // 固定字段保存多语言 Id，动态内容由调用方完成本地化。
-        HoverTipHelper.Show(this,
-            dynamicTip ? dynamicTitle : string.IsNullOrEmpty(tipTitle) ? null : LanguageHelper.Get(tipTitle),
-            dynamicTip ? dynamicContent : string.IsNullOrEmpty(tipContent) ? null : LanguageHelper.Get(tipContent),
+        HoverTipHelper.Show(this, dynamicTitle, dynamicContent,
             _button != null && _button.image != null ? _button.image.rectTransform : (RectTransform)transform,
             tipDirection, tipExtraGap);
     }
 
     /// <summary>收起提示（只有自己的提示才会被关）</summary>
-    public void HideTip() => HoverTipHelper.Hide(this);
+    private void HideTip() => HoverTipHelper.Hide(this);
 
     /// <summary>Button.onClick 的转发（Button 已经过滤了 interactable）</summary>
     private void HandleClick() => OnClick?.Invoke();
@@ -168,7 +149,6 @@ public partial class IconInfoModule : BaseModule
 
     /// <summary>待显示的文字（控件绑定前 SetInfo 的缓存）</summary>
     private string _info;
-    private bool dynamicTip;
     private string dynamicTitle;
     private string dynamicContent;
 }

@@ -125,9 +125,9 @@ LevelBtnModule                 ← UIRaiseEffect 的 Target，仍是地图定位
 
 BeginBuildPanel 的 btn_Left / btn_Right、ShopPanel 的 btn_Continue / btn_DeleteCard、LittleShopPanel 的 btn_Skip 已按 btn_Check 配置为 Scale/Raise/Shadow，不再额外变色。缩放过渡为 0.1 秒、OutBack，普通/按下/焦点/禁用倍率为 1，悬停为 1.3。阴影复用各按钮自身图标，配置与 btn_Check 一致；Reference Target 绑定可见 Background，删除按钮使用 DelIcon，不包含价格和次数文字，跳过按钮也只参考自身图标。新增 Shadow 在 BreatheRoot 下位于 Surface 之前，关闭 Raycast Target。
 
-IconInfoModule 订阅 Controller.HoverChanged 控制提示；不可交互时停止悬停并收起提示。提示对齐到实际缩放后的图标。MainTopPanel 中的五个嵌套实例随共享预制体更新，两处自定义缩放覆盖也已迁移到新字段。
+固定提示在控件节点挂 `LocalizedHoverTip`，配置 LanguageConfig 的 `Content Id`，需要标题时再填 `Title Id`。带 Controller 的控件使用 `HoverChanged`。按钮的提示对齐到实际缩放后的图标，按钮不可交互时收起。普通图片或文字通过 `Raycast Target` 接收悬停。MainTopPanel 的地图、金币、菜单、层数、牌组、花色和接龙进度都使用这个组件。
 
-IconInfoModule 支持 `SetTip(title, content)` 设置已经本地化的动态提示，优先于 Inspector 的固定提示；标题为空时只显示正文，两者都为空时隐藏提示。调用方在语言改变时重新设置，悬停中的提示会立即刷新；解绑时清理动态内容。MainTopPanel 的难度信息使用此接口，数字显示本局难度，正文按难度顺序用普通换行累计非空描述；难度 1 仅显示正文名称。
+IconInfoModule 通过 `SetTip(title, content)` 接收已经本地化的动态提示。标题为空时只显示正文，两者都为空时隐藏提示。调用方在语言改变时重新设置，悬停中的提示会立即刷新。解绑时清理动态内容。MainTopPanel 的难度信息使用此接口，数字显示本局难度，正文按难度顺序用普通换行累计非空描述。难度 1 仅显示正文名称。
 
 BeginBuildPanel 的牌组和难度箭头都在第一项隐藏左键、最后一项隐藏右键，切换到边界即停止。两组箭头使用 Scale/Raise/Shadow/Color，禁用状态的外观参数与普通状态一致。
 

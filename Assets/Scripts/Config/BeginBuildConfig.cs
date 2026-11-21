@@ -7,4 +7,5 @@ public class BeginBuildConfig
     public string Id;
     public List<string> Image;
     public string Name;
+    public UnityEngine.Vector2Int Suit;
 }

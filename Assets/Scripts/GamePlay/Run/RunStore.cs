@@ -5,13 +5,15 @@ using Framework.Store;
 /// 一整局游戏（一大局：从第一层开始到通关）的玩家资产数据
 ///
 /// 注意：作用域是「一大局」，不是跨局长期资产；开始新的一大局时清零。
-/// TODO: 后续接入存档，支持中途退出后继续这一局
 /// </summary>
 public class RunStore : StoreBase<RunStore>
 {
     /// <summary>已确认初始牌组或成功读档，允许保存本局。</summary>
     public bool hasStarted;
     public string difficultyId;
+
+    /// <summary>初始牌组确定的本局主要花色。</summary>
+    public readonly List<E_CardSuitEnum> mainSuits = new();
 
     /// <summary>本局金币</summary>
     public int coin;
@@ -34,6 +36,7 @@ public class RunStore : StoreBase<RunStore>
     {
         hasStarted = false;
         difficultyId = null;
+        mainSuits.Clear();
         coin = 0;
         deck.Clear();
         // 以后：临时 buff 等
