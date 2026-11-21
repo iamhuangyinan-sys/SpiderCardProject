@@ -14,6 +14,8 @@ using UnityEngine;
 /// </summary>
 public static class CardHelper
 {
+    public const string RandomNormalPresetId = "100005";
+
     /// <summary>仅用于预设配置；构建牌定义时解析为实际点数或花色。</summary>
     private const int RandomValue = -9;
 
@@ -39,6 +41,23 @@ public static class CardHelper
         }
 
         return result;
+    }
+
+    public static List<(CardDef def, int price)> BuildShopPresetPool()
+    {
+        var pool = new List<(CardDef def, int price)>();
+        foreach (var cfg in GetAll())
+        {
+            if (cfg == null || cfg.Type == (int)E_CardPreSetTypeEnum.Negative
+                || cfg.Type == (int)E_CardPreSetTypeEnum.Normal) continue;
+
+            if (TryToDef(cfg, out var def, out _))
+            {
+                pool.Add((def, cfg.Price));
+            }
+        }
+
+        return pool;
     }
 
     /// <summary>

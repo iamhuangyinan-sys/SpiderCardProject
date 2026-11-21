@@ -9,7 +9,7 @@ public class ShopStore : StoreBase<ShopStore>
     /// <summary>当前商店关 id（空 = 不在商店中）</summary>
     public string shopLevelId;
 
-    /// <summary>当前商店的商品（前 2 件特殊牌，后 4 件普通牌）</summary>
+    /// <summary>当前商店的商品，按生成顺序存放</summary>
     public readonly List<ShopGoods> goods = new();
 
     /// <summary>
