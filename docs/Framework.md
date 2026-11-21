@@ -1,8 +1,3 @@
----
-name: spidercard-framework
-description: 'SpiderCard Unity 项目框架使用指南。Use when developing business code for this project: 添加 Store/Manager/Helper、写 UI 面板/模组/列表项、事件、存档、资源加载、对象池、音频、配表等。关键词：Mgr/Store、BasePanel、UIBinder、comps、mod_xxx、ScrollList、SaveManager、EventManager、ResManager、PoolManager、ConfigHelper。'
----
-
 # SpiderCard 框架使用指南
 
 Unity 项目 `SpiderCardProject` 的业务开发框架。所有框架代码在 `Assets/Scripts/Framework/`，业务代码在 `Assets/Scripts/` 下对应文件夹。
@@ -16,7 +11,7 @@ Unity 项目 `SpiderCardProject` 的业务开发框架。所有框架代码在 `
 | **Helper** | 纯静态工具函数 | 无（static class） | `XxxHelper` |
 | **UI** | 界面层，调 Manager | `NormalPanel`/`PopupPanel` | `XxxPanel` |
 
-数据流：`UI → Mgr → Store`。UI 不直接碰 Store 数据，Manager 不直接碰数据本身。
+常规数据流为 `UI → Manager → Store`。Manager 负责业务状态的读写，UI 通过业务入口读取状态并响应事件刷新。
 
 ## 命名规范（重要）
 
@@ -26,7 +21,7 @@ Unity 项目 `SpiderCardProject` 的业务开发框架。所有框架代码在 `
 
 ## 启动入口 FrameworkEntry
 
-所有框架模块在 `FrameworkEntry.InitFramework()` 中按依赖顺序初始化。新增 Manager/Store 时在此登记：
+框架服务在 `Assets/Scripts/Framework/FrameworkEntry.cs` 的 `InitFramework()` 中初始化。纸牌业务的 Store 和 Manager 在 `Assets/Scripts/GamePlay/Card/CardGameModule.cs` 中登记，由 `CardGameEntry` 随场景管理。各入口按依赖先初始化 Store，再初始化 Manager。
 
 ```csharp
 // Store（无依赖）→ Manager（依赖 Store）顺序
@@ -52,7 +47,7 @@ public class CardStore : StoreBase<CardStore> { }
 
 ### 2. MonoManager（协程/Update 服务）
 
-框架唯一的 MonoBehaviour，为纯 C# Manager 提供协程和 Update：
+框架的常驻 Mono 单例为纯 C# Manager 提供协程和 Update。
 
 ```csharp
 MonoManager.Instance.StartCoroutine(MyCoroutine());
@@ -129,6 +124,8 @@ SoundManager.Instance.SetVolume(0.8f);
 
 ### 8. 场景切换（Framework/SceneController.cs）
 
+应用从 `Main` 启动框架并进入 `BeginPanelScene`，由主菜单进出 `CardGameScene`。场景入口在内容就绪时调用 `NotifySceneReady()`，让 `SceneController` 淡出切场遮罩。
+
 ```csharp
 SceneController.Instance.LoadScene("GameScene");
 SceneController.Instance.OnBeforeLoad += () => { /* 遮罩淡入 */ };
@@ -157,7 +154,7 @@ SceneController.Instance.OnAfterLoad += () => { /* 遮罩淡出 */ };
 |----|------|
 | `BasePanel` | 所有面板基类，生命周期 OnOpen/OnShow/OnHide/OnClose（抽象，必须实现） |
 | `NormalPanel` | 普通面板，可声明式开关动画 |
-| `FullScreenPanel` | 全屏面板（展示牌、菜单），无动画 + 自动遮挡场景输入 |
+| `ISceneInputBlockPanel` | 需要阻断场景输入的面板接口，菜单和展示牌使用 `NormalPanel` 搭配该接口 |
 | `PopupPanel` | 弹窗（栈管理，`CloseTopPopup()`/`CloseAllPopups()`） |
 
 ### 声明式开关动画（NormalPanel）
@@ -178,24 +175,9 @@ protected override float FlyOffsetY     => 400f;
 protected override float FadeDuration   => 0.2f;
 ```
 
-### 全屏面板（FullScreenPanel）
+### 场景输入
 
-与 `NormalPanel` **并列**（都直接继承 `BasePanel`）：不带飞入 / 飞出等开关动画，打开期间自动遮挡场景输入。
-
-| 基类 | 用途 |
-|------|------|
-| `NormalPanel` | 普通面板，可声明式开关动画 |
-| `FullScreenPanel` | 铺满屏幕、盖住整个场景的面板（展示牌、菜单） |
-
-UI 之间的点击由 EventSystem 挡住，但**挡不住**场景里走 `Physics.Raycast` 的拾取（卡牌拖拽等），所以由 `FullScreenPanel` 自己维护打开计数，业务侧查它锁输入：
-
-```csharp
-public bool CanCardInput => ... && !FullScreenPanel.IsBlockingInput;
-```
-
-- 新增全屏面板：继承 `FullScreenPanel` 并在 `UIConfig` 注册即可，无需额外代码。
-- 现有全屏面板：`ShowCardsPanel` / `MenuPanel` / `ConsolePanel`。
-- 场景输入被锁时，正在进行中的拖拽要自行回弹（参见 `CardController.CancelDrag`），否则牌会卡在半空。
+面板通过 `ISceneInputBlockPanel` 接入 `SceneInputLock`。走 `Physics.Raycast` 的场景交互也需要检查该锁。纸牌输入统一查 `CardGameModule.CanCardInput`，锁定时由 `CardController` 取消进行中的拖拽。面板退场、交接和背景的约定见 [面板淡入淡出与背景](UIPanelTransitions.md)。
 
 ### 通用提示（TipHelper / TipPanel）
 
@@ -315,10 +297,10 @@ var all = ConfigHelper.GetAll<CardConfig>(); // 拿全部
 
 ## 开发新业务模块的步骤
 
-1. **数据**：新建 `Assets/Scripts/Store/XxxStore.cs` 继承 `StoreBase<XxxStore>`。
-2. **逻辑**：新建 `Assets/Scripts/Mgr/XxxManager.cs` 继承 `ManagerBase<XxxManager>`。
+1. **数据**放在对应业务目录，继承 `StoreBase<XxxStore>`。
+2. **逻辑**放在对应业务目录，继承 `ManagerBase<XxxManager>`。
 3. **工具**：按需加 `Assets/Scripts/Helper/XxxHelper.cs`（static）。
-4. **登记**：在 `FrameworkEntry.InitFramework()` 中 Init/Dispose。
+4. **登记**：纸牌业务在 `CardGameModule` 编排 Init/Dispose，通用框架服务走 `FrameworkEntry`。
 5. **UI**：面板继承 `NormalPanel`/`PopupPanel`，在 `UIConfig` 注册，挂 `UIBinder` 绑定控件。
 
 ---
@@ -327,4 +309,4 @@ var all = ConfigHelper.GetAll<CardConfig>(); // 拿全部
 
 在 `Assets/Scripts/Framework/` 下新建文件夹（如 `Timer/`），沿用约定：
 - 数据层 `XxxStore : StoreBase`，逻辑层 `XxxManager : ManagerBase`。
-- 新增后**更新本 Skill 文档**，在「模块速查」加一节。
+- 新增后**更新本指南**，在「模块速查」加一节。

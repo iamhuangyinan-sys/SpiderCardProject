@@ -9,7 +9,7 @@ description: 维护 SpiderCard 的 UIFeedback UI 交互效果，包括控件表�
 
 先区分本次任务：单个控件的表现调整、共享系统能力变更，或仅查询/提供方案。仅查询或方案请求不直接修改实现。撤销时只撤销用户指定的改动，保留已有调参和其它修改。
 
-先读 `docs/UIFeedback.md` 和本次涉及的实现；文档与代码不一致时查明实际行为，不照搬过时示例。涉及业务模块、资源加载或 UIBinder 时，同时读取项目的 `spidercard-framework` Skill。
+先读 `docs/UIFeedback.md` 和本次涉及的实现；文档与代码不一致时查明实际行为，不照搬过时示例。涉及业务模块、资源加载或 UIBinder 时，同时读取项目的 [`framework` Skill](../framework/SKILL.md)。
 
 | 职责 | 项目入口 |
 | --- | --- |
