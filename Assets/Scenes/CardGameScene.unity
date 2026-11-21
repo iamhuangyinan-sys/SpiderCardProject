@@ -1257,7 +1257,7 @@ MeshRenderer:
   m_GlobalIlluminationMeshLod: 0
   m_SortingLayerID: 0
   m_SortingLayer: 0
-  m_SortingOrder: 20000
+  m_SortingOrder: 5000
   m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
 --- !u!1 &921611093
@@ -1996,7 +1996,7 @@ SpriteRenderer:
   m_GlobalIlluminationMeshLod: 0
   m_SortingLayerID: 0
   m_SortingLayer: 0
-  m_SortingOrder: 20001
+  m_SortingOrder: 5001
   m_MaskInteraction: 0
   m_Sprite: {fileID: 21300000, guid: a548d53314f832641ae9b358bcb2ff12, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -2507,7 +2507,7 @@ MeshRenderer:
   m_GlobalIlluminationMeshLod: 0
   m_SortingLayerID: 0
   m_SortingLayer: 0
-  m_SortingOrder: 20000
+  m_SortingOrder: 5000
   m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
 --- !u!1 &1714193405
@@ -2762,7 +2762,7 @@ SpriteRenderer:
   m_GlobalIlluminationMeshLod: 0
   m_SortingLayerID: 0
   m_SortingLayer: 0
-  m_SortingOrder: 20002
+  m_SortingOrder: 5001
   m_MaskInteraction: 0
   m_Sprite: {fileID: 21300000, guid: a548d53314f832641ae9b358bcb2ff12, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -2839,7 +2839,7 @@ SpriteRenderer:
   m_GlobalIlluminationMeshLod: 0
   m_SortingLayerID: 0
   m_SortingLayer: 0
-  m_SortingOrder: 20000
+  m_SortingOrder: 5000
   m_MaskInteraction: 0
   m_Sprite: {fileID: 21300000, guid: 243bdff1731f2fa40a4934aaeb14d2b0, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -2969,7 +2969,7 @@ SpriteRenderer:
   m_GlobalIlluminationMeshLod: 0
   m_SortingLayerID: 0
   m_SortingLayer: 0
-  m_SortingOrder: 20000
+  m_SortingOrder: 5000
   m_MaskInteraction: 0
   m_Sprite: {fileID: 21300000, guid: 243bdff1731f2fa40a4934aaeb14d2b0, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -3079,7 +3079,7 @@ SpriteRenderer:
   m_GlobalIlluminationMeshLod: 0
   m_SortingLayerID: 0
   m_SortingLayer: 0
-  m_SortingOrder: 20001
+  m_SortingOrder: 5001
   m_MaskInteraction: 0
   m_Sprite: {fileID: 21300000, guid: 29c62703ca1c87f438beb21d02bfa14e, type: 3}
   m_Color: {r: 1, g: 0.43000004, b: 0.100000024, a: 0.9019608}
