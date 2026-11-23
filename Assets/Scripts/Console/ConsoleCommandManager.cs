@@ -1,4 +1,4 @@
-#if UNITY_EDITOR
+#if UNITY_EDITOR || SPIDERCARD_TEST_BUILD
 using System;
 using System.Collections.Generic;
 using Framework.Mgr;

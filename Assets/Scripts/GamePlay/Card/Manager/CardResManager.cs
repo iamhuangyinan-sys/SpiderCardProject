@@ -8,7 +8,7 @@ using UnityEngine;
 ///   Bg/cardBack · Bg/cardEmpty         牌背 / 空牌底
 ///   Image/{配表 Image}                  图案
 ///   Suit/{hearts|clubs|spades|diamonds}  花色小图
-///   Rank/{Red|Black}/{A..K|S}            点数小图
+///   Rank/{A..K|S}                       共用白色点数小图
 ///   Attribute/{配表 Icon}                属性小图
 ///   PlaceSkill/{配表 Icon}               落牌技能小图
 /// </summary>
@@ -59,16 +59,16 @@ public class CardResManager : ManagerBase<CardResManager>
     /// <summary>无花色的占位图（Suit/none）—— 没有花色的牌画这个</summary>
     public Sprite GetNoSuitSprite() => LoadSprite(SUIT_DIR + "none");
 
-    /// <summary>点数小图（Rank/{Red|Black}/{A..K|S}）</summary>
-    public Sprite GetRankSprite(int rank, bool isRed)
+    /// <summary>共用白色点数小图（Rank/{A..K|S}）</summary>
+    public Sprite GetRankSprite(int rank)
     {
-        return LoadSprite($"{RANK_DIR}{(isRed ? "Red" : "Black")}/{GetRankName(rank)}");
+        return LoadSprite(RANK_DIR + GetRankName(rank));
     }
 
-    /// <summary>万能放下（-1）的点数图（Rank/M，不分红黑）</summary>
+    /// <summary>万能放下（-1）的点数图（Rank/M）</summary>
     public Sprite GetWildRankSprite() => LoadSprite(RANK_DIR + "M");
 
-    /// <summary>无点数的占位图（Rank/none，不分红黑）</summary>
+    /// <summary>无点数的占位图（Rank/none）</summary>
     public Sprite GetNoRankSprite() => LoadSprite(RANK_DIR + "none");
 
     /// <summary>属性小图（读配表 CardAttributeConfig.Icon → Attribute/ 下的文件名，不含扩展名）</summary>

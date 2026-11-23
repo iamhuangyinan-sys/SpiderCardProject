@@ -109,7 +109,7 @@ namespace Framework
             SoundManager.Instance.Init();    // 音效管理器（依赖 ResManager + PoolManager）
             SceneController.Instance.Init(); // 场景控制器（依赖 PoolManager + MonoManager）
             UIManager.Instance.Init();       // UI 管理器（依赖 ResManager）
-#if UNITY_EDITOR
+#if UNITY_EDITOR || SPIDERCARD_TEST_BUILD
             ConsoleCommandManager.Instance.Init(); // 控制台命令（注册回调，执行时访问业务层）
 #endif
             // XxxManager.Instance.Init();
@@ -129,7 +129,7 @@ namespace Framework
             _initialized = false;
 
             // 按依赖的反序销毁
-#if UNITY_EDITOR
+#if UNITY_EDITOR || SPIDERCARD_TEST_BUILD
             ConsoleCommandManager.Instance.Dispose();
 #endif
             PlayerSettingManager.Instance.Dispose();

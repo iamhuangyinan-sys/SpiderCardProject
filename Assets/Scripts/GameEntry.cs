@@ -26,9 +26,9 @@ public class GameEntry : MonoBehaviour
             SceneController.Instance.NotifySceneReady();
         });
 
-        // ===== 2. 编辑器模式：控制台入口 =====
-#if UNITY_EDITOR
-        ConsoleEntryPanel.ShowInEditor();
+        // ===== 2. 编辑器和测试包：控制台入口 =====
+#if UNITY_EDITOR || SPIDERCARD_TEST_BUILD
+        ConsoleEntryPanel.ShowEntry();
 #endif
 
         Debug.Log("[GameEntry] 游戏业务初始化完成");

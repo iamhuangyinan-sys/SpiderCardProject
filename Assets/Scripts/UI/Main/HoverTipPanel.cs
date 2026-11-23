@@ -186,7 +186,8 @@ public partial class HoverTipPanel : BasePanel
             _items[i].gameObject.SetActive(used);
             if (!used) continue;
 
-            float width = _items[i].SetTip(tips[i].Title, tips[i].Content, tips[i].Icon);
+            var tip = tips[i];
+            float width = _items[i].SetTip(tip.Title, tip.Content, tip.Icon, tip.IconColor);
             if (width > maxWidth) maxWidth = width;
 
             shown++;

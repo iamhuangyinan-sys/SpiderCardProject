@@ -58,7 +58,7 @@ public class SpriteRowLayout : MonoBehaviour
     }
 
     /// <summary>喂一串要显示的图（null / 空 = 全部隐藏）。多余、以及 sprite 为 null 的槽位自动关掉</summary>
-    public void SetItems(IReadOnlyList<Sprite> sprites)
+    public void SetItems(IReadOnlyList<Sprite> sprites, Color? color = null)
     {
         int count = Mathf.Min(sprites?.Count ?? 0, _slots.Count);
 
@@ -74,6 +74,7 @@ public class SpriteRowLayout : MonoBehaviour
             }
 
             slot.sprite = sprites[i];
+            if (color.HasValue) slot.color = color.Value;
             slot.transform.localScale = _baseScales[i] * iconScale;
             slot.gameObject.SetActive(true);
         }

@@ -63,9 +63,9 @@ public class CardGameEntry : MonoBehaviour
         // 内容就绪：告知场景控制器可以淡出黑屏遮罩
         SceneController.Instance.NotifySceneReady();
 
-        // 编辑器模式：控制台入口（面板会被切场景的 DestroyAll 清掉，每个场景入口重新显示）
-#if UNITY_EDITOR
-        ConsoleEntryPanel.ShowInEditor();
+        // 编辑器和测试包：控制台入口（面板会被切场景的 DestroyAll 清掉，每个场景入口重新显示）
+#if UNITY_EDITOR || SPIDERCARD_TEST_BUILD
+        ConsoleEntryPanel.ShowEntry();
 #endif
     }
 

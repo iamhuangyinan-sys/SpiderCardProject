@@ -27,12 +27,14 @@ public partial class HoverTipItemModule : BaseModule
 
     /// <summary>标题行（图标 + 标题的父节点，从 txt_Title 往上取）</summary>
     private GameObject _titleRow;
+    private Color _iconBaseColor;
 
     protected override void OnBind()
     {
         _titleRow = comps.txtTitle != null && comps.txtTitle.transform.parent != null
             ? comps.txtTitle.transform.parent.gameObject
             : null;
+        if (comps.imgIcon != null) _iconBaseColor = comps.imgIcon.color;
 
         // 外层排列的是模组根节点，实际可见框必须与根节点重合。
         if (comps.imgLayout != null)
@@ -67,7 +69,8 @@ public partial class HoverTipItemModule : BaseModule
     /// <param name="title">标题（可空）</param>
     /// <param name="content">正文（可空）</param>
     /// <param name="icon">标题行左侧的图标（null = 不显示）</param>
-    public float SetTip(string title, string content, Sprite icon = null)
+    /// <param name="iconColor">图标颜色（null = 使用预制体颜色）</param>
+    public float SetTip(string title, string content, Sprite icon = null, Color? iconColor = null)
     {
         bool hasTitle = !string.IsNullOrEmpty(title);
         bool hasIcon = icon != null;
@@ -78,6 +81,7 @@ public partial class HoverTipItemModule : BaseModule
         if (comps.imgIcon != null)
         {
             comps.imgIcon.sprite = icon;   // 没图标时置空，避免复用到上一条的图
+            comps.imgIcon.color = iconColor ?? _iconBaseColor;
             comps.imgIcon.gameObject.SetActive(hasIcon);
         }
 

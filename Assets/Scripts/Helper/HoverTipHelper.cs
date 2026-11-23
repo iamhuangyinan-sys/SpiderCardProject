@@ -102,13 +102,17 @@ public struct HoverTipData
     /// <summary>标题行左侧的图标（null = 不显示；目前只有牌属性描述用）</summary>
     public Sprite Icon;
 
+    /// <summary>图标颜色（null = 使用预制体颜色）</summary>
+    public Color? IconColor;
+
     /// <summary>标题 / 正文 / 图标至少有一个（全空 = 这条不用显示）</summary>
     public bool HasAny => !string.IsNullOrEmpty(Title) || !string.IsNullOrEmpty(Content) || Icon != null;
 
-    public HoverTipData(string title, string content, Sprite icon = null)
+    public HoverTipData(string title, string content, Sprite icon = null, Color? iconColor = null)
     {
         Title = title;
         Content = content;
         Icon = icon;
+        IconColor = iconColor;
     }
 }

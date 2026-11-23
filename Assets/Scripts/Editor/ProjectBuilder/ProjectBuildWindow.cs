@@ -7,6 +7,8 @@ public sealed class ProjectBuildWindow : EditorWindow
 {
     [SerializeField] private string version;
     [SerializeField] private string lastOutputDirectory;
+    private static readonly string[] BuildKindLabels = { "正式包", "测试包" };
+    private ProjectBuildKind buildKind;
     private bool buildQueued;
     private string status;
     private MessageType statusType;
@@ -19,7 +21,7 @@ public sealed class ProjectBuildWindow : EditorWindow
 
     private void OnEnable()
     {
-        minSize = new Vector2(500, 330);
+        minSize = new Vector2(500, 360);
         if (!string.IsNullOrEmpty(version)) return;
         try
         {
@@ -41,7 +43,10 @@ public sealed class ProjectBuildWindow : EditorWindow
         EditorGUILayout.LabelField("SpiderCard 项目打包", EditorStyles.boldLabel);
         EditorGUILayout.Space(5);
         using (new EditorGUI.DisabledScope(busy))
+        {
             version = EditorGUILayout.TextField("版本号", version);
+            buildKind = (ProjectBuildKind)EditorGUILayout.Popup("包类型", (int)buildKind, BuildKindLabels);
+        }
         EditorGUILayout.LabelField("构建平台", "Windows 64 位");
         EditorGUILayout.LabelField("输出根目录", ProjectBuilder.OutputRoot);
 
@@ -49,7 +54,7 @@ public sealed class ProjectBuildWindow : EditorWindow
         string validationError = null;
         try
         {
-            outputDirectory = ProjectBuildPaths.GetAvailableDirectory(ProjectBuilder.OutputRoot, version);
+            outputDirectory = ProjectBuildPaths.GetAvailableDirectory(ProjectBuilder.OutputRoot, version, buildKind);
         }
         catch (Exception exception)
         {
@@ -63,7 +68,7 @@ public sealed class ProjectBuildWindow : EditorWindow
             if (GUILayout.Button("打开输出目录"))
                 EditorUtility.RevealInFinder(directoryToOpen);
         }
-        EditorGUILayout.HelpBox("重名目录自动追加后缀，游戏版本始终使用填写的版本号。", MessageType.Info);
+        EditorGUILayout.HelpBox("测试包启用控制台，目录加 -test。重名目录追加数字，游戏版本使用填写的版本号。", MessageType.Info);
         if (validationError != null)
             EditorGUILayout.HelpBox(validationError, MessageType.Warning);
         if (EditorApplication.isPlayingOrWillChangePlaymode || EditorApplication.isCompiling || EditorApplication.isUpdating)
@@ -91,7 +96,7 @@ public sealed class ProjectBuildWindow : EditorWindow
         try
         {
             version = ProjectBuildPaths.NormalizeVersion(version);
-            string result = ProjectBuilder.Build(version);
+            string result = ProjectBuilder.Build(version, buildKind);
             if (result == null)
             {
                 status = "已取消打包，版本信息未修改。";
@@ -100,9 +105,9 @@ public sealed class ProjectBuildWindow : EditorWindow
             }
 
             lastOutputDirectory = result;
-            status = $"打包成功：{result}";
+            status = $"{BuildKindLabels[(int)buildKind]}打包成功：{result}";
             statusType = MessageType.Info;
-            if (EditorUtility.DisplayDialog("打包完成", $"版本：{version}\n输出目录：{result}", "打开文件夹", "关闭"))
+            if (EditorUtility.DisplayDialog("打包完成", $"包类型：{BuildKindLabels[(int)buildKind]}\n版本：{version}\n输出目录：{result}", "打开文件夹", "关闭"))
                 EditorUtility.RevealInFinder(result);
         }
         catch (Exception exception)

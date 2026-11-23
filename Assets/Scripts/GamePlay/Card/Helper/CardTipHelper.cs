@@ -29,7 +29,6 @@ public static class CardTipHelper
         var ranks = def.ranks;
 
         var res = CardResManager.Instance;
-        bool isRed = CardFaceHelper.IsRedSuit(suits);
 
         // ===== 1. 点数（配表 1xx）=====
 
@@ -45,7 +44,8 @@ public static class CardTipHelper
         // -2：无视点数（蜘蛛），连接时只看花色
         if (HasRank(ranks, CardRankConst.Ignore))
         {
-            AddTip(tips, E_CardTipEnum.RankIgnore, res.GetRankSprite(CardRankConst.Ignore, isRed));
+            AddTip(tips, E_CardTipEnum.RankIgnore, res.GetRankSprite(CardRankConst.Ignore),
+                CardFaceHelper.GetRankColor(suits));
         }
 
         // 没有点数
@@ -105,10 +105,13 @@ public static class CardTipHelper
     }
 
     /// <summary>按 tip 类型查属性描述表（Id = 枚举值）；查不到就跳过。icon 可空（只有四条牌面 tip 带图标）</summary>
-    private static void AddTip(List<HoverTipData> tips, E_CardTipEnum type, Sprite icon = null)
+    private static void AddTip(List<HoverTipData> tips, E_CardTipEnum type, Sprite icon = null, Color? iconColor = null)
     {
         var cfg = ConfigHelper.Get<CardTipConfig>(((int)type).ToString());
-        if (cfg != null) tips.Add(new HoverTipData(LanguageHelper.Get(cfg.Name), LanguageHelper.Get(cfg.Description), icon));
+        if (cfg != null)
+        {
+            tips.Add(new HoverTipData(LanguageHelper.Get(cfg.Name), LanguageHelper.Get(cfg.Description), icon, iconColor));
+        }
     }
 
     /// <summary>按落牌技能查技能描述表（Id = 枚举值）；查不到就跳过。技能 tip 后面紧跟它的关联 Buff 描述</summary>

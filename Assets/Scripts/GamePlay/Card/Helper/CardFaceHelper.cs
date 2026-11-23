@@ -8,7 +8,7 @@ using UnityEngine;
 /// 规则：
 ///   图案   ：优先显示主花色和主点数对应的图案，缺图时尝试 PlaceSkillConfig.Image
 ///   花色   ：花色列表第一个（排序最前），其余进图标行；没有花色 → Suit/none 占位
-///   点数   ：点数列表第一个「可显示」的点数（跳过 -1），其余进图标行；红黑跟主花色；
+///   点数   ：点数列表第一个「可显示」的点数（跳过 -1），其余进图标行；按主花色着色；
 ///            一个可显示点数都没有 → 有 -1 画 Rank/M，否则画 Rank/none
 ///
 /// 列对齐（多重牌压在别的牌上时切换主值）不在这里做 —— 那是 CardViewManager 的事，
@@ -31,6 +31,9 @@ public class CardFace
     /// <summary>其余点数 → 图标行（素材不存在的已跳过）</summary>
     public readonly List<Sprite> ExtraRanks = new();
 
+    /// <summary>主点数和额外点数的颜色，白色保留素材原色</summary>
+    public Color RankColor = Color.white;
+
     /// <summary>
     /// 数据上是不是「多重花色」（花色列表超过 1 个）—— 跟素材有没有无关。
     /// 用来决定图案要不要下沉给花色图标行让位
@@ -40,6 +43,11 @@ public class CardFace
 
 public static class CardFaceHelper
 {
+    private static readonly Color SpadesRankColor = new Color32(28, 28, 28, 255);
+    private static readonly Color HeartsRankColor = new Color32(201, 63, 63, 255);
+    private static readonly Color ClubsRankColor = new Color32(12, 43, 95, 255);
+    private static readonly Color DiamondsRankColor = new Color32(191, 77, 42, 255);
+
     /// <summary>该属性是否在牌桌和局内牌堆中显示</summary>
     public static bool IsAttributeVisibleInGame(E_CardAttributeEnum attribute)
     {
@@ -110,8 +118,7 @@ public static class CardFaceHelper
 
         face.HasMultiSuit = suitCount > 1;
 
-        // 点数：跳过 -1（它不是点数），第一个当主点数，其余进图标行；红黑跟主花色
-        bool isRed = IsRedSuit(suits);
+        // 点数：跳过 -1，第一个当主点数，其余进图标行
         bool hasMainRank = false;
 
         for (int i = 0; i < rankCount; i++)
@@ -119,12 +126,13 @@ public static class CardFaceHelper
             int rank = ranks[i];
             if (rank == CardRankConst.Wild) continue;
 
-            var sprite = res.GetRankSprite(rank, isRed);
+            var sprite = res.GetRankSprite(rank);
             if (sprite == null) continue;   // 素材缺失就当没这个点数
 
             if (!hasMainRank)
             {
                 face.MainRank = sprite;
+                face.RankColor = GetRankColor(suits);
                 hasMainRank = true;
             }
             else
@@ -157,12 +165,18 @@ public static class CardFaceHelper
         return false;
     }
 
-    /// <summary>点数用红套还是黑套：红心 / 方块是红，其余（含没有花色）是黑</summary>
-    public static bool IsRedSuit(IReadOnlyList<int> suits)
+    /// <summary>取主花色的点数颜色。无花色时保留白图原色。</summary>
+    public static Color GetRankColor(IReadOnlyList<int> suits)
     {
-        if (suits == null || suits.Count == 0) return false;
+        if (suits == null || suits.Count == 0) return Color.white;
 
-        int suit = suits[0];
-        return suit == (int)E_CardSuitEnum.Hearts || suit == (int)E_CardSuitEnum.Diamonds;
+        return (E_CardSuitEnum)suits[0] switch
+        {
+            E_CardSuitEnum.Spades => SpadesRankColor,
+            E_CardSuitEnum.Hearts => HeartsRankColor,
+            E_CardSuitEnum.Clubs => ClubsRankColor,
+            E_CardSuitEnum.Diamonds => DiamondsRankColor,
+            _ => Color.white
+        };
     }
 }

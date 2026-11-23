@@ -333,14 +333,14 @@ public class CardView : MonoBehaviour
 
         SetSprite(_imageRenderer, face.Face);
         SetSprite(_suitRenderer, face.MainSuit);
-        SetSprite(_rankRenderer, face.MainRank);
+        SetSprite(_rankRenderer, face.MainRank, face.RankColor);
 
         // 没有布局组件就没有东西填图标，容器保持关闭（避免池复用时残留上一张牌的图标）
         if (_multiSuitGo != null) _multiSuitGo.SetActive(_multiSuitLayout != null && face.ExtraSuits.Count > 0);
         if (_multiRankGo != null) _multiRankGo.SetActive(_multiRankLayout != null && face.ExtraRanks.Count > 0);
 
         _multiSuitLayout?.SetItems(face.ExtraSuits);
-        _multiRankLayout?.SetItems(face.ExtraRanks);
+        _multiRankLayout?.SetItems(face.ExtraRanks, face.RankColor);
 
         // 属性图标行（和 2D 牌一样：数据 → 图标，没属性就整行关掉）
         CardFaceHelper.FillAttributeSprites(def, attributes, _attributeSprites, useInGameAttributes: true);
@@ -384,11 +384,12 @@ public class CardView : MonoBehaviour
         _imageRenderer.transform.localPosition = pos;
     }
 
-    private static void SetSprite(SpriteRenderer renderer, Sprite sprite)
+    private static void SetSprite(SpriteRenderer renderer, Sprite sprite, Color? color = null)
     {
         if (renderer == null) return;
 
         renderer.sprite = sprite;
+        if (color.HasValue) renderer.color = color.Value;
         renderer.gameObject.SetActive(sprite != null);
     }
 }

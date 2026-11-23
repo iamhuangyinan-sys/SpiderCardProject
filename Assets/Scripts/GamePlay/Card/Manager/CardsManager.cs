@@ -583,7 +583,7 @@ public class CardsManager : ManagerBase<CardsManager>
         return true;
     }
 
-#if UNITY_EDITOR
+#if UNITY_EDITOR || SPIDERCARD_TEST_BUILD
     /// <summary>【测试】直接达成接龙次数 → 关卡完成 + 收牌结算（供后续测试使用）</summary>
     public void DebugCompleteLevel()
     {
@@ -795,7 +795,7 @@ public class CardsManager : ManagerBase<CardsManager>
         EventManager.Instance.Dispatch<int>(E_EventEnum.OnPocketChanged, toIndex);
     }
 
-#if UNITY_EDITOR
+#if UNITY_EDITOR || SPIDERCARD_TEST_BUILD
     /// <summary>控制台测试：直接生成正面牌加入第一个空牌包，只检查空位，不走移动规则或动画。</summary>
     public bool DebugAddCardToPocket(CardDef def, out string error)
     {
@@ -875,6 +875,7 @@ public class CardsManager : ManagerBase<CardsManager>
     /// <summary>洗入协程是否在跑（保证同一时刻只有一个队列在出队）</summary>
     private bool _washingIn;
 
+#if UNITY_EDITOR || SPIDERCARD_TEST_BUILD
     /// <summary>
     /// 往发牌堆洗入一张牌：随机插进发牌堆任意位置，
     /// 并派发「中央生成一张正面牌 → 飞入发牌堆」动画。连续调用会排队，逐张错开飞入
@@ -890,6 +891,8 @@ public class CardsManager : ManagerBase<CardsManager>
 
         return true;
     }
+
+#endif
 
     /// <summary>
     /// 洗入若干张牌并等待整段动画播完（关卡开局事件用）。

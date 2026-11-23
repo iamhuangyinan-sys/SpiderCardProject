@@ -54,7 +54,7 @@ namespace Framework.UI
             Register<ShowCardsPanel>("GamePlay/ShowCardsPanel", E_UILayerEnum.Normal);
             Register<ShowOneCardPanel>("GamePlay/ShowOneCardPanel", E_UILayerEnum.Normal);
             Register<BuffPanel>("GamePlay/BuffPanel", E_UILayerEnum.Normal);
-#if UNITY_EDITOR
+#if UNITY_EDITOR || SPIDERCARD_TEST_BUILD
             // ===== 控制台（调试工具，置顶层避免被遮挡）=====
             Register<ConsoleEntryPanel>("Console/ConsoleEntryPanel", E_UILayerEnum.Top);
             Register<ConsolePanel>("Console/ConsolePanel", E_UILayerEnum.Top);

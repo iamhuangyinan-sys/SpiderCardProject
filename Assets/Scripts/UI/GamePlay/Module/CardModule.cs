@@ -179,13 +179,15 @@ public partial class CardModule : BaseModule, IPointerEnterHandler, IPointerExit
     private void RefreshFace()
     {
         var face = Def.IsValid ? CardFaceHelper.Build(Def) : null;
+        var rankColor = face?.RankColor ?? Color.white;
 
         SetImage(comps.imgImg, face?.Face);
         SetImage(comps.imgSuit, face?.MainSuit);
-        SetImage(comps.imgRank, face?.MainRank);
+        SetImage(comps.imgRank, face?.MainRank, rankColor);
 
         SetSlots(face?.ExtraSuits, comps.imgSuit1, comps.imgSuit2, comps.imgSuit3);
-        SetSlots(face?.ExtraRanks, comps.imgRank1, comps.imgRank2, comps.imgRank3, comps.imgRank4);
+        SetSlots(face?.ExtraRanks, rankColor,
+            comps.imgRank1, comps.imgRank2, comps.imgRank3, comps.imgRank4);
 
         // 属性图标行（技能优先，槽位固定 5 个）
         CardFaceHelper.FillAttributeSprites(Def, _attributes, _attributeSprites,
@@ -236,28 +238,28 @@ public partial class CardModule : BaseModule, IPointerEnterHandler, IPointerExit
     }
 
     /// <summary>设图并按有无图开关节点（图标槽位在 LayoutGroup 里，必须用 SetActive 占/不占位）</summary>
-    private static void SetImage(Image img, Sprite sprite)
+    private static void SetImage(Image img, Sprite sprite, Color? color = null)
     {
         if (img == null) return;
 
         img.sprite = sprite;
+        if (color.HasValue) img.color = color.Value;
         img.gameObject.SetActive(sprite != null);
     }
 
     /// <summary>给图标槽位依次填图，多出来的槽位关掉</summary>
     private static void SetSlots(IReadOnlyList<Sprite> sprites, params Image[] slots)
     {
+        SetSlots(sprites, null, slots);
+    }
+
+    private static void SetSlots(IReadOnlyList<Sprite> sprites, Color? color, params Image[] slots)
+    {
         int count = sprites?.Count ?? 0;
 
         for (int i = 0; i < slots.Length; i++)
         {
-            var slot = slots[i];
-            if (slot == null) continue;
-
-            bool used = i < count && sprites[i] != null;
-
-            slot.sprite = used ? sprites[i] : null;
-            slot.gameObject.SetActive(used);
+            SetImage(slots[i], i < count ? sprites[i] : null, color);
         }
     }
 

@@ -4,7 +4,7 @@ using Framework.UI;
 
 public partial class AddCardItem : BaseListItem
 {
-#if UNITY_EDITOR
+#if UNITY_EDITOR || SPIDERCARD_TEST_BUILD
     private Action<int> onChanged;
     private Action onDelete;
 

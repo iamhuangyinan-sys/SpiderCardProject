@@ -1,4 +1,4 @@
-#if UNITY_EDITOR
+#if UNITY_EDITOR || SPIDERCARD_TEST_BUILD
 using Framework;
 
 /// <summary>控制台加牌表单的目标位置。</summary>

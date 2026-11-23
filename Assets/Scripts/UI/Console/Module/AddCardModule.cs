@@ -7,7 +7,7 @@ using UnityEngine;
 
 public partial class AddCardModule : BaseModule
 {
-#if UNITY_EDITOR
+#if UNITY_EDITOR || SPIDERCARD_TEST_BUILD
     // 列表保存选项索引，实际花色 / 点数 / 枚举值由选项表映射。
     private readonly List<int> suits = new() { 0 };
     private readonly List<int> ranks = new() { 0 };

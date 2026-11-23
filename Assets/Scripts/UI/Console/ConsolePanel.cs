@@ -8,7 +8,7 @@ using UnityEngine;
 /// </summary>
 public partial class ConsolePanel : NormalPanel, ISceneInputBlockPanel
 {
-#if UNITY_EDITOR
+#if UNITY_EDITOR || SPIDERCARD_TEST_BUILD
     protected override void OnOpen()
     {
         comps.btnOk.onClick.AddListener(OnClickOk);

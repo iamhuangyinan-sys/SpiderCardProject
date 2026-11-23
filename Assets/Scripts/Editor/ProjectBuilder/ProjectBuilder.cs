@@ -3,6 +3,8 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using UnityEditor;
+using UnityEditor.Build;
+using UnityEditor.Build.Profile;
 using UnityEditor.Build.Reporting;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -13,6 +15,8 @@ public static class ProjectBuilder
     public const string OutputRoot = @"F:\Workspace\Build";
     public const string PlayerFileName = "SpiderCard.exe";
     public const BuildTarget Target = BuildTarget.StandaloneWindows64;
+
+    private const string TestBuildDefine = "SPIDERCARD_TEST_BUILD";
 
     public static bool IsBuilding { get; private set; }
 
@@ -25,7 +29,7 @@ public static class ProjectBuilder
     }
 
     /// <returns>成功的产物目录；用户取消保存场景时返回 null。</returns>
-    public static string Build(string version)
+    public static string Build(string version, ProjectBuildKind kind)
     {
         version = ProjectBuildPaths.NormalizeVersion(version);
         if (IsBuilding || BuildPipeline.isBuildingPlayer)
@@ -36,6 +40,11 @@ public static class ProjectBuilder
             throw new InvalidOperationException("当前 Editor 缺少 Windows 构建支持模块。");
         if (EditorUserBuildSettings.activeBuildTarget != Target)
             throw new InvalidOperationException("请先在 File → Build Profiles 中切换到 Windows 64 位平台。");
+
+        PlayerSettings.GetScriptingDefineSymbols(NamedBuildTarget.Standalone, out string[] playerDefines);
+        var profileDefines = BuildProfile.GetActiveBuildProfile()?.scriptingDefines;
+        if (playerDefines.Contains(TestBuildDefine) || profileDefines?.Contains(TestBuildDefine) == true)
+            throw new InvalidOperationException($"请从 Player Settings 或当前 Build Profile 移除 {TestBuildDefine}，该宏由项目打包工具按包类型注入。");
 
         string[] scenes = EditorBuildSettings.scenes.Where(scene => scene.enabled).Select(scene => scene.path).ToArray();
         if (scenes.Length == 0 || scenes.Any(path => string.IsNullOrEmpty(path) || !File.Exists(path)))
@@ -57,8 +66,8 @@ public static class ProjectBuilder
             // 同一输出根目录的工具构建互斥；关闭句柄时自动删除锁文件，覆盖成功、失败和取消路径。
             using var outputLock = new FileStream(Path.Combine(OutputRoot, ".spidercard-build.lock"),
                 FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None, 4096, FileOptions.DeleteOnClose);
-            string outputDirectory = ProjectBuildPaths.GetAvailableDirectory(OutputRoot, version);
-            return BuildIntoDirectory(version, scenes, previousJson, outputDirectory);
+            string outputDirectory = ProjectBuildPaths.GetAvailableDirectory(OutputRoot, version, kind);
+            return BuildIntoDirectory(version, kind, scenes, previousJson, outputDirectory);
         }
         finally
         {
@@ -66,14 +75,14 @@ public static class ProjectBuilder
         }
     }
 
-    private static string BuildIntoDirectory(string version, string[] scenes, byte[] previousJson, string outputDirectory)
+    private static string BuildIntoDirectory(string version, ProjectBuildKind kind, string[] scenes, byte[] previousJson, string outputDirectory)
     {
         string previousVersion = PlayerSettings.bundleVersion;
         bool versionTouched = false;
         bool directoryCreated = false;
         bool capturingLog = false;
         var log = new StringBuilder();
-        log.AppendLine($"Version: {version}\nTarget: {Target}\nOutput: {outputDirectory}\nStarted: {DateTime.Now:O}");
+        log.AppendLine($"Version: {version}\nBuild kind: {kind}\nTarget: {Target}\nOutput: {outputDirectory}\nStarted: {DateTime.Now:O}");
         Application.LogCallback capture = (message, stackTrace, type) =>
         {
             log.AppendLine($"[{type}] {message}");
@@ -108,7 +117,8 @@ public static class ProjectBuilder
                 scenes = scenes,
                 locationPathName = Path.Combine(outputDirectory, PlayerFileName),
                 target = Target,
-                options = BuildOptions.None
+                options = BuildOptions.None,
+                extraScriptingDefines = kind == ProjectBuildKind.Test ? new[] { TestBuildDefine } : Array.Empty<string>()
             });
 
             if (report == null)

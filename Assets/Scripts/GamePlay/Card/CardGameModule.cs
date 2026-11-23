@@ -82,7 +82,7 @@ public class CardGameModule : ManagerBase<CardGameModule>
         CardsManager.Instance.StartNewGame(columnCount, pocketCount);
     }
 
-#if UNITY_EDITOR
+#if UNITY_EDITOR || SPIDERCARD_TEST_BUILD
     /// <summary>【测试】直接完成当前关卡（达成接龙次数 + 收牌结算）</summary>
     public void DebugCompleteLevel()
     {

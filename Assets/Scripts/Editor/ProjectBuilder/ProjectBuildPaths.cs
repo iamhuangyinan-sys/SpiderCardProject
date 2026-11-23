@@ -1,6 +1,12 @@
 using System;
 using System.IO;
 
+public enum ProjectBuildKind
+{
+    Release,
+    Test,
+}
+
 /// <summary>版本目录命名规则；预览和实际构建共用。</summary>
 public static class ProjectBuildPaths
 {
@@ -24,14 +30,20 @@ public static class ProjectBuildPaths
         return value;
     }
 
-    public static string GetAvailableDirectory(string outputRoot, string version)
+    public static string GetAvailableDirectory(string outputRoot, string version, ProjectBuildKind kind)
     {
         string value = NormalizeVersion(version);
+        string directoryName = kind switch
+        {
+            ProjectBuildKind.Release => value,
+            ProjectBuildKind.Test => value + "-test",
+            _ => throw new ArgumentOutOfRangeException(nameof(kind)),
+        };
         string root = Path.GetFullPath(outputRoot);
-        string candidate = Path.Combine(root, value);
+        string candidate = Path.Combine(root, directoryName);
         int suffix = 0;
         while (Directory.Exists(candidate) || File.Exists(candidate))
-            candidate = Path.Combine(root, $"{value}.{checked(++suffix)}");
+            candidate = Path.Combine(root, $"{directoryName}.{checked(++suffix)}");
 
         return candidate;
     }
