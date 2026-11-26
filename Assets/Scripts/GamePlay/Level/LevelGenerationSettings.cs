@@ -1,7 +1,8 @@
-/// <summary>试玩版集中调参入口。稳定后可迁入 Excel；修改只影响新局。</summary>
+/// <summary>集中调参入口</summary>
 public static class LevelGenerationSettings
 {
-    public const int Version = 8;
+    public const int Version = 9;
+    public const int ChapterCount = 3;
     public const int LayerCount = 7;
     public const int FirstEventId = 11001;
     public const int BossEventId = 11002;
@@ -9,6 +10,8 @@ public static class LevelGenerationSettings
     public const float FirstTarget = 55;
     public const float NormalStartTarget = 90;
     public const float NormalEndTarget = 122;
+    public static readonly int[] ChapterDifficultyBonuses = { 0, 12, 24 };
+    public static readonly int[] ChapterRewardBonuses = { 0, 10, 20 };
     public const float Difficulty3TargetBonus = 8;
     public const int Difficulty3ExtraDealCards = 6;
     public const float FirstScoreLimit = 80;

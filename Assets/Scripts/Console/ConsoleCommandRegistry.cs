@@ -1,5 +1,9 @@
 #if UNITY_EDITOR || SPIDERCARD_TEST_BUILD
 using Framework;
+#if UNITY_EDITOR
+using System.Globalization;
+using UnityEngine;
+#endif
 
 /// <summary>控制台加牌表单的目标位置。</summary>
 public enum E_ConsoleCardTarget
@@ -27,6 +31,10 @@ public static class ConsoleCommandRegistry
 
         // level skip —— 直接完成当前关卡（走正常收牌结算流程）
         cmd.Register("skip", CmdLevelSkip, "直接完成当前关卡");
+#if UNITY_EDITOR
+        cmd.Register("goto *", CmdLevelGoto, "跳到指定大关和层的选关界面（如 goto 2-4）");
+        cmd.Register("goto", CmdLevelGoto, "查看跳关用法");
+#endif
 
         // ===== 资源 =====
 
@@ -48,6 +56,31 @@ public static class ConsoleCommandRegistry
         CardGameModule.Instance.DebugCompleteLevel();
         return "已跳过当前关卡";
     }
+
+#if UNITY_EDITOR
+    private static string CmdLevelGoto(string[] args)
+    {
+        string destination = args.Length > 1 ? args[1] : string.Empty;
+        var parts = destination.Split('-');
+        if (parts.Length != 2
+            || !int.TryParse(parts[0], NumberStyles.None, CultureInfo.InvariantCulture, out int chapter)
+            || !int.TryParse(parts[1], NumberStyles.None, CultureInfo.InvariantCulture, out int layer))
+        {
+            const string message = "执行失败：用法为 goto <大关>-<层>（如 goto 2-4）";
+            Debug.LogError(message);
+            return message;
+        }
+
+        if (!CardGameModule.Instance.TryJumpToLevelSelection(chapter, layer, out string error))
+        {
+            string message = $"执行失败：{error}";
+            Debug.LogError(message);
+            return message;
+        }
+
+        return $"已保存 {chapter}-{layer} 的选关进度，正在重载卡牌场景";
+    }
+#endif
 
     /// <summary>加牌表单入口：直接接收结构化牌定义。</summary>
     public static string AddCard(CardDef def, E_ConsoleCardTarget target)

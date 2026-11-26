@@ -79,15 +79,20 @@ namespace Framework.UI
         }
 
         /// <summary> 隐藏（保留缓存，UIManager 内部） </summary>
-        internal void HideInternal(Action onHidden = null)
+        internal void HideInternal(Action onHidden = null, bool immediate = false)
         {
-            if (!IsOpen) return;
-            IsOpen = false;
-            hiddenCallback = onHidden;
-            OnHide();
+            if (IsOpen)
+            {
+                IsOpen = false;
+                hiddenCallback = onHidden;
+                OnHide();
 
-            // 子类接管隐藏（如先播关闭动画，动画结束后再自行隐藏）
-            if (OnPanelClosing()) return;
+                if (!immediate && OnPanelClosing()) return;
+            }
+            else if (!immediate || !IsTransitioning)
+            {
+                return;
+            }
 
             CompleteHide();
         }

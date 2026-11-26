@@ -15,6 +15,11 @@ public partial class ConsolePanel : NormalPanel, ISceneInputBlockPanel
         comps.btnSkip.onClick.AddListener(OnClickSkip);
         comps.btnClose.onClick.AddListener(OnClickClose);
         comps.iptConsole.onSubmit.AddListener(OnSubmit);
+#if UNITY_EDITOR
+        comps.btnGoto.onClick.AddListener(OnClickGoto);
+#else
+        comps.btnGoto.transform.parent.gameObject.SetActive(false);
+#endif
     }
 
     protected override void OnShow()
@@ -31,6 +36,9 @@ public partial class ConsolePanel : NormalPanel, ISceneInputBlockPanel
         comps.btnSkip.onClick.RemoveListener(OnClickSkip);
         comps.btnClose.onClick.RemoveListener(OnClickClose);
         comps.iptConsole.onSubmit.RemoveListener(OnSubmit);
+#if UNITY_EDITOR
+        comps.btnGoto.onClick.RemoveListener(OnClickGoto);
+#endif
     }
 
     /// <summary>提交输入框（回车）</summary>
@@ -49,6 +57,15 @@ public partial class ConsolePanel : NormalPanel, ISceneInputBlockPanel
     {
         ExecuteCommand("skip");
     }
+
+#if UNITY_EDITOR
+    private void OnClickGoto()
+    {
+        string chapter = comps.iptGotoX.text.Trim();
+        string layer = comps.iptGotoY.text.Trim();
+        ExecuteCommand($"goto {chapter}-{layer}");
+    }
+#endif
 
     /// <summary>执行输入框中的命令，并清空输入框保持焦点</summary>
     private void ExecuteCurrentInput()

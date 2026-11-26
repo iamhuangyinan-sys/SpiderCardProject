@@ -1,6 +1,10 @@
 using Framework.Mgr;
 using Framework.Save;
 using Framework.UI;
+#if UNITY_EDITOR
+using System.IO;
+using Framework;
+#endif
 
 /// <summary>
 /// 纸牌游戏门面 —— 集中管理纸牌游戏各子系统的初始化与销毁
@@ -91,11 +95,60 @@ public class CardGameModule : ManagerBase<CardGameModule>
 
 #endif
 
+#if UNITY_EDITOR
+    private bool _reloadingForLevelJump;
+
+    /// <summary>保存调试选关进度并通过续玩入口重载当前场景。</summary>
+    public bool TryJumpToLevelSelection(int chapter, int layer, out string error)
+    {
+        if (!CardGameEntry.IsInCardScene || !RunManager.Instance.HasStarted)
+        {
+            error = "请先开始或继续一局游戏";
+            return false;
+        }
+
+        var scene = SceneController.Instance;
+        if (scene.IsLoading || _reloadingForLevelJump
+            || CardsManager.Instance.IsSettling || CardsManager.Instance.IsResolvingBoard
+            || UIManager.Instance.GetPanel<LevelPanel>()?.IsEnteringLevel == true)
+        {
+            error = "请等待进关、牌桌操作或场景切换完成";
+            return false;
+        }
+
+        if (!LevelManager.Instance.TryCreateDebugLevelSelection(chapter, layer, out var data))
+        {
+            error = $"本局不存在关卡 {chapter}-{layer}";
+            return false;
+        }
+
+        RunManager.Instance.ExportTo(data);
+        try
+        {
+            SaveManager.Instance.Save(E_SaveCustomEnum.RunData, data);
+        }
+        catch (System.Exception exception) when (exception is IOException or System.UnauthorizedAccessException)
+        {
+            error = $"无法保存跳关进度（{exception.Message}）";
+            return false;
+        }
+
+        _reloadingForLevelJump = true;
+        scene.LoadScene(scene.CurrentScene, () => _reloadingForLevelJump = false);
+        error = null;
+        return true;
+    }
+#endif
+
     // ==================== 存档 ====================
 
     /// <summary>把本局进度写入存档（金币 / 牌组 / 关卡进度 / 商店状态）</summary>
     public void SaveRun()
     {
+#if UNITY_EDITOR
+        // 等旧场景销毁期间，延迟执行的选关或牌桌流程不能覆盖跳关存档。
+        if (_reloadingForLevelJump) return;
+#endif
         // 选初始牌组期间尚无新局，退出或其他保存入口不能生成半成品存档。
         if (!RunManager.Instance.HasStarted) return;
         var data = new RunSaveData();
@@ -125,9 +178,14 @@ public class CardGameModule : ManagerBase<CardGameModule>
             return false;
         }
 
-        if (!LevelGenerationHelper.Validate(data.map, out _))
+        if (!LevelGenerationHelper.Validate(data.map, out string mapError))
         {
-            UnityEngine.Debug.LogError("[Level] 存档地图校验失败，未重新随机或覆盖存档");
+            UnityEngine.Debug.LogError($"[Level] 存档地图校验失败：{mapError}");
+            return false;
+        }
+        if (data.currentChapter < 1 || data.currentChapter > data.map.chapters.Count)
+        {
+            UnityEngine.Debug.LogError($"[Level] 存档大关编号无效：{data.currentChapter}");
             return false;
         }
 
@@ -135,10 +193,9 @@ public class CardGameModule : ManagerBase<CardGameModule>
         LevelManager.Instance.ImportFrom(data);
         ShopManager.Instance.ImportFrom(data);
         LittleShopManager.Instance.ImportFrom(data);
-        // 结算动画期间退出时，补发已完成关卡的挂起奖励并立即保存，防止丢失或重复领取。
-        if (data.pendingLevelReward > 0)
+        // 结算动画期间退出时，补发奖励并完成待处理的大关切换，一起保存结算结果。
+        if (LevelManager.Instance.SettleCompletedLevel())
         {
-            LevelManager.Instance.SettleLevelReward();
             SaveRun();
         }
         return true;

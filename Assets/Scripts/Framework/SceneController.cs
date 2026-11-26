@@ -54,7 +54,7 @@ namespace Framework
         /// <summary> 场景加载前（此时画面已全黑） </summary>
         public event UnityAction OnBeforeLoad;
 
-        /// <summary> 场景加载后（遮罩即将淡出） </summary>
+        /// <summary> 场景切换完成（遮罩已淡出） </summary>
         public event UnityAction OnAfterLoad;
 
         // ==================== 加载场景 ====================
@@ -105,10 +105,8 @@ namespace Framework
                 UIManager.Instance.SetSceneMaskBlack();
 
             // ===== 2. 加载前通知 + 切场景清理（此时已经看不到画面了）=====
-            // 先把旧场景的 UI 全部隐藏：面板挂在 DontDestroyOnLoad 的 Canvas 上，
-            // 若等切完再关，会跟着新场景一起露出来闪一下。
-            // 只隐藏不销毁 —— 缓存保留，下次 Show 直接复用（面板的关闭动画也播在黑幕下面，看不见）
-            UIManager.Instance.HideAll();
+            // 旧面板挂在常驻 Canvas 上，必须在新场景加载前完成隐藏。
+            UIManager.Instance.HideAllForSceneChange();
 
             OnBeforeLoad?.Invoke();
             PoolManager.Instance.ClearOnSceneChange();

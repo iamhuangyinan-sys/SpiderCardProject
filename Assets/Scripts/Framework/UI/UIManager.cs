@@ -337,16 +337,17 @@ namespace Framework.UI
         }
 
         /// <summary>
-        /// 隐藏所有已打开的面板（切场景时调用）
-        /// 只隐藏、**保留缓存**：面板下次 Show 可直接复用，无需重新加载预制体；
-        /// 监听不会解绑（那是 OnClose 的事），所以重新 Show 时状态是连续的
+        /// 在切场遮罩全黑时同步隐藏旧面板，保留缓存并完成已经开始的退场。
         /// </summary>
-        public void HideAll()
+        internal void HideAllForSceneChange()
         {
-            foreach (var kv in _panelCache)
+            // 正在关闭的面板完成退场时会从缓存移除。
+            var panels = new List<BasePanel>(_panelCache.Values);
+            _popupStack.Clear();
+            foreach (var panel in panels)
             {
-                if (kv.Value != null && kv.Value.IsOpen)
-                    kv.Value.HideInternal();
+                if (panel != null)
+                    panel.HideInternal(immediate: true);
             }
         }
 

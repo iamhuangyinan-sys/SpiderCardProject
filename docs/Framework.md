@@ -95,7 +95,10 @@ SaveManager.Instance.Save(E_SaveCustomEnum.PlayerData, data);
 var data = SaveManager.Instance.Load<PlayerData>(E_SaveCustomEnum.PlayerData);
 ```
 
-- 基础类型枚举名存入 JSON，改名需 `MigrateBasicKey("旧名", 新枚举)`；自定义类型改文件名用 `MigrateCustomPath("旧文件", 新枚举)`。
+**开发阶段的存档规则**
+
+- 开发阶段不做旧存档兼容。修改存档结构、字段含义或文件名时，先直接删除受影响的本地旧存档，再改代码并用新存档验证。
+- 读写逻辑只针对当前格式。不要为旧存档增加版本识别、兼容读取、迁移或运行时自动删档逻辑。
 
 ### 6. 对象池（Framework/Pool/）
 
@@ -126,10 +129,10 @@ SoundManager.Instance.SetVolume(0.8f);
 
 应用从 `Main` 启动框架并进入 `BeginPanelScene`，由主菜单进出 `CardGameScene`。场景入口在内容就绪时调用 `NotifySceneReady()`，让 `SceneController` 淡出切场遮罩。
 
+切场遮罩达到全黑后，`SceneController` 同步隐藏常驻 Canvas 上的旧面板，再加载新场景。`OnBeforeLoad` 在全黑时触发，供独立背景等对象收起。`OnAfterLoad` 和 `LoadScene` 的完成回调在遮罩淡出后触发。
+
 ```csharp
 SceneController.Instance.LoadScene("GameScene");
-SceneController.Instance.OnBeforeLoad += () => { /* 遮罩淡入 */ };
-SceneController.Instance.OnAfterLoad += () => { /* 遮罩淡出 */ };
 ```
 
 ### 9. 玩家设置（PlayerSetting/）

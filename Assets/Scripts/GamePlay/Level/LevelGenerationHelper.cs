@@ -8,21 +8,33 @@ public static class LevelGenerationHelper
     public static RunMapData Generate(int seed, int deckCount, int difficulty = 1)
     {
         if (deckCount < 13) throw new ArgumentException("初始牌组不足 13 张");
+        var map = new RunMapData { seed = seed, generatorVersion = LevelGenerationSettings.Version };
+        for (int chapter = 1; chapter <= LevelGenerationSettings.ChapterCount; chapter++)
+        {
+            int chapterSeed = chapter == 1 ? seed : DeriveSeed(seed, chapter, 4);
+            map.chapters.Add(GenerateChapter(chapter, chapterSeed, deckCount, difficulty));
+        }
+        return map;
+    }
+
+    private static RunChapterData GenerateChapter(int chapter, int seed, int deckCount, int difficulty)
+    {
         // 路线汇合后可能没有同时满足全部前置关卡约束的 Boss 参数，有限重试地图结构。
         // 重试种子只由原种子和次数决定，输入相同仍会生成完全相同的地图。
         InvalidOperationException lastError = null;
         for (int attempt = 0; attempt < 16; attempt++)
         {
-            try { return GenerateAttempt(seed, deckCount, attempt, difficulty); }
+            try { return GenerateAttempt(chapter, seed, deckCount, attempt, difficulty); }
             catch (InvalidOperationException error) { lastError = error; }
         }
-        throw new InvalidOperationException("地图生成重试后仍无合法组合，请检查生成参数", lastError);
+        throw new InvalidOperationException($"第 {chapter} 大关生成重试后仍无合法组合，请检查生成参数", lastError);
     }
 
-    private static RunMapData GenerateAttempt(int seed, int deckCount, int attempt, int difficulty)
+    private static RunChapterData GenerateAttempt(int chapter, int seed, int deckCount, int attempt, int difficulty)
     {
         var random = new Random(attempt == 0 ? seed : DeriveSeed(seed, attempt, 3));
-        var map = new RunMapData { seed = seed, generatorVersion = LevelGenerationSettings.Version };
+        var chapterData = new RunChapterData();
+        var levels = chapterData.levels;
         int shopLayer = 2 + Pick(random, LevelGenerationSettings.GuaranteedShopLayerWeights);
         var layers = new List<List<RunLevelData>>();
         for (int layer = 1; layer <= LevelGenerationSettings.LayerCount; layer++)
@@ -33,32 +45,34 @@ public static class LevelGenerationHelper
             var nodes = new List<RunLevelData>();
             for (int index = 1; index <= count; index++)
             {
-                var node = new RunLevelData { Id = $"01{layer:00}{index:00}01", NextLevelId = "" };
+                var node = new RunLevelData { Id = $"{chapter:00}{layer:00}{index:00}01", NextLevelId = "" };
                 nodes.Add(node);
-                map.levels.Add(node);
+                levels.Add(node);
             }
             layers.Add(nodes);
         }
         for (int layer = 0; layer < layers.Count - 1; layer++)
             Connect(layers[layer], layers[layer + 1], random);
 
+        if (chapter > 1) layers[0][0].LevelType = (int)E_LevelTypeEnum.Shop;
         layers[shopLayer - 1][random.Next(layers[shopLayer - 1].Count)].LevelType = (int)E_LevelTypeEnum.Shop;
         // 先尝试 Boss 前商店，避免普通层随机商店抢占连续商店及路线数量限制。
         int preBossLayer = layers.Count - 1;
         if (random.NextDouble() < LevelGenerationSettings.LateShopChance)
-            TryPlaceShop(map, layers[preBossLayer - 1], random, requireAlternative: true);
+            TryPlaceShop(levels, layers[preBossLayer - 1], random, requireAlternative: true);
 
         for (int layer = 2; layer < layers.Count; layer++)
         {
             if (layer == shopLayer || layer == preBossLayer) continue;
             if (random.NextDouble() < LevelGenerationSettings.ShopChance)
-                TryPlaceShop(map, layers[layer - 1], random, requireAlternative: false);
+                TryPlaceShop(levels, layers[layer - 1], random, requireAlternative: false);
         }
 
         float maxNormal = 0;
-        float targetBonus = difficulty >= 3 ? LevelGenerationSettings.Difficulty3TargetBonus : 0;
+        float targetBonus = LevelGenerationSettings.ChapterDifficultyBonuses[chapter - 1]
+            + (difficulty >= 3 ? LevelGenerationSettings.Difficulty3TargetBonus : 0);
         int extraDealCards = difficulty >= 3 ? LevelGenerationSettings.Difficulty3ExtraDealCards : 0;
-        foreach (var node in map.levels)
+        foreach (var node in levels)
         {
             int layer = Layer(node);
             if (node.LevelType == (int)E_LevelTypeEnum.Shop) continue;
@@ -74,11 +88,12 @@ public static class LevelGenerationHelper
                     + progress * (LevelGenerationSettings.NormalEndTarget - LevelGenerationSettings.NormalStartTarget)
                     + targetBonus
                     + LevelGenerationSettings.TierOffsets[Pick(nodeRandom, LevelGenerationSettings.TierWeights)];
-            FillCombat(map, node, nodeRandom, deckCount, target, isFirst, isBoss, maxNormal,
+            FillCombat(levels, node, nodeRandom, deckCount, target, isFirst, isBoss, maxNormal,
                 progress, LevelGenerationSettings.FirstScoreLimit + targetBonus, extraDealCards);
             if (!isFirst && !isBoss) maxNormal = Math.Max(maxNormal, node.difficulty);
             var rewards = new Random(DeriveSeed(seed, layer * 100 + Index(node), 2));
-            double reward = Math.Max(80, Math.Min(190, 100 + 1.5 * (node.difficulty - 90)));
+            double reward = Math.Max(80, Math.Min(190, 100 + 1.5 * (node.difficulty - 90)))
+                + LevelGenerationSettings.ChapterRewardBonuses[chapter - 1];
             if (isBoss) reward += LevelGenerationSettings.BossBonus;
             reward *= 1 + (rewards.NextDouble() * 2 - 1) * LevelGenerationSettings.RewardJitter;
             node.FinishReward = (int)Math.Round(reward / 5) * 5;
@@ -86,21 +101,21 @@ public static class LevelGenerationHelper
             if (difficulty >= 4)
                 node.FinishReward = (int)Math.Round(node.FinishReward * LevelGenerationSettings.Difficulty4RewardMultiplier / 5) * 5;
         }
-        if (!Validate(map, out string error)) throw new InvalidOperationException(error);
-        return map;
+        if (!ValidateChapter(chapterData, chapter)) throw new InvalidOperationException($"第 {chapter} 大关地图无效");
+        return chapterData;
     }
 
-    private static bool TryPlaceShop(RunMapData map, List<RunLevelData> layer, Random random, bool requireAlternative)
+    private static bool TryPlaceShop(List<RunLevelData> levels, List<RunLevelData> layer, Random random, bool requireAlternative)
     {
         if (layer.Count < 2 || layer.Any(n => n.LevelType == (int)E_LevelTypeEnum.Shop)) return false;
         var candidates = layer.OrderBy(_ => random.Next()).ToList();
         foreach (var node in candidates)
         {
             // 至少存在一个前置节点能同时选择商店和普通战斗。
-            if (requireAlternative && !map.levels.Any(parent => Next(parent).Contains(node.Id)
+            if (requireAlternative && !levels.Any(parent => Next(parent).Contains(node.Id)
                 && Next(parent).Any(id => id != node.Id && layer.Any(n => n.Id == id && n.LevelType == (int)E_LevelTypeEnum.Normal)))) continue;
             node.LevelType = (int)E_LevelTypeEnum.Shop;
-            if (ValidShopPaths(map)) return true;
+            if (ValidShopPaths(levels, levels[0])) return true;
             node.LevelType = (int)E_LevelTypeEnum.Normal;
         }
         return false;
@@ -133,10 +148,10 @@ public static class LevelGenerationHelper
     private static bool CanConnect(int fromIndex, int fromCount, int toIndex, int toCount) =>
         Math.Abs(GetRowOffset(fromIndex, fromCount) - GetRowOffset(toIndex, toCount)) <= 1f;
 
-    private static void FillCombat(RunMapData map, RunLevelData node, Random random, int deckCount,
+    private static void FillCombat(List<RunLevelData> levels, RunLevelData node, Random random, int deckCount,
         float target, bool first, bool boss, float maxNormal, float progress, float firstScoreLimit, int extraDealCards)
     {
-        var previous = PreviousCombats(map, node).ToList();
+        var previous = PreviousCombats(levels, node).ToList();
         var candidates = new List<RunLevelData>();
         var weights = new List<double>();
         bool early = progress <= 0.25f;
@@ -229,34 +244,54 @@ public static class LevelGenerationHelper
         return result;
     }
 
-    private static IEnumerable<RunLevelData> PreviousCombats(RunMapData map, RunLevelData node)
+    private static IEnumerable<RunLevelData> PreviousCombats(List<RunLevelData> levels, RunLevelData node)
     {
-        foreach (var parent in map.levels.Where(n => Next(n).Contains(node.Id)))
+        foreach (var parent in levels.Where(n => Next(n).Contains(node.Id)))
         {
             if (parent.LevelType != (int)E_LevelTypeEnum.Shop) yield return parent;
-            else foreach (var ancestor in PreviousCombats(map, parent)) yield return ancestor;
+            else foreach (var ancestor in PreviousCombats(levels, parent)) yield return ancestor;
         }
     }
 
     public static bool Validate(RunMapData map, out string error)
     {
         error = "无效的本局地图";
-        if (map?.levels == null || map.levels.Count == 0) return false;
-        var ids = new HashSet<string>();
-        foreach (var n in map.levels)
+        if (map?.chapters?.Count != LevelGenerationSettings.ChapterCount) return false;
+        for (int i = 0; i < map.chapters.Count; i++)
         {
-            if (n == null || n.Id == null || n.Id.Length != 8 || !int.TryParse(n.Id, out _) || !ids.Add(n.Id)) return false;
+            if (ValidateChapter(map.chapters[i], i + 1)) continue;
+            error = $"第 {i + 1} 大关地图无效";
+            return false;
         }
-        var sorted = map.levels.OrderBy(Layer).ToList();
-        int lastLayer = Layer(sorted[sorted.Count - 1]);
+        error = null;
+        return true;
+    }
+
+    private static bool ValidateChapter(RunChapterData chapterData, int chapter)
+    {
+        var levels = chapterData?.levels;
+        if (levels == null || levels.Count < LevelGenerationSettings.LayerCount) return false;
+        var ids = new HashSet<string>();
+        foreach (var n in levels)
+        {
+            if (n?.Id == null || n.Id.Length != 8 || n.Id.Any(c => c < '0' || c > '9') || !ids.Add(n.Id)) return false;
+            if (RunLevelData.GetChapter(n.Id) != chapter || Layer(n) < 1 || Layer(n) > LevelGenerationSettings.LayerCount) return false;
+        }
+        var sorted = levels.OrderBy(Layer).ToList();
+        int lastLayer = LevelGenerationSettings.LayerCount;
         if (sorted.Count(n => Layer(n) == 1) != 1 || sorted.Count(n => Layer(n) == lastLayer) != 1) return false;
-        if (sorted[0].LevelType != (int)E_LevelTypeEnum.Normal || sorted[sorted.Count - 1].LevelType != (int)E_LevelTypeEnum.Boss) return false;
-        var reached = new HashSet<string> { sorted[0].Id };
+        var entry = sorted[0];
+        if (entry.LevelType != (int)(chapter == 1 ? E_LevelTypeEnum.Normal : E_LevelTypeEnum.Shop)
+            || entry.LevelEvent != (chapter == 1 ? LevelGenerationSettings.FirstEventId : 0)) return false;
+
+        var reached = new HashSet<string> { entry.Id };
         foreach (var n in sorted)
         {
             if (!reached.Contains(n.Id)) return false;
+            bool isBoss = n.LevelType == (int)E_LevelTypeEnum.Boss;
+            if (isBoss != (Layer(n) == lastLayer)) return false;
             var next = Next(n);
-            if ((Layer(n) == lastLayer) != (next.Length == 0)) return false;
+            if (isBoss != (next.Length == 0)) return false;
             foreach (string id in next)
             {
                 var child = sorted.Find(x => x.Id == id);
@@ -266,22 +301,25 @@ public static class LevelGenerationHelper
             if (n.LevelType == (int)E_LevelTypeEnum.Shop) continue;
             if (n.ColumnNum < 1 || n.PocketNum < 0 || n.NeedStraightNum < 1 || n.FinishReward < 0
                 || n.initialCards == null || n.initialCards.Count != n.ColumnNum || n.initialCards.Any(x => x < 1)) return false;
-            if (PreviousCombats(map, n).Any(p => Math.Abs(p.ColumnNum - n.ColumnNum) > 1 || Math.Abs(p.PocketNum - n.PocketNum) > 1)) return false;
         }
-        if (!ValidShopPaths(map)) return false;
-        error = null;
-        return true;
+        foreach (var node in sorted.Where(n => n.LevelType != (int)E_LevelTypeEnum.Shop))
+        {
+            if (PreviousCombats(levels, node).Any(p => Math.Abs(p.ColumnNum - node.ColumnNum) > 1
+                || Math.Abs(p.PocketNum - node.PocketNum) > 1)) return false;
+        }
+        return ValidShopPaths(levels, entry);
     }
 
-    private static bool ValidShopPaths(RunMapData map)
+    private static bool ValidShopPaths(List<RunLevelData> levels, RunLevelData entry)
     {
-        return Visit(map.levels[0], 0, false);
+        return Visit(entry, 0, false);
         bool Visit(RunLevelData node, int shops, bool hadOpportunity)
         {
-            bool shop = node.LevelType == (int)E_LevelTypeEnum.Shop;
+            // 固定入口商店独立于随机商店的次数和连续限制。
+            bool shop = node != entry && node.LevelType == (int)E_LevelTypeEnum.Shop;
             if (shop) shops++;
             if (shops > LevelGenerationSettings.MaxShopsPerPath) return false;
-            var children = Next(node).Select(id => map.levels.Find(n => n.Id == id)).ToList();
+            var children = Next(node).Select(id => levels.Find(n => n.Id == id)).ToList();
             if (children.Count == 0) return hadOpportunity;
             bool opportunity = hadOpportunity || children.Any(n => n.LevelType == (int)E_LevelTypeEnum.Shop);
             return children.All(n => !(shop && n.LevelType == (int)E_LevelTypeEnum.Shop) && Visit(n, shops, opportunity));
@@ -299,7 +337,7 @@ public static class LevelGenerationHelper
     {
         unchecked { return (seed * 397) ^ (node * 7919) ^ (stream * 104729); }
     }
-    private static int Layer(RunLevelData n) => int.Parse(n.Id.Substring(2, 2));
-    private static int Index(RunLevelData n) => int.Parse(n.Id.Substring(4, 2));
+    private static int Layer(RunLevelData n) => RunLevelData.GetLayer(n.Id);
+    private static int Index(RunLevelData n) => RunLevelData.GetLayerIndex(n.Id);
     private static string[] Next(RunLevelData n) => (n.NextLevelId ?? "").Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries);
 }

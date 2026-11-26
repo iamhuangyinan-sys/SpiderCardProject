@@ -16,7 +16,9 @@ public class LittleShopManager : ManagerBase<LittleShopManager>
     // 通关确认时就生成，确保收牌动画途中退出也不会丢失奖励选择。
     public void Prepare(string levelId)
     {
-        if (IsPending || LevelManager.Instance.GetNextIds(levelId).Count == 0) return;
+        if (IsPending || string.IsNullOrEmpty(levelId)
+            || !LevelStore.Instance.allLevels.TryGetValue(levelId, out var level)
+            || level.LevelType == (int)E_LevelTypeEnum.Boss) return;
         var pool = CardHelper.BuildShopPresetPool();
         var store = LittleShopStore.Instance;
         store.goods.Clear();

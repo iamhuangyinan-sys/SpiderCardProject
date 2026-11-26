@@ -143,12 +143,14 @@ public partial class MainTopPanel : NormalPanel
         comps.txtLevelProgress.text = $"{store.straightCount} / {store.needStraightNum}";
     }
 
-    /// <summary>刷新层数信息：未确认初始牌组时显示 0，开始本局后显示当前层。</summary>
+    /// <summary>刷新整局累计层号。</summary>
     private void RefreshLevelInfo()
     {
-        comps.modLevelInfo.SetInfo(RunManager.Instance.HasStarted
-            ? LevelStore.Instance.currentLayer.ToString()
-            : "0");
+        var store = LevelStore.Instance;
+        int layer = RunManager.Instance.HasStarted
+            ? (store.currentChapter - 1) * LevelGenerationSettings.LayerCount + store.currentLayer
+            : 0;
+        comps.modLevelInfo.SetInfo(layer.ToString());
     }
 
     /// <summary>刷新金币数量（只显示数字）</summary>

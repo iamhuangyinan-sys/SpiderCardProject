@@ -1,3 +1,4 @@
+using DG.Tweening;
 using UnityEngine;
 
 namespace Framework.UI
@@ -22,6 +23,7 @@ namespace Framework.UI
         protected CanvasGroup FadeTarget => fadeTarget != null ? fadeTarget : CanvasGroup;
         /// <summary>面板原位（Awake 时记录），飞入 / 飞出动画的基准点，避免反复开关累积偏移</summary>
         private Vector2 _baseAnchoredPos;
+        private Tween _transition;
 
         /// <summary>打开时是否播放「从下方飞入」动画（默认关，子类开启）</summary>
         protected virtual bool FlyInOnOpen => false;
@@ -49,43 +51,37 @@ namespace Framework.UI
 
         protected override void OnPanelOpened()
         {
+            StopTransition();
             IsTransitioning = false;
             if (FlyInOnOpen)
             {
-                AnimationHelper.FlyInFromBottom(RectTransform, CanvasGroup, _baseAnchoredPos, FlyOffsetY);
+                _transition = AnimationHelper.FlyInFromBottom(RectTransform, CanvasGroup, _baseAnchoredPos, FlyOffsetY);
                 return;
             }
 
             if (FadeInOnOpen)
             {
                 IsTransitioning = true;
-                AnimationHelper.FadeIn(FadeTarget, FadeDuration,
+                _transition = AnimationHelper.FadeIn(FadeTarget, FadeDuration,
                     onComplete: () => IsTransitioning = false);
             }
         }
 
         protected override bool OnPanelClosing()
         {
+            StopTransition();
             IsTransitioning = true;
             if (FlyOutOnClose)
             {
-                AnimationHelper.FlyOutToBottom(RectTransform, CanvasGroup, _baseAnchoredPos, FlyOffsetY,
-                    onComplete: () =>
-                    {
-                        // 飞完时若已被重新 Show（IsOpen 又为 true），就不要把面板藏掉
-                        CompleteHide();
-                    });
+                _transition = AnimationHelper.FlyOutToBottom(RectTransform, CanvasGroup, _baseAnchoredPos, FlyOffsetY,
+                    onComplete: CompleteHide);
 
                 return true;   // 接管隐藏：等飞完再 SetActive(false)
             }
 
             if (FadeOutOnClose)
             {
-                AnimationHelper.FadeOut(FadeTarget, FadeDuration,
-                    onComplete: () =>
-                    {
-                        CompleteHide();
-                    });
+                _transition = AnimationHelper.FadeOut(FadeTarget, FadeDuration, onComplete: CompleteHide);
 
                 return true;   // 接管隐藏：等淡完再 SetActive(false)
             }
@@ -96,8 +92,14 @@ namespace Framework.UI
 
         protected virtual void OnDisable()
         {
-            AnimationHelper.Kill(FadeTarget);
+            StopTransition();
             IsTransitioning = false;
+        }
+
+        private void StopTransition()
+        {
+            _transition?.Kill();
+            _transition = null;
         }
     }
 }

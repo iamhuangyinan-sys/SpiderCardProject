@@ -3,7 +3,7 @@ using System.Collections.Generic;
 /// <summary>
 /// 一大局游戏的存档数据 —— 整局的金币、牌组、关卡进度与商店状态
 ///
-/// 只记录「选择过的关卡顺序（走过的路线）」与「进行中的关卡 id」：
+/// 关卡进度记录当前大关、路线和进行中的关卡 id：
 ///   进行中的那一关只存关卡 id，牌局本身不存，重进后从头开始这一关。
 ///   通关信息不单独存 —— 由「选择顺序 + 是否还在关卡中」推导（见 LevelStore.LastClearedLevelId）
 /// </summary>
@@ -16,6 +16,7 @@ public class RunSaveData
 
     /// <summary>完整地图快照，续玩必须具备有效地图。</summary>
     public RunMapData map;
+    public int currentChapter;
     public int pendingLevelReward;
     /// <summary>本局金币</summary>
     public int coin;
@@ -25,7 +26,7 @@ public class RunSaveData
 
     /// <summary>
     /// 玩家选择过的关卡 id（按选择顺序追加，含正在打的那一关）：
-    ///   相邻两项 = 玩家实际走过的路线（选关界面 / 地图据此把连线置白）
+    ///   同一大关内的相邻两项用于标记地图上走过的连线。
     ///   最后一项 = 当前正在打的关；已通关则 = 最后通关的关
     /// </summary>
     public List<string> chosenLevelIds = new();

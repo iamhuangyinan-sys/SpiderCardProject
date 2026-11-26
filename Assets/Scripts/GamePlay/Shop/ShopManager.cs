@@ -179,7 +179,7 @@ public class ShopManager : ManagerBase<ShopManager>
         _goodsPrepared = false;
 
         LevelManager.Instance.CompleteLevel(levelId);
-        LevelManager.Instance.SettleLevelReward();   // 发放本关奖励（与层号刷新同时机）
+        LevelManager.Instance.SettleCompletedLevel();
 
         CardGameModule.Instance.SaveRun();           // 商店结束，进度落盘
 

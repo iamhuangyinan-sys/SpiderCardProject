@@ -66,6 +66,10 @@ public partial class LevelPanel : NormalPanel, ISceneInputBlockPanel
     /// <summary>是否正在「刷白 → 延迟进入」流程中（期间屏蔽点击）</summary>
     private bool _entering;
 
+#if UNITY_EDITOR
+    public bool IsEnteringLevel => _entering;
+#endif
+
     /// <summary>延迟进入的协程句柄（面板关闭时要停掉）</summary>
     private Coroutine _enterRoutine;
 
@@ -77,7 +81,7 @@ public partial class LevelPanel : NormalPanel, ISceneInputBlockPanel
 
     /// <summary>查看模式（关卡中打开地图）：所有关卡按钮不可点，只显示当前位置</summary>
     private bool _viewOnly;
-    private RunMapData _builtMap;
+    private RunChapterData _builtChapter;
 
     /// <summary>当前是否处于查看模式（地图）</summary>
     public bool IsViewOnly => _viewOnly;
@@ -93,20 +97,12 @@ public partial class LevelPanel : NormalPanel, ISceneInputBlockPanel
             comps.btnClose.gameObject.SetActive(false);   // 只有查看模式才显示
         }
 
-        BuildLevels();
-        BuildLines();
         RefreshLevels();
     }
 
     /// <summary>重新显示时按最新存档刷新（通关后回选关 → 走过的线自动变白）</summary>
     protected override void OnShow()
     {
-        if (!ReferenceEquals(_builtMap, LevelStore.Instance.map))
-        {
-            ClearGeneratedMap();
-            BuildLevels();
-            BuildLines();
-        }
         _previewPlayerId = null;   // 重新打开时以真实存档为准
         RefreshLevels();
     }
@@ -145,6 +141,7 @@ public partial class LevelPanel : NormalPanel, ISceneInputBlockPanel
 
     private void ClearGeneratedMap()
     {
+        _builtChapter = null;
         foreach (var m in _modules)
         {
             if (m == null) continue;
@@ -161,7 +158,6 @@ public partial class LevelPanel : NormalPanel, ISceneInputBlockPanel
     /// <summary>生成所有关卡按钮</summary>
     private void BuildLevels()
     {
-        _builtMap = LevelStore.Instance.map;
         var parent = comps.imgLevelBtns.transform;
         int minLayer = LevelManager.Instance.GetMinLayer();
         int maxLayer = LevelManager.Instance.GetMaxLayer();
@@ -246,6 +242,16 @@ public partial class LevelPanel : NormalPanel, ISceneInputBlockPanel
     /// <summary>刷新所有按钮状态 + 连线颜色 + 「玩家在这里」箭头</summary>
     private void RefreshLevels()
     {
+        var chapter = LevelStore.Instance.CurrentChapterMap;
+        if (!ReferenceEquals(_builtChapter, chapter))
+        {
+            ClearGeneratedMap();
+            _previewPlayerId = null;
+            _builtChapter = chapter;
+            BuildLevels();
+            BuildLines();
+        }
+
         foreach (var m in _modules)
         {
             if (m == null) continue;

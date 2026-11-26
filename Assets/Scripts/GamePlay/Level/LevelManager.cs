@@ -2,6 +2,9 @@ using System.Collections.Generic;
 using Framework;
 using Framework.Event;
 using Framework.Mgr;
+#if UNITY_EDITOR
+using System.Linq;
+#endif
 
 /// <summary>
 /// 关卡逻辑层 —— 加载关卡图、选关、通关解锁
@@ -13,50 +16,47 @@ public class LevelManager : ManagerBase<LevelManager>
 
     protected override void OnDispose() { }
 
-    private void ApplyLevels(IEnumerable<RunLevelData> levels)
+    private void ApplyMap(RunMapData map, int chapter)
     {
         var store = LevelStore.Instance;
-        store.allLevels.Clear();
-        store.levelsByLayer.Clear();
-        store.unlockedIds.Clear();
+        store.map = map;
         store.chosenLevelIds.Clear();
         store.selectedLevelId = null;
         store.pendingReward = 0;
+        ApplyChapter(chapter);
+    }
 
-        foreach (var cfg in levels)
+    private void ApplyChapter(int chapter)
+    {
+        var store = LevelStore.Instance;
+        store.currentChapter = chapter;
+        store.currentLayer = 1;
+        store.allLevels.Clear();
+        store.levelsByLayer.Clear();
+        store.unlockedIds.Clear();
+
+        foreach (var node in store.CurrentChapterMap.levels)
         {
-            if (cfg is RunLevelData node)
-            {
-                node.initialCards?.Sort();
-                node.actualInitialCards?.Sort();
-            }
-            store.allLevels[cfg.Id] = cfg;
+            node.initialCards?.Sort();
+            node.actualInitialCards?.Sort();
+            store.allLevels.Add(node.Id, node);
 
-            int layer = GetLayer(cfg.Id);
+            int layer = RunLevelData.GetLayer(node.Id);
             if (!store.levelsByLayer.TryGetValue(layer, out var list))
             {
                 list = new List<RunLevelData>();
                 store.levelsByLayer[layer] = list;
             }
-            list.Add(cfg);
+            list.Add(node);
         }
 
         // 每层按关号排序
         foreach (var list in store.levelsByLayer.Values)
         {
-            list.Sort((a, b) => GetLayerIndex(a.Id).CompareTo(GetLayerIndex(b.Id)));
+            list.Sort((a, b) => RunLevelData.GetLayerIndex(a.Id).CompareTo(RunLevelData.GetLayerIndex(b.Id)));
         }
 
-        // 初始解锁第一层全部，当前层 = 最小层
-        int minLayer = GetMinLayer();
-        store.currentLayer = minLayer;
-        if (store.levelsByLayer.TryGetValue(minLayer, out var firstList))
-        {
-            foreach (var cfg in firstList)
-            {
-                store.unlockedIds.Add(cfg.Id);
-            }
-        }
+        store.unlockedIds.Add(store.levelsByLayer[1][0].Id);
     }
 
     /// <summary>先生成成功再替换当前地图，避免错误参数破坏正在玩的局。</summary>
@@ -66,8 +66,7 @@ public class LevelManager : ManagerBase<LevelManager>
         {
             int seed = requestedSeed ?? System.Guid.NewGuid().GetHashCode();
             var map = LevelGenerationHelper.Generate(seed, deckCount, difficulty);
-            ApplyLevels(map.levels);
-            LevelStore.Instance.map = map;
+            ApplyMap(map, 1);
             ShopManager.Instance.ResetForNewRun();
             LittleShopManager.Instance.ResetForNewRun();
             UnityEngine.Debug.Log($"[Level] 新地图 seed={seed}, version={map.generatorVersion}");
@@ -99,12 +98,6 @@ public class LevelManager : ManagerBase<LevelManager>
         }
         throw new System.InvalidOperationException("当前关卡缺少本局地图数据，无法发牌");
     }
-
-    /// <summary>取层号（id 第 3-4 位）</summary>
-    public static int GetLayer(string levelId) => int.Parse(levelId.Substring(2, 2));
-
-    /// <summary>取层内关号（id 第 5-6 位）</summary>
-    public static int GetLayerIndex(string levelId) => int.Parse(levelId.Substring(4, 2));
 
     /// <summary>最小层号</summary>
     public int GetMinLayer()
@@ -140,18 +133,28 @@ public class LevelManager : ManagerBase<LevelManager>
     }
 
     /// <summary>
-    /// 结算完成：发放挂起的通关奖励（加金币）
-    /// 由收牌结算结束（打牌关）或商店结束（商店关）时调用，保证金币变化与层号刷新同时机
+    /// 发放挂起的通关奖励，并在前两个 Boss 结算完后切换大关。
+    /// 收牌结束、商店结束或恢复存档时调用，返回是否需要保存结算结果。
     /// </summary>
-    public void SettleLevelReward()
+    public bool SettleCompletedLevel()
     {
         var store = LevelStore.Instance;
-        if (store.pendingReward <= 0) return;
-
         int reward = store.pendingReward;
         store.pendingReward = 0;
-
         RunManager.Instance.AddCoin(reward);
+
+        string lastLevelId = store.LastClearedLevelId;
+        bool clearedBoss = !string.IsNullOrEmpty(lastLevelId)
+            && store.allLevels.TryGetValue(lastLevelId, out var node)
+            && node.LevelType == (int)E_LevelTypeEnum.Boss;
+        if (!clearedBoss) return reward > 0;
+
+        // TODO：最终 Boss 通关后接入整局胜利结算。目前保留第三大关及最终 Boss 的位置。
+        if (store.currentChapter == store.map.chapters.Count) return reward > 0;
+
+        ApplyChapter(store.currentChapter + 1);
+        store.Refresh();
+        return true;
     }
 
     /// <summary>解析 NextLevelId（; 分割）</summary>
@@ -229,25 +232,22 @@ public class LevelManager : ManagerBase<LevelManager>
 
     /// <summary>
     /// 通关：记录完成关卡 + 挂起奖励 + 解锁下一批关卡
-    /// 进入更高层时切层（清掉旧层解锁状态，不走回头路）；已完成的关卡不再可选
-    /// 奖励在结算动画结束后由 SettleLevelReward() 发放
+    /// 走完当前层后仅保留后继节点的解锁状态。
+    /// 奖励和跨大关切换由 SettleCompletedLevel() 在结算动画结束后处理
     /// </summary>
     public void CompleteLevel(string levelId)
     {
-        if (string.IsNullOrEmpty(levelId)) return;
-
         var store = LevelStore.Instance;
+        if (string.IsNullOrEmpty(levelId) || store.selectedLevelId != levelId
+            || !store.allLevels.TryGetValue(levelId, out var node)) return;
 
         // 开完了，回到选关状态。
         // 路线不在这里记：关卡 id 是「选择时」就写进 chosenLevelIds 的，
         // 清掉 selectedLevelId 后 LastClearedLevelId 自然指向这一关
         store.selectedLevelId = null;
 
-        // 挂起通关奖励：结算动画结束后由 SettleLevelReward() 发放
-        if (store.allLevels.TryGetValue(levelId, out var cfg))
-        {
-            store.pendingReward = cfg.FinishReward;
-        }
+        // 挂起通关奖励，等结算动画结束后发放。
+        store.pendingReward = node.FinishReward;
 
         UnlockNext(levelId);
         store.Refresh();
@@ -264,25 +264,9 @@ public class LevelManager : ManagerBase<LevelManager>
     {
         var store = LevelStore.Instance;
 
-        // 已完成关卡不再可选（不能重复打）
-        store.unlockedIds.Remove(levelId);
-
         var nextIds = GetNextIds(levelId);
-
-        // 下一批所在的高层号
-        int nextLayer = 0;
-        foreach (var nextId in nextIds)
-        {
-            int layer = GetLayer(nextId);
-            if (layer > nextLayer) nextLayer = layer;
-        }
-
-        // 进入新层：旧层的解锁状态全部作废
-        if (nextLayer > store.currentLayer)
-        {
-            store.currentLayer = nextLayer;
-            store.unlockedIds.Clear();
-        }
+        store.currentLayer = RunLevelData.GetLayer(nextIds.Count > 0 ? nextIds[0] : levelId);
+        store.unlockedIds.Clear();
 
         foreach (var nextId in nextIds)
         {
@@ -320,15 +304,56 @@ public class LevelManager : ManagerBase<LevelManager>
 
     /// <summary>
     /// 玩家当前所在关卡 id（选关界面标「你在这里」用）：
-    ///   关卡中（含商店）= 进行中的关卡，选关界面 = 最后通关的关卡
+    /// 关卡中标记进行中的关卡，选关时标记最后通关的关卡或新大关入口。
     /// </summary>
     public string GetPlayerLevelId()
     {
         var store = LevelStore.Instance;
-        return string.IsNullOrEmpty(store.selectedLevelId) ? store.LastClearedLevelId : store.selectedLevelId;
+        if (!string.IsNullOrEmpty(store.selectedLevelId)) return store.selectedLevelId;
+        string lastLevelId = store.LastClearedLevelId;
+        if (!string.IsNullOrEmpty(lastLevelId) && !store.allLevels.ContainsKey(lastLevelId))
+            return store.levelsByLayer[1][0].Id;
+        return lastLevelId;
     }
 
     // ==================== 存档 ====================
+
+#if UNITY_EDITOR
+    /// <summary>按每层最上方的可选节点重建路线，停在目标层选关之前。</summary>
+    public bool TryCreateDebugLevelSelection(int chapter, int layer, out RunSaveData data)
+    {
+        data = null;
+        var map = LevelStore.Instance.map;
+        if (map == null || chapter < 1 || chapter > map.chapters.Count
+            || layer < 1 || layer > LevelGenerationSettings.LayerCount) return false;
+
+        var route = new List<string>();
+        for (int chapterNumber = 1; chapterNumber <= chapter; chapterNumber++)
+        {
+            var levels = map.chapters[chapterNumber - 1].levels;
+            int endLayer = chapterNumber == chapter ? layer : LevelGenerationSettings.LayerCount;
+            string[] reachableIds = null;
+
+            for (int currentLayer = 1; currentLayer <= endLayer; currentLayer++)
+            {
+                var node = levels.Where(n => RunLevelData.GetLayer(n.Id) == currentLayer
+                        && (reachableIds == null || reachableIds.Contains(n.Id)))
+                    .OrderBy(n => RunLevelData.GetLayerIndex(n.Id))
+                    .FirstOrDefault();
+                if (node == null) return false;
+
+                // 确认目标可达即可，留给玩家从这一层的所有解锁节点中选择。
+                if (chapterNumber == chapter && currentLayer == layer) break;
+
+                route.Add(node.Id);
+                reachableIds = node.NextLevelId?.Split(';') ?? System.Array.Empty<string>();
+            }
+        }
+
+        data = new RunSaveData { map = map, currentChapter = chapter, chosenLevelIds = route };
+        return true;
+    }
+#endif
 
     /// <summary>导出关卡进度（存档用）</summary>
     public void ExportTo(RunSaveData data)
@@ -337,6 +362,7 @@ public class LevelManager : ManagerBase<LevelManager>
 
         data.selectedLevelId = store.selectedLevelId;
         data.map = store.map;
+        data.currentChapter = store.currentChapter;
         data.pendingLevelReward = store.pendingReward;
 
         data.chosenLevelIds.Clear();
@@ -347,18 +373,16 @@ public class LevelManager : ManagerBase<LevelManager>
     public void ImportFrom(RunSaveData data)
     {
         var store = LevelStore.Instance;
-        ApplyLevels(data.map.levels);
-        store.map = data.map;
+        ApplyMap(data.map, data.currentChapter);
         store.pendingReward = data.pendingLevelReward;
 
         store.selectedLevelId = data.selectedLevelId;
 
-        store.chosenLevelIds.Clear();
         if (data.chosenLevelIds != null) store.chosenLevelIds.AddRange(data.chosenLevelIds);
 
-        // 未通关过任何关卡 → 保持初始第一层解锁状态
+        // 新大关尚无已通关节点时，保留入口解锁状态。
         string lastLevelId = store.LastClearedLevelId;
-        if (!string.IsNullOrEmpty(lastLevelId))
+        if (!string.IsNullOrEmpty(lastLevelId) && store.allLevels.ContainsKey(lastLevelId))
         {
             UnlockNext(lastLevelId);
         }

@@ -17,6 +17,15 @@ public class RunLevelData
     public List<int> actualInitialCards = new();
     public float difficulty;
 
+    public static int GetChapter(string id) => int.Parse(id.Substring(0, 2));
+    public static int GetLayer(string id) => int.Parse(id.Substring(2, 2));
+    public static int GetLayerIndex(string id) => int.Parse(id.Substring(4, 2));
+}
+
+[Serializable]
+public class RunChapterData
+{
+    public List<RunLevelData> levels = new();
 }
 
 [Serializable]
@@ -24,5 +33,5 @@ public class RunMapData
 {
     public int seed;
     public int generatorVersion;
-    public List<RunLevelData> levels = new();
+    public List<RunChapterData> chapters = new();
 }
