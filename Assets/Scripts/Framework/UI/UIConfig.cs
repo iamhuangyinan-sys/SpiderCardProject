@@ -50,6 +50,7 @@ namespace Framework.UI
             Register<LevelPanel>("GamePlay/LevelPanel", E_UILayerEnum.Normal);
             Register<BeginBuildPanel>("GamePlay/BeginBuildPanel", E_UILayerEnum.Normal);
             Register<LittleShopPanel>("GamePlay/LittleShopPanel", E_UILayerEnum.Normal);
+            Register<AddSuitPanel>("GamePlay/AddSuitPanel", E_UILayerEnum.Normal);
             Register<ShopPanel>("GamePlay/ShopPanel", E_UILayerEnum.Normal);
             Register<ShowCardsPanel>("GamePlay/ShowCardsPanel", E_UILayerEnum.Normal);
             Register<ShowOneCardPanel>("GamePlay/ShowOneCardPanel", E_UILayerEnum.Normal);

@@ -68,9 +68,17 @@ public static class LevelGenerationHelper
                 TryPlaceShop(levels, layers[layer - 1], random, requireAlternative: false);
         }
 
-        float maxNormal = 0;
-        float targetBonus = LevelGenerationSettings.ChapterDifficultyBonuses[chapter - 1]
-            + (difficulty >= 3 ? LevelGenerationSettings.Difficulty3TargetBonus : 0);
+        int maxNormal = 0;
+        int chapterIndex = chapter - 1;
+        int difficultyTargetBonus = difficulty >= 3 ? LevelGenerationSettings.Difficulty3TargetBonuses[chapterIndex] : 0;
+        var normalTargets = LevelGenerationSettings.NormalTargets[chapterIndex];
+        var chapterGoals = LevelGenerationSettings.ChapterStraightGoals[chapterIndex];
+        var tierOffsets = LevelGenerationSettings.TierOffsets[chapterIndex];
+        // 随目标上限提高 Boss 的评分目标，让高次数的组合实际有机会被抽中。
+        int bossTarget = LevelGenerationSettings.BossTarget + difficultyTargetBonus
+            + LevelGenerationSettings.BossChapterTargetBonuses[chapterIndex]
+            + LevelGenerationSettings.GoalPressure[chapterGoals.Maximum]
+            - LevelGenerationSettings.GoalPressure[LevelGenerationSettings.ChapterStraightGoals[0].Maximum];
         int extraDealCards = difficulty >= 3 ? LevelGenerationSettings.Difficulty3ExtraDealCards : 0;
         foreach (var node in levels)
         {
@@ -82,15 +90,13 @@ public static class LevelGenerationHelper
             node.LevelEvent = isFirst ? LevelGenerationSettings.FirstEventId : isBoss ? LevelGenerationSettings.BossEventId : 0;
             var nodeRandom = new Random(DeriveSeed(seed, layer * 100 + Index(node), 1));
             float progress = (float)(layer - 2) / Math.Max(1, layers.Count - 3);
-            float target = isFirst ? LevelGenerationSettings.FirstTarget + targetBonus : isBoss
-                ? Math.Max(LevelGenerationSettings.BossTarget + targetBonus, maxNormal + LevelGenerationSettings.BossMinimumGap)
-                : LevelGenerationSettings.NormalStartTarget
-                    + progress * (LevelGenerationSettings.NormalEndTarget - LevelGenerationSettings.NormalStartTarget)
-                    + targetBonus
-                    + LevelGenerationSettings.TierOffsets[Pick(nodeRandom, LevelGenerationSettings.TierWeights)];
+            int target = isFirst ? LevelGenerationSettings.FirstTarget + difficultyTargetBonus : isBoss
+                ? Math.Max(bossTarget, maxNormal + LevelGenerationSettings.BossMinimumGap)
+                : RoundScore(normalTargets.Start + progress * (normalTargets.End - normalTargets.Start))
+                    + difficultyTargetBonus + tierOffsets[Pick(nodeRandom, LevelGenerationSettings.TierWeights)];
             FillCombat(levels, node, nodeRandom, deckCount, target, isFirst, isBoss, maxNormal,
-                progress, LevelGenerationSettings.FirstScoreLimit + targetBonus, extraDealCards);
-            if (!isFirst && !isBoss) maxNormal = Math.Max(maxNormal, node.difficulty);
+                progress, LevelGenerationSettings.FirstScoreLimit + difficultyTargetBonus, extraDealCards, chapterGoals);
+            if (!isFirst && !isBoss) maxNormal = Math.Max(maxNormal, (int)node.difficulty);
             var rewards = new Random(DeriveSeed(seed, layer * 100 + Index(node), 2));
             double reward = Math.Max(80, Math.Min(190, 100 + 1.5 * (node.difficulty - 90)))
                 + LevelGenerationSettings.ChapterRewardBonuses[chapter - 1];
@@ -149,7 +155,8 @@ public static class LevelGenerationHelper
         Math.Abs(GetRowOffset(fromIndex, fromCount) - GetRowOffset(toIndex, toCount)) <= 1f;
 
     private static void FillCombat(List<RunLevelData> levels, RunLevelData node, Random random, int deckCount,
-        float target, bool first, bool boss, float maxNormal, float progress, float firstScoreLimit, int extraDealCards)
+        int target, bool first, bool boss, int maxNormal, float progress, int firstScoreLimit, int extraDealCards,
+        (int Minimum, int Maximum) chapterGoals)
     {
         var previous = PreviousCombats(levels, node).ToList();
         var candidates = new List<RunLevelData>();
@@ -161,12 +168,12 @@ public static class LevelGenerationHelper
              c <= LevelGenerationSettings.MaximumColumns; c++)
         for (int p = first ? LevelGenerationSettings.MaximumPockets : LevelGenerationSettings.MinimumPockets;
              p <= LevelGenerationSettings.MaximumPockets; p++)
-        for (int goal = first ? 1 : boss ? 4 : 2; goal <= (first ? 2 : boss ? LevelGenerationSettings.MaximumStraightGoal : 4); goal++)
+        for (int goal = first ? 1 : chapterGoals.Minimum; goal <= (first ? 2 : chapterGoals.Maximum); goal++)
         {
             if (previous.Any(n => Math.Abs(n.ColumnNum - c) > 1 || Math.Abs(n.PocketNum - p) > 1)) continue;
-            int goalWeight = first ? (goal == 1 ? 30 : 70) : boss ? (goal == 4 ? 70 : 30)
+            int goalWeight = first ? (goal == 1 ? 30 : 70) : boss ? (goal == chapterGoals.Maximum - 1 ? 70 : 30)
                 : (early ? LevelGenerationSettings.EarlyGoalWeights : late
-                    ? LevelGenerationSettings.LateGoalWeights : LevelGenerationSettings.MiddleGoalWeights)[goal - 2];
+                    ? LevelGenerationSettings.LateGoalWeights : LevelGenerationSettings.MiddleGoalWeights)[goal - chapterGoals.Minimum];
             if (goalWeight == 0) continue;
             for (int sample = 0; sample < LevelGenerationSettings.CandidateCount / 10; sample++)
             {
@@ -213,17 +220,21 @@ public static class LevelGenerationHelper
         node.initialCards.Sort();
     }
 
-    public static float Score(RunLevelData node, bool first, bool boss)
+    private static int RoundScore(double score) => (int)Math.Floor(score + 0.5);
+
+    public static int Score(RunLevelData node, bool first, bool boss)
     {
-        float hidden = (float)node.initialCards.Sum() / node.ColumnNum - 1;
         int shorts = node.initialCards.Count(n => n <= 2);
-        return 100 + LevelGenerationSettings.ColumnPressure * (12 - node.ColumnNum)
+        // 平均盖牌数减去基准 2.5，合并分母后再计算评分，避免半分提前舍入。
+        double hiddenPressure = LevelGenerationSettings.HiddenPressure
+            * (2 * node.initialCards.Sum() - 7 * node.ColumnNum) / (2d * node.ColumnNum);
+        return RoundScore(100 + LevelGenerationSettings.ColumnPressure * (12 - node.ColumnNum)
             + LevelGenerationSettings.PocketPressure * (3 - node.PocketNum)
-            + LevelGenerationSettings.HiddenPressure * (hidden - 2.5f)
+            + hiddenPressure
             + LevelGenerationSettings.ShortColumnPressure * (5 - shorts)
             + LevelGenerationSettings.GoalPressure[node.NeedStraightNum]
             + (node.NeedStraightNum >= 4 && node.PocketNum == 2 ? 6 : 0)
-            + (first ? LevelGenerationSettings.FirstEventModifier : boss ? LevelGenerationSettings.BossEventModifier : 0);
+            + (first ? LevelGenerationSettings.FirstEventModifier : boss ? LevelGenerationSettings.BossEventModifier : 0));
     }
 
     /// <summary>删牌后牌数不足时确定性削减深列；极端小牌组也不会发出未翻开的半列。</summary>

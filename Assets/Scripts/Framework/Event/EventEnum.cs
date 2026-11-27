@@ -48,5 +48,6 @@
         OnBuffChanged,           // 无参数：当前关卡的 Buff 状态发生变化
 
         OnRunStarted,            // 无参数：确认初始牌组后，新一大局已开始
+        OnMainSuitsChanged,      // 无参数：跨大关增加了主要花色
     }
 }

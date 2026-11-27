@@ -20,6 +20,7 @@ public partial class MainTopPanel : NormalPanel
         EventManager.Instance.AddListener(E_EventEnum.OnShopClosed, RefreshLevelInfo);
         EventManager.Instance.AddListener(E_EventEnum.OnCoinChanged, RefreshCoinInfo);
         EventManager.Instance.AddListener(E_EventEnum.OnRunStarted, RefreshRunInfo);
+        EventManager.Instance.AddListener(E_EventEnum.OnMainSuitsChanged, RefreshRunInfo);
         EventManager.Instance.AddListener(E_EventEnum.OnMapOpen, OnMapOpened);
         EventManager.Instance.AddListener(E_EventEnum.OnMapClose, OnMapClosed);
 
@@ -54,6 +55,7 @@ public partial class MainTopPanel : NormalPanel
         EventManager.Instance.RemoveListener(E_EventEnum.OnShopClosed, RefreshLevelInfo);
         EventManager.Instance.RemoveListener(E_EventEnum.OnCoinChanged, RefreshCoinInfo);
         EventManager.Instance.RemoveListener(E_EventEnum.OnRunStarted, RefreshRunInfo);
+        EventManager.Instance.RemoveListener(E_EventEnum.OnMainSuitsChanged, RefreshRunInfo);
         EventManager.Instance.RemoveListener(E_EventEnum.OnMapOpen, OnMapOpened);
         EventManager.Instance.RemoveListener(E_EventEnum.OnMapClose, OnMapClosed);
 

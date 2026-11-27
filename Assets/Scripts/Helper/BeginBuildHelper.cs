@@ -55,7 +55,7 @@ public static class BeginBuildHelper
         return true;
     }
 
-    private static void AddSuit(List<CardDef> deck, E_CardSuitEnum suit, int copies)
+    internal static void AddSuit(List<CardDef> deck, E_CardSuitEnum suit, int copies)
     {
         for (int rank = 1; rank <= 13; rank++)
             for (int i = 0; i < copies; i++)

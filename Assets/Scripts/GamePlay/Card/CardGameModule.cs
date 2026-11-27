@@ -193,7 +193,7 @@ public class CardGameModule : ManagerBase<CardGameModule>
         LevelManager.Instance.ImportFrom(data);
         ShopManager.Instance.ImportFrom(data);
         LittleShopManager.Instance.ImportFrom(data);
-        // 结算动画期间退出时，补发奖励并完成待处理的大关切换，一起保存结算结果。
+        // 结算动画期间退出时补发金币。跨大关选花色由场景入口继续。
         if (LevelManager.Instance.SettleCompletedLevel())
         {
             SaveRun();

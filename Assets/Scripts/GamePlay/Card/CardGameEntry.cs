@@ -22,6 +22,7 @@ public class CardGameEntry : MonoBehaviour
     private BuffPanel _buffPanel;
     private ShopPanel _shopPanel;
     private LittleShopPanel littleShopPanel;
+    private AddSuitPanel _addSuitPanel;
 
     /// <summary>「等选关面板挡住牌桌后再隐藏牌桌物件」的协程句柄（开新局时取消）</summary>
     private Coroutine _hideTableRoutine;
@@ -48,7 +49,8 @@ public class CardGameEntry : MonoBehaviour
         {
             _mainTopPanel = UIManager.Instance.Show<MainTopPanel>();
             var currentId = LevelStore.Instance.selectedLevelId;
-            if (LittleShopManager.Instance.IsPending) ShowLittleShop();
+            if (LevelManager.Instance.IsWaitingForMainSuit) ShowAddSuit();
+            else if (LittleShopManager.Instance.IsPending) ShowLittleShop();
             else if (string.IsNullOrEmpty(currentId)) ShowLevelSelect();
             else LevelManager.Instance.SelectLevel(currentId);
         }
@@ -102,9 +104,35 @@ public class CardGameEntry : MonoBehaviour
     private void OnLevelEnd()
     {
         if (_buffPanel != null) UIManager.Instance.Hide(_buffPanel);
-        if (LittleShopManager.Instance.IsPending) ShowLittleShop();
+        if (LevelManager.Instance.IsWaitingForMainSuit) ShowAddSuit();
+        else if (LittleShopManager.Instance.IsPending) ShowLittleShop();
+        // TODO：最终 Boss 通关后接入整局结算。目前停在最终 Boss 的地图。
         else ShowLevelSelect();
         _hideTableRoutine = MonoManager.Instance.StartCoroutine(HideTableRoutine());
+    }
+
+    private void ShowAddSuit()
+    {
+        if (_levelPanel != null) UIManager.Instance.Hide(_levelPanel);
+        SetMapButtonVisible(false);
+        _addSuitPanel = UIManager.Instance.Show<AddSuitPanel>(panel =>
+        {
+            panel.OnChoose = TryAddMainSuit;
+            panel.OnFinished = () =>
+            {
+                UIManager.Instance.Hide(panel);
+                ShowLevelSelect();
+            };
+        });
+    }
+
+    private bool TryAddMainSuit(E_CardSuitEnum suit)
+    {
+        if (!LevelManager.Instance.TryAdvanceChapterWithSuit(suit)) return false;
+
+        CardGameModule.Instance.SaveRun();
+        EventManager.Instance.Dispatch(E_EventEnum.OnMainSuitsChanged);
+        return true;
     }
 
     /// <summary>显示通关小商店，保留只读地图入口。</summary>
@@ -208,6 +236,7 @@ public class CardGameEntry : MonoBehaviour
         if (_buffPanel != null) UIManager.Instance.Close(_buffPanel);
         if (_shopPanel != null) UIManager.Instance.Close(_shopPanel);
         if (littleShopPanel != null) UIManager.Instance.Close(littleShopPanel);
+        if (_addSuitPanel != null) UIManager.Instance.Close(_addSuitPanel);
 
         CardGameModule.Instance.Dispose();
     }

@@ -12,7 +12,7 @@ public class RunStore : StoreBase<RunStore>
     public bool hasStarted;
     public string difficultyId;
 
-    /// <summary>初始牌组确定的本局主要花色。</summary>
+    /// <summary>初始牌组和跨大关选择确定的主要花色。</summary>
     public readonly List<E_CardSuitEnum> mainSuits = new();
 
     /// <summary>本局金币</summary>

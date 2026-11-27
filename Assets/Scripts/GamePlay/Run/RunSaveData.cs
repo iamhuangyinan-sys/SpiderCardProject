@@ -11,7 +11,7 @@ using System.Collections.Generic;
 public class RunSaveData
 {
     public string difficultyId;
-    /// <summary>初始牌组确定的本局主要花色。</summary>
+    /// <summary>初始牌组和跨大关选择确定的主要花色。</summary>
     public List<E_CardSuitEnum> mainSuits = new();
 
     /// <summary>完整地图快照，续玩必须具备有效地图。</summary>

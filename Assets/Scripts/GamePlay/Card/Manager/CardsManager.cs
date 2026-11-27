@@ -673,7 +673,7 @@ public class CardsManager : ManagerBase<CardsManager>
         IsSettling = false;
         IsPlaying = false;
 
-        // 收牌结束后发放金币，完成 Boss 时一并推进大关。
+        // 收牌结束后发放金币，随后由场景入口展示选花色或选关界面。
         LevelManager.Instance.SettleCompletedLevel();
 
         // 关卡进度 + 金币落盘（正在进行中的关不存牌局，重进后重开）

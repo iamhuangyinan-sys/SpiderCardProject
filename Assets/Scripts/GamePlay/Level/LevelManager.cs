@@ -133,7 +133,7 @@ public class LevelManager : ManagerBase<LevelManager>
     }
 
     /// <summary>
-    /// 发放挂起的通关奖励，并在前两个 Boss 结算完后切换大关。
+    /// 发放挂起的通关金币。
     /// 收牌结束、商店结束或恢复存档时调用，返回是否需要保存结算结果。
     /// </summary>
     public bool SettleCompletedLevel()
@@ -142,16 +142,27 @@ public class LevelManager : ManagerBase<LevelManager>
         int reward = store.pendingReward;
         store.pendingReward = 0;
         RunManager.Instance.AddCoin(reward);
+        return reward > 0;
+    }
 
-        string lastLevelId = store.LastClearedLevelId;
-        bool clearedBoss = !string.IsNullOrEmpty(lastLevelId)
-            && store.allLevels.TryGetValue(lastLevelId, out var node)
-            && node.LevelType == (int)E_LevelTypeEnum.Boss;
-        if (!clearedBoss) return reward > 0;
+    public bool IsWaitingForMainSuit
+    {
+        get
+        {
+            var store = LevelStore.Instance;
+            if (store.map == null || store.currentChapter >= store.map.chapters.Count
+                || !string.IsNullOrEmpty(store.selectedLevelId)) return false;
+            string lastLevelId = store.LastClearedLevelId;
+            return !string.IsNullOrEmpty(lastLevelId)
+                && store.allLevels.TryGetValue(lastLevelId, out var node)
+                && node.LevelType == (int)E_LevelTypeEnum.Boss;
+        }
+    }
 
-        // TODO：最终 Boss 通关后接入整局胜利结算。目前保留第三大关及最终 Boss 的位置。
-        if (store.currentChapter == store.map.chapters.Count) return reward > 0;
-
+    public bool TryAdvanceChapterWithSuit(E_CardSuitEnum suit)
+    {
+        if (!IsWaitingForMainSuit || !RunManager.Instance.TryAddMainSuit(suit)) return false;
+        var store = LevelStore.Instance;
         ApplyChapter(store.currentChapter + 1);
         store.Refresh();
         return true;
@@ -233,7 +244,7 @@ public class LevelManager : ManagerBase<LevelManager>
     /// <summary>
     /// 通关：记录完成关卡 + 挂起奖励 + 解锁下一批关卡
     /// 走完当前层后仅保留后继节点的解锁状态。
-    /// 奖励和跨大关切换由 SettleCompletedLevel() 在结算动画结束后处理
+    /// 收牌结束后发放金币，前两个 Boss 通关后等待增加花色。
     /// </summary>
     public void CompleteLevel(string levelId)
     {
@@ -304,16 +315,16 @@ public class LevelManager : ManagerBase<LevelManager>
 
     /// <summary>
     /// 玩家当前所在关卡 id（选关界面标「你在这里」用）：
-    /// 关卡中标记进行中的关卡，选关时标记最后通关的关卡或新大关入口。
+    /// 关卡中标记进行中的关卡，选关时只标记当前大关最后通关的关卡。
     /// </summary>
     public string GetPlayerLevelId()
     {
         var store = LevelStore.Instance;
         if (!string.IsNullOrEmpty(store.selectedLevelId)) return store.selectedLevelId;
         string lastLevelId = store.LastClearedLevelId;
-        if (!string.IsNullOrEmpty(lastLevelId) && !store.allLevels.ContainsKey(lastLevelId))
-            return store.levelsByLayer[1][0].Id;
-        return lastLevelId;
+        return !string.IsNullOrEmpty(lastLevelId) && store.allLevels.ContainsKey(lastLevelId)
+            ? lastLevelId
+            : null;
     }
 
     // ==================== 存档 ====================

@@ -28,6 +28,7 @@
 | 地图和选关 | `GamePlay/Level/` 下的 `LevelManager.cs`、`LevelStore.cs` 管理路线、解锁、当前关与奖励。`RunLevelData.cs` 定义节点与地图快照，`LevelGenerationHelper.cs`、`LevelGenerationSettings.cs` 管理生成和调参。界面在 `UI/GamePlay/LevelPanel.cs`，可选关或只读查看地图 |
 | 商店关 | `GamePlay/Shop/` 下的 `ShopManager.cs`、`ShopStore.cs` 管理商品、买牌、删牌和商店关完成，界面在 `UI/GamePlay/ShopPanel.cs` |
 | 通关小商店 | `GamePlay/Shop/` 下的 `LittleShopManager.cs`、`LittleShopStore.cs` 管理打牌关通关后可领取或购买的牌与待处理状态，界面在 `UI/GamePlay/LittleShopPanel.cs` |
+| 跨大关增加花色 | 前两个 Boss 通关后，`LevelManager.cs` 等待选花色，`RunManager.cs` 加入新花色的两套 A–K 并记录主要花色，界面在 `UI/GamePlay/AddSuitPanel.cs` |
 | 存档 | `GamePlay/Run/RunSaveData.cs` 定义数据，`GamePlay/Card/CardGameModule.cs` 编排各 Manager 的导入导出，`Framework/Save/SaveRegistry.cs` 将 `RunData` 注册到 `Saves/run_data.json` |
 | 顶栏和整局牌组查看 | `UI/Main/MainTopPanel.cs` 提供整局信息和入口，`UI/GamePlay/ShowCardsPanel.cs` 复用牌列表，`UI/Main/MenuPanel.cs` 提供保存和返回入口 |
 

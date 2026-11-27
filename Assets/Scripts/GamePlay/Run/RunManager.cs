@@ -20,6 +20,24 @@ public class RunManager : ManagerBase<RunManager>
     public string DifficultyId => RunStore.Instance.difficultyId;
     public IReadOnlyList<E_CardSuitEnum> MainSuits => RunStore.Instance.mainSuits;
 
+    public IEnumerable<E_CardSuitEnum> GetAvailableMainSuits()
+    {
+        foreach (E_CardSuitEnum suit in System.Enum.GetValues(typeof(E_CardSuitEnum)))
+        {
+            if (!RunStore.Instance.mainSuits.Contains(suit)) yield return suit;
+        }
+    }
+
+    public bool TryAddMainSuit(E_CardSuitEnum suit)
+    {
+        var store = RunStore.Instance;
+        if (!store.hasStarted || !IsValidSuit(suit) || store.mainSuits.Contains(suit)) return false;
+
+        BeginBuildHelper.AddSuit(store.deck, suit, 2);
+        store.mainSuits.Add(suit);
+        return true;
+    }
+
     protected override void OnInit() { }
 
     protected override void OnDispose() { }
