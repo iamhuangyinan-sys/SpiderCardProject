@@ -87,6 +87,7 @@
     {"Id": "place_skill_desc_20003", "Chinese": "移动后，将自己和本列所有翻开的牌放入弃牌堆，然后往弃牌堆加入一张空白牌", "English": "After moving, discard this card and all face-up cards in this column, then add a Blank Card to the discard pile"},
     {"Id": "ui_top_tip_main_suits", "Chinese": "主要花色", "English": "Main suits"},
     {"Id": "ui_top_tip_level_progress", "Chinese": "已完成接龙/目标", "English": "Completed sequences / Goal"},
-    {"Id": "ui_addsuit_tip", "Chinese": "增加一个新花色", "English": "Add a new suit"}
+    {"Id": "ui_addsuit_tip", "Chinese": "增加一个新花色", "English": "Add a new suit"},
+    {"Id": "build_name_103", "Chinese": "多重花色", "English": "Multiple suits"}
   ]
 }

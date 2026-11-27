@@ -48,6 +48,12 @@
     {"Id": "220064", "Type": 3, "Rank": [-9, -9, -9], "Suit": [3], "Attribute": [], "Price": 75, "PlaceSkill": 0, "FlipSkill": 0},
     {"Id": "110003", "Type": 1, "Rank": [-1], "Suit": [], "PlaceSkill": 20003, "Attribute": [], "Price": 85, "FlipSkill": 0},
     {"Id": "220055", "Type": 3, "Rank": [-9, -9], "Suit": [-9], "Attribute": [], "Price": 40, "PlaceSkill": 0, "FlipSkill": 0},
-    {"Id": "220065", "Type": 3, "Rank": [-9, -9, -9], "Suit": [-9], "Attribute": [], "Price": 40, "PlaceSkill": 0, "FlipSkill": 0}
+    {"Id": "220065", "Type": 3, "Rank": [-9, -9, -9], "Suit": [-9], "Attribute": [], "Price": 40, "PlaceSkill": 0, "FlipSkill": 0},
+    {"Id": "230001", "Type": 4, "Rank": [-9], "Suit": [0, 2], "Attribute": [], "Price": 65, "PlaceSkill": 0, "FlipSkill": 0},
+    {"Id": "230002", "Type": 4, "Rank": [-9], "Suit": [-9, -9], "Attribute": [], "Price": 65, "PlaceSkill": 0, "FlipSkill": 0},
+    {"Id": "230003", "Type": 4, "Rank": [-9], "Suit": [-9, -9, -9], "Attribute": [], "Price": 100, "PlaceSkill": 0, "FlipSkill": 0},
+    {"Id": "230004", "Type": 4, "Rank": [-9], "Suit": [0, 1, 2, 3], "Attribute": [], "Price": 180, "PlaceSkill": 0, "FlipSkill": 0},
+    {"Id": "230005", "Type": 4, "Rank": [1], "Suit": [0, 2], "Attribute": [], "Price": 65, "PlaceSkill": 0, "FlipSkill": 0},
+    {"Id": "230006", "Type": 4, "Rank": [13], "Suit": [0, 2], "Attribute": [], "Price": 65, "PlaceSkill": 0, "FlipSkill": 0}
   ]
 }

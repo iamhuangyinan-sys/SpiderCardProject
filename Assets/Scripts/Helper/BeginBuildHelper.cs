@@ -1,48 +1,58 @@
 using System.Collections.Generic;
 using System.Globalization;
 
-/// <summary>初始牌组配方。展示和正式开局必须共用此入口，Image 仅用于 UI。</summary>
+/// <summary>构建初始牌组，选组时解析预设里的随机槽位。</summary>
 public static class BeginBuildHelper
 {
-    public static bool TryBuild(string id, string difficultyId, out List<CardDef> deck)
+    public static bool TryBuildForDifficulty(IReadOnlyList<CardDef> baseDeck, string difficultyId, out List<CardDef> deck)
     {
         deck = null;
         if (!int.TryParse(difficultyId, NumberStyles.None, CultureInfo.InvariantCulture, out int difficulty)
-            || difficulty < 1 || !TryBuildBaseDeck(id, out var cards)) return false;
+            || difficulty < 1) return false;
 
-        if (difficulty >= 2)
-        {
-            if (!CardHelper.TryGetDef("710003", out var blank, out _)) return false;
-            cards.Add(blank.Clone());
-        }
-
+        var cards = new List<CardDef>(baseDeck);
+        if (difficulty >= 2 && !AddPreset(cards, "710003")) return false;
         deck = cards;
         return true;
     }
 
-    private static bool TryBuildBaseDeck(string id, out List<CardDef> deck)
+    public static bool TryBuildBaseDeck(BeginBuildConfig config, out List<CardDef> deck)
     {
         deck = new List<CardDef>();
-        if (string.IsNullOrEmpty(id) || ConfigHelper.Get<BeginBuildConfig>(id) == null) return false;
+        var firstSuit = (E_CardSuitEnum)config.Suit.x;
+        var secondSuit = (E_CardSuitEnum)config.Suit.y;
+        if (!System.Enum.IsDefined(typeof(E_CardSuitEnum), firstSuit)
+            || !System.Enum.IsDefined(typeof(E_CardSuitEnum), secondSuit))
+        {
+            UnityEngine.Debug.LogError($"[BeginBuildHelper] 初始牌组 {config.Id} 的主要花色无效：{config.Suit}");
+            return false;
+        }
 
-        switch (id)
+        AddSuit(deck, firstSuit, 2);
+        AddSuit(deck, secondSuit, 2);
+        switch (config.Id)
         {
             case "101":
-                if (!CardHelper.TryGetDef("210001", out var spider, out _)) return false;
-                AddSuit(deck, E_CardSuitEnum.Hearts, 2);
-                AddSuit(deck, E_CardSuitEnum.Spades, 2);
-                deck.Add(spider.Clone());
-                return true;
+                return AddPreset(deck, "210001");
             case "102":
-                AddSuit(deck, E_CardSuitEnum.Diamonds, 2);
-                AddSuit(deck, E_CardSuitEnum.Spades, 2);
-                return ReplaceWithPreset(deck, E_CardSuitEnum.Diamonds, 5, "220032")
-                    && ReplaceWithPreset(deck, E_CardSuitEnum.Diamonds, 8, "220042")
-                    && ReplaceWithPreset(deck, E_CardSuitEnum.Diamonds, 11, "220012");
+                return ReplaceWithPreset(deck, E_CardSuitEnum.Hearts, 5, "220031")
+                    && ReplaceWithPreset(deck, E_CardSuitEnum.Hearts, 8, "220041")
+                    && AddPreset(deck, "220051");
+            case "103":
+                return ReplaceWithPreset(deck, E_CardSuitEnum.Hearts, 1, "230005")
+                    && ReplaceWithPreset(deck, E_CardSuitEnum.Hearts, 13, "230006")
+                    && AddPreset(deck, "230001");
             default:
-                UnityEngine.Debug.LogError($"[BeginBuildHelper] 初始牌组 {id} 尚未配置代码配方");
+                UnityEngine.Debug.LogError($"[BeginBuildHelper] 初始牌组 {config.Id} 尚未配置代码配方");
                 return false;
         }
+    }
+
+    private static bool AddPreset(List<CardDef> deck, string presetId)
+    {
+        if (!CardHelper.TryGetDef(presetId, out var def, out _)) return false;
+        deck.Add(def);
+        return true;
     }
 
     /// <summary>只替换一份普通牌，保持牌组总张数不变。</summary>
@@ -51,7 +61,7 @@ public static class BeginBuildHelper
         if (!CardHelper.TryGetDef(presetId, out var replacement, out _)) return false;
         int index = deck.IndexOf(CardDef.Create((int)suit, rank));
         if (index < 0) return false;
-        deck[index] = replacement.Clone();
+        deck[index] = replacement;
         return true;
     }
 

@@ -44,13 +44,19 @@ public class RunManager : ManagerBase<RunManager>
 
     // ==================== 一大局生命周期 ====================
 
-    /// <summary>确认初始牌组后开始新的一大局；配方无效时保留原有状态。</summary>
-    public bool StartNewRun(string beginBuildId, string difficultyId, int? seed = null)
+    /// <summary>用选组时生成的牌组开始新局。校验失败时保留原有状态。</summary>
+    public bool StartNewRun(string beginBuildId, string difficultyId, IReadOnlyList<CardDef> deck, int? seed = null)
     {
-        if (string.IsNullOrEmpty(difficultyId) || ConfigHelper.Get<DifficultyConfig>(difficultyId) == null) return false;
-        if (!BeginBuildHelper.TryBuild(beginBuildId, difficultyId, out var deck)) return false;
+        if (string.IsNullOrEmpty(difficultyId) || ConfigHelper.Get<DifficultyConfig>(difficultyId) == null
+            || !int.TryParse(difficultyId, System.Globalization.NumberStyles.None,
+                System.Globalization.CultureInfo.InvariantCulture, out int difficulty) || difficulty < 1) return false;
+        if (deck == null || deck.Count == 0) return false;
+        foreach (var def in deck)
+            if (!def.IsValid) return false;
 
-        var configuredSuits = ConfigHelper.Get<BeginBuildConfig>(beginBuildId).Suit;
+        var config = string.IsNullOrEmpty(beginBuildId) ? null : ConfigHelper.Get<BeginBuildConfig>(beginBuildId);
+        if (config == null) return false;
+        var configuredSuits = config.Suit;
         var firstSuit = (E_CardSuitEnum)configuredSuits.x;
         var secondSuit = (E_CardSuitEnum)configuredSuits.y;
         if (!IsValidSuit(firstSuit) || !IsValidSuit(secondSuit))
@@ -59,7 +65,6 @@ public class RunManager : ManagerBase<RunManager>
             return false;
         }
 
-        int difficulty = int.Parse(difficultyId, System.Globalization.CultureInfo.InvariantCulture);
         if (!LevelManager.Instance.TryCreateRunMap(deck.Count, difficulty, seed)) return false;
         var store = RunStore.Instance;
         store.Reset();

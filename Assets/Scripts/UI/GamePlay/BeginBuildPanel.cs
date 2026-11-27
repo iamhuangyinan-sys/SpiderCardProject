@@ -11,11 +11,12 @@ public partial class BeginBuildPanel : NormalPanel, ISceneInputBlockPanel
     protected override bool FlyOutOnClose => true;
 
     private const string ItemPath = "Prefab/UI/GamePlay/Module/BeginBuildItemModule";
-    public Func<string, string, int?, bool> OnConfirm;
+    public Func<string, string, IReadOnlyList<CardDef>, int?, bool> OnConfirm;
     private List<DifficultyConfig> difficulties;
     private int difficultyIndex;
     private List<BeginBuildConfig> builds;
     private readonly List<BeginBuildItemModule> items = new();
+    private readonly Dictionary<string, List<CardDef>> baseDecks = new();
     private GameObject itemPrefab;
     private List<CardDef> preview;
     private int selectedIndex;
@@ -39,6 +40,7 @@ public partial class BeginBuildPanel : NormalPanel, ISceneInputBlockPanel
     protected override void OnShow()
     {
         confirming = false;
+        baseDecks.Clear();
         comps.iptSeed.text = string.Empty;
         RefreshBuild();
     }
@@ -57,6 +59,7 @@ public partial class BeginBuildPanel : NormalPanel, ISceneInputBlockPanel
         foreach (var item in items)
             if (item != null) Destroy(item.gameObject);
         items.Clear();
+        baseDecks.Clear();
         if (itemPrefab != null) ResManager.Instance.UnloadAsset<GameObject>(ItemPath);
         itemPrefab = null;
         preview = null;
@@ -131,9 +134,17 @@ public partial class BeginBuildPanel : NormalPanel, ISceneInputBlockPanel
     private void RefreshDeckPreview()
     {
         preview = null;
-        if (builds.Count > 0 && difficulties.Count > 0)
-            BeginBuildHelper.TryBuild(builds[selectedIndex].Id, difficulties[difficultyIndex].Id, out preview);
+        if (builds.Count > 0 && difficulties.Count > 0 && TryGetBaseDeck(builds[selectedIndex], out var baseDeck))
+            BeginBuildHelper.TryBuildForDifficulty(baseDeck, difficulties[difficultyIndex].Id, out preview);
         comps.btnCheck.interactable = preview != null;
+    }
+
+    private bool TryGetBaseDeck(BeginBuildConfig config, out List<CardDef> deck)
+    {
+        if (baseDecks.TryGetValue(config.Id, out deck)) return true;
+        if (!BeginBuildHelper.TryBuildBaseDeck(config, out deck)) return false;
+        baseDecks.Add(config.Id, deck);
+        return true;
     }
 
     private void RefreshBuildName()
@@ -166,7 +177,7 @@ public partial class BeginBuildPanel : NormalPanel, ISceneInputBlockPanel
         confirming = true;
         RefreshDifficulty();
         // 回调成功时场景入口会隐藏本面板并播放退出动画。
-        if (OnConfirm(builds[selectedIndex].Id, difficulties[difficultyIndex].Id, seed)) return;
+        if (OnConfirm(builds[selectedIndex].Id, difficulties[difficultyIndex].Id, preview, seed)) return;
         confirming = false;
         RefreshDifficulty();
         TipHelper.Show(LanguageHelper.Get("tip_beginbuild_deck_invalid"));

@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Collections.Generic;
 using Framework;
 using Framework.Event;
 using Framework.UI;
@@ -71,9 +72,9 @@ public class CardGameEntry : MonoBehaviour
 #endif
     }
 
-    private bool OnConfirmBeginBuild(string id, string difficultyId, int? seed)
+    private bool OnConfirmBeginBuild(string id, string difficultyId, IReadOnlyList<CardDef> deck, int? seed)
     {
-        if (!RunManager.Instance.StartNewRun(id, difficultyId, seed)) return false;
+        if (!RunManager.Instance.StartNewRun(id, difficultyId, deck, seed)) return false;
         CardGameModule.Instance.SaveRun();
         // Hide 才会播放 NormalPanel 的退出动画；切场景时再 Close 释放资源。
         if (_beginBuildPanel != null) UIManager.Instance.Hide(_beginBuildPanel);
