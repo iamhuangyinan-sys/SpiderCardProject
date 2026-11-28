@@ -113,6 +113,12 @@ public enum E_CardAttributeEnum
 
     /// <summary>无法在商店主动删除</summary>
     CannotDelete = 10003,
+
+    /// <summary>销毁：弃牌时直接从本关移除</summary>
+    Destroy = 10004,
+
+    /// <summary>容器：作为落列目标时允许任何牌放上来</summary>
+    Container = 10005,
 }
 
 /// <summary>

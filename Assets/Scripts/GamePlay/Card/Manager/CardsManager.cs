@@ -337,27 +337,31 @@ public class CardsManager : ManagerBase<CardsManager>
     }
 
     /// <summary>
-    /// 把一张牌收进弃牌堆（全项目唯一入口）：按概率打沉底标记 → 移入弃牌堆 → 派发表现事件。
-    /// 顺子回收 / 回收技能 / 以后任何「牌进弃牌堆」都走这里，保证沉底规则只有一处
+    /// 处理弃牌：带销毁的牌直接退出本关，其余牌按概率打沉底标记再移入弃牌堆。
+    /// 两种结果都可以播放飞向弃牌堆的动画。
     /// </summary>
-    /// <param name="card">要加入弃牌堆的牌，由调用方先从原位置移除</param>
+    /// <param name="card">要弃掉的牌，由调用方先从原位置移除</param>
     /// <param name="rollSunk">是否概率判定沉底；false 保留现有属性</param>
     /// <param name="playAnimation">是否派发入堆动画事件；测试直接加牌时关闭</param>
     public void TakeToDiscard(CardData card, bool rollSunk = true, bool playAnimation = true)
     {
-        var store = CardsStore.Instance;
-
         if (card == null) return;
 
-        // 关闭概率判定时保留牌现有的属性，新生成的无沉底牌不会被额外标记。
-        if (rollSunk)
-            card.SetAttribute(E_CardAttributeEnum.Sunk, _random.NextDouble() < SunkProbability);
+        var discardPile = CardsStore.Instance.discardPile;
+        bool shouldEnterDiscardPile = !card.HasAttribute(E_CardAttributeEnum.Destroy);
+        if (shouldEnterDiscardPile)
+        {
+            // 关闭概率判定时保留牌现有的沉底属性。
+            if (rollSunk)
+                card.SetAttribute(E_CardAttributeEnum.Sunk, _random.NextDouble() < SunkProbability);
 
-        store.discardPile.Add(card);
+            discardPile.Add(card);
+        }
 
         if (playAnimation)
             EventManager.Instance.Dispatch<CardData>(E_EventEnum.OnCardToDiscard, card);
-        EventManager.Instance.Dispatch<int>(E_EventEnum.OnDiscardPileChanged, store.discardPile.Count);
+        if (shouldEnterDiscardPile)
+            EventManager.Instance.Dispatch<int>(E_EventEnum.OnDiscardPileChanged, discardPile.Count);
     }
 
     /// <summary>

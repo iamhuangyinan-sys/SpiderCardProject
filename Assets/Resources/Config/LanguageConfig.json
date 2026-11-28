@@ -100,6 +100,10 @@
     {"Id": "ui_deck_sort_suit", "Chinese": "花色", "English": "Suit"},
     {"Id": "ui_deck_sort_rank", "Chinese": "点数", "English": "Rank"},
     {"Id": "ui_deck_sort_special", "Chinese": "特殊性", "English": "Special first"},
-    {"Id": "ui_deck_sort_order", "Chinese": "排列顺序", "English": "Sort order"}
+    {"Id": "ui_deck_sort_order", "Chinese": "排列顺序", "English": "Sort order"},
+    {"Id": "card_attr_name_10004", "Chinese": "销毁", "English": "Destroy"},
+    {"Id": "card_attr_desc_10004", "Chinese": "当这张牌进入弃牌堆时会被销毁，本关内不会再出现", "English": "This card is destroyed when it enters the discard pile and won't appear again this level"},
+    {"Id": "card_attr_name_10005", "Chinese": "容器", "English": "Container"},
+    {"Id": "card_attr_desc_10005", "Chinese": "任何牌都可以被放在这张牌上", "English": "Any card can be placed on this card"}
   ]
 }

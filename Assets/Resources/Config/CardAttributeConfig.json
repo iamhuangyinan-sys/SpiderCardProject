@@ -2,6 +2,8 @@
   "items": [
     {"Id": "10001", "Icon": "sunk", "Name": "card_attr_name_10001", "Description": "card_attr_desc_10001", "IsShowInGame": true},
     {"Id": "10002", "Icon": "poison", "Name": "card_attr_name_10002", "Description": "card_attr_desc_10002", "IsShowInGame": true},
-    {"Id": "10003", "Icon": "noDel", "Name": "card_attr_name_10003", "Description": "card_attr_desc_10003", "IsShowInGame": false}
+    {"Id": "10003", "Icon": "noDel", "Name": "card_attr_name_10003", "Description": "card_attr_desc_10003", "IsShowInGame": false},
+    {"Id": "10004", "Icon": "destroy", "Name": "card_attr_name_10004", "Description": "card_attr_desc_10004", "IsShowInGame": true},
+    {"Id": "10005", "Icon": "container", "Name": "card_attr_name_10005", "Description": "card_attr_desc_10005", "IsShowInGame": true}
   ]
 }

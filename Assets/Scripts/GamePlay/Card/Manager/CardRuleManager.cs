@@ -122,6 +122,7 @@ public class CardRuleManager : ManagerBase<CardRuleManager>
     /// <summary>
     /// 判断能否把一串牌移动到目标列：
     /// - 空列：可直接移动
+    /// - 目标列顶牌带容器：可直接移动
     /// - 万能放下（-1）：可落到任意牌上（不看点数也不看花色）
     /// - 涉及「无视点数」（-2）：只看花色（红心牌才能压到红心蜘蛛上）
     /// - 普通牌：只看点数（同花色不是落列的必要条件，同花顺才是）
@@ -144,6 +145,7 @@ public class CardRuleManager : ManagerBase<CardRuleManager>
         if (targetColumn.Count == 0) return true;   // 空列：任何牌都能放
 
         var top = targetColumn[targetColumn.Count - 1];
+        if (top.HasAttribute(E_CardAttributeEnum.Container)) return true;
 
         // 万能放下：直接落，不比点数也不比花色
         if (HasRankValue(anchor, CardRankConst.Wild)) return true;
