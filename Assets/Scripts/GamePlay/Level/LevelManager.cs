@@ -145,18 +145,21 @@ public class LevelManager : ManagerBase<LevelManager>
         return reward > 0;
     }
 
-    public bool IsWaitingForMainSuit
+    public bool HasWonRun => HasClearedCurrentChapterBoss()
+        && LevelStore.Instance.currentChapter == LevelStore.Instance.map.chapters.Count;
+
+    public bool IsWaitingForMainSuit => HasClearedCurrentChapterBoss()
+        && LevelStore.Instance.currentChapter < LevelStore.Instance.map.chapters.Count;
+
+    private bool HasClearedCurrentChapterBoss()
     {
-        get
-        {
-            var store = LevelStore.Instance;
-            if (store.map == null || store.currentChapter >= store.map.chapters.Count
-                || !string.IsNullOrEmpty(store.selectedLevelId)) return false;
-            string lastLevelId = store.LastClearedLevelId;
-            return !string.IsNullOrEmpty(lastLevelId)
-                && store.allLevels.TryGetValue(lastLevelId, out var node)
-                && node.LevelType == (int)E_LevelTypeEnum.Boss;
-        }
+        var store = LevelStore.Instance;
+        if (store.map == null || !string.IsNullOrEmpty(store.selectedLevelId)) return false;
+
+        string lastLevelId = store.LastClearedLevelId;
+        return !string.IsNullOrEmpty(lastLevelId)
+            && store.allLevels.TryGetValue(lastLevelId, out var node)
+            && node.LevelType == (int)E_LevelTypeEnum.Boss;
     }
 
     public bool TryAdvanceChapterWithSuit(E_CardSuitEnum suit)

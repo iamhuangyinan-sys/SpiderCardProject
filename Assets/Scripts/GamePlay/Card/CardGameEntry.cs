@@ -24,6 +24,7 @@ public class CardGameEntry : MonoBehaviour
     private ShopPanel _shopPanel;
     private LittleShopPanel littleShopPanel;
     private AddSuitPanel _addSuitPanel;
+    private WinPanel _winPanel;
 
     /// <summary>「等选关面板挡住牌桌后再隐藏牌桌物件」的协程句柄（开新局时取消）</summary>
     private Coroutine _hideTableRoutine;
@@ -107,7 +108,6 @@ public class CardGameEntry : MonoBehaviour
         if (_buffPanel != null) UIManager.Instance.Hide(_buffPanel);
         if (LevelManager.Instance.IsWaitingForMainSuit) ShowAddSuit();
         else if (LittleShopManager.Instance.IsPending) ShowLittleShop();
-        // TODO：最终 Boss 通关后接入整局结算。目前停在最终 Boss 的地图。
         else ShowLevelSelect();
         _hideTableRoutine = MonoManager.Instance.StartCoroutine(HideTableRoutine());
     }
@@ -178,11 +178,37 @@ public class CardGameEntry : MonoBehaviour
     /// <summary>显示选关面板（可点关）；顺手把地图按钮藏掉 —— 选关界面本身就是地图</summary>
     private void ShowLevelSelect()
     {
-        _levelPanel = UIManager.Instance.Show<LevelPanel>();
+        _levelPanel = UIManager.Instance.Show<LevelPanel>(panel => panel.OnWinContinue = ShowWinPanel);
         if (_levelPanel == null) return;
 
         _levelPanel.SetViewOnly(false);
         SetMapButtonVisible(false);
+    }
+
+    private void ShowWinPanel()
+    {
+        if (_levelPanel == null || !_levelPanel.IsOpen || SceneController.Instance.IsLoading) return;
+
+        UIManager.Instance.Close(_levelPanel, () =>
+        {
+            _levelPanel = null;
+            if (!IsInCardScene || SceneController.Instance.IsLoading) return;
+
+            _winPanel = UIManager.Instance.Show<WinPanel>(panel => panel.OnReturn = ReturnAfterWin);
+            if (_winPanel == null) ShowLevelSelect();
+        });
+    }
+
+    private void ReturnAfterWin()
+    {
+        if (SceneController.Instance.IsLoading || !LevelManager.Instance.HasWonRun
+            || !CardGameModule.Instance.TryDiscardRun()) return;
+
+        UIManager.Instance.Close(_winPanel, () =>
+        {
+            _winPanel = null;
+            SceneController.Instance.LoadScene("BeginPanelScene");
+        });
     }
 
     /// <summary>关卡中打开地图：只读查看，箭头标出当前所在关卡</summary>
@@ -238,6 +264,7 @@ public class CardGameEntry : MonoBehaviour
         if (_shopPanel != null) UIManager.Instance.Close(_shopPanel);
         if (littleShopPanel != null) UIManager.Instance.Close(littleShopPanel);
         if (_addSuitPanel != null) UIManager.Instance.Close(_addSuitPanel);
+        if (_winPanel != null) UIManager.Instance.Close(_winPanel);
 
         CardGameModule.Instance.Dispose();
     }

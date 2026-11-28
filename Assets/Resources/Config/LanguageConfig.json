@@ -55,9 +55,8 @@
     {"Id": "ui_top_tip_deck", "Chinese": "牌组", "English": "Deck"},
     {"Id": "ui_begin_continue", "Chinese": "继续游戏", "English": "Continue"},
     {"Id": "ui_begin_new_game", "Chinese": "开始新游戏", "English": "New game"},
-    {"Id": "ui_begin_quit", "Chinese": "退出", "English": "Quit"},
     {"Id": "ui_common_settings", "Chinese": "设置", "English": "Settings"},
-    {"Id": "ui_menu_quit_game", "Chinese": "退出游戏", "English": "Quit game"},
+    {"Id": "ui_quit_game", "Chinese": "退出游戏", "English": "Quit game"},
     {"Id": "ui_menu_back_to_main", "Chinese": "返回主菜单", "English": "Back to main menu"},
     {"Id": "ui_beginbuild_seed_placeholder", "Chinese": "可输入固定种子", "English": "Enter a fixed seed"},
     {"Id": "ui_level_copy_seed", "Chinese": "复制种子", "English": "Copy seed"},
@@ -88,6 +87,14 @@
     {"Id": "ui_top_tip_main_suits", "Chinese": "主要花色", "English": "Main suits"},
     {"Id": "ui_top_tip_level_progress", "Chinese": "已完成接龙/目标", "English": "Completed sequences / Goal"},
     {"Id": "ui_addsuit_tip", "Chinese": "增加一个新花色", "English": "Add a new suit"},
-    {"Id": "build_name_103", "Chinese": "多重花色", "English": "Multiple suits"}
+    {"Id": "build_name_103", "Chinese": "多重花色", "English": "Multiple suits"},
+    {"Id": "ui_win_title", "Chinese": "胜利", "English": "WIN"},
+    {"Id": "ui_menu_give_up", "Chinese": "放弃", "English": "Give up"},
+    {"Id": "ui_confirm_title", "Chinese": "你确定吗", "English": "Are you sure"},
+    {"Id": "ui_common_confirm", "Chinese": "确定", "English": "Confirm"},
+    {"Id": "ui_common_cancel", "Chinese": "取消", "English": "Cancel"},
+    {"Id": "ui_confirm_new_game_tip", "Chinese": "还有未完成的游戏，确定开始新游戏吗，未完成的游戏进度将被删除", "English": "Start a new game and delete your unfinished game progress?"},
+    {"Id": "ui_confirm_give_up_tip", "Chinese": "确定放弃这局游戏吗，这局游戏进度将被删除", "English": "Give up this game and delete its progress?"},
+    {"Id": "ui_confirm_quit_tip", "Chinese": "确定退出游戏吗", "English": "Are you sure you want to quit the game?"}
   ]
 }

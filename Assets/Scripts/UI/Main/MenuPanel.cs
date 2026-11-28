@@ -1,9 +1,8 @@
 using Framework;
 using Framework.UI;
-using UnityEngine;
 
 /// <summary>
-/// 游戏菜单面板 —— 保存并回主菜单 / 保存并退出
+/// 游戏菜单面板 —— 保存并回主菜单 / 放弃本局 / 保存并退出
 /// 遮挡场景输入（实现 ISceneInputBlockPanel）
 /// </summary>
 public partial class MenuPanel : NormalPanel, ISceneInputBlockPanel
@@ -13,6 +12,8 @@ public partial class MenuPanel : NormalPanel, ISceneInputBlockPanel
     private bool keepBackground;
     private PanelBackdrop Backdrop => GetComponent<PanelBackdrop>();
 
+    internal void KeepBackground() => keepBackground = true;
+
     protected override void OnOpen()
     {
         keepBackground = false;
@@ -20,6 +21,7 @@ public partial class MenuPanel : NormalPanel, ISceneInputBlockPanel
         comps.btnClose.onClick.AddListener(CloseSelf);
         comps.btnSettings.onClick.AddListener(OnClickSettings);
         comps.btnSaveReturn.onClick.AddListener(OnClickSaveReturn);
+        comps.btnGiveUpReturn.onClick.AddListener(OnClickGiveUpReturn);
         comps.btnSaveQuit.onClick.AddListener(OnClickSaveQuit);
     }
 
@@ -42,6 +44,7 @@ public partial class MenuPanel : NormalPanel, ISceneInputBlockPanel
         comps.btnClose.onClick.RemoveListener(CloseSelf);
         comps.btnSettings.onClick.RemoveListener(OnClickSettings);
         comps.btnSaveReturn.onClick.RemoveListener(OnClickSaveReturn);
+        comps.btnGiveUpReturn.onClick.RemoveListener(OnClickGiveUpReturn);
         comps.btnSaveQuit.onClick.RemoveListener(OnClickSaveQuit);
     }
 
@@ -49,7 +52,7 @@ public partial class MenuPanel : NormalPanel, ISceneInputBlockPanel
     {
         if (!IsOpen || IsTransitioning || SceneController.Instance.IsLoading
             || UIManager.Instance.IsOpen<SettingsPanel>()) return;
-        keepBackground = true;
+        KeepBackground();
         SettingsPanel.OpenFrom(this);
     }
 
@@ -60,15 +63,20 @@ public partial class MenuPanel : NormalPanel, ISceneInputBlockPanel
         SceneController.Instance.LoadScene("BeginPanelScene", CloseSelf);
     }
 
-    /// <summary>保存并退出游戏</summary>
-    private void OnClickSaveQuit()
+    private void OnClickGiveUpReturn()
     {
-        CardGameModule.Instance.SaveRun();
-
-#if UNITY_EDITOR
-        UnityEditor.EditorApplication.isPlaying = false;
-#else
-        Application.Quit();
-#endif
+        SecondConfirmHelper.OpenFrom(this, "ui_confirm_give_up_tip", GiveUpRun);
     }
+
+    private bool GiveUpRun()
+    {
+        var scene = SceneController.Instance;
+        if (scene.IsLoading || !CardGameModule.Instance.TryDiscardRun()) return false;
+
+        scene.LoadScene("BeginPanelScene", CloseSelf);
+        return true;
+    }
+
+    /// <summary>确认后保存并退出游戏。</summary>
+    private void OnClickSaveQuit() => SecondConfirmHelper.ConfirmQuit(this, () => CardGameModule.Instance.SaveRun());
 }

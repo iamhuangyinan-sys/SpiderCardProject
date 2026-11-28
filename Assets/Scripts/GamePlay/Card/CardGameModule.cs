@@ -1,8 +1,8 @@
+using System.IO;
 using Framework.Mgr;
 using Framework.Save;
 using Framework.UI;
 #if UNITY_EDITOR
-using System.IO;
 using Framework;
 #endif
 
@@ -15,6 +15,8 @@ using Framework;
 /// </summary>
 public class CardGameModule : ManagerBase<CardGameModule>
 {
+    private bool _runDiscarded;
+
     protected override void OnInit()
     {
         // ===== 数据层（无依赖）=====
@@ -101,7 +103,7 @@ public class CardGameModule : ManagerBase<CardGameModule>
     /// <summary>保存调试选关进度并通过续玩入口重载当前场景。</summary>
     public bool TryJumpToLevelSelection(int chapter, int layer, out string error)
     {
-        if (!CardGameEntry.IsInCardScene || !RunManager.Instance.HasStarted)
+        if (!CardGameEntry.IsInCardScene || !RunManager.Instance.HasStarted || _runDiscarded)
         {
             error = "请先开始或继续一局游戏";
             return false;
@@ -150,7 +152,7 @@ public class CardGameModule : ManagerBase<CardGameModule>
         if (_reloadingForLevelJump) return;
 #endif
         // 选初始牌组期间尚无新局，退出或其他保存入口不能生成半成品存档。
-        if (!RunManager.Instance.HasStarted) return;
+        if (!RunManager.Instance.HasStarted || _runDiscarded) return;
         var data = new RunSaveData();
         RunManager.Instance.ExportTo(data);
         LevelManager.Instance.ExportTo(data);
@@ -158,6 +160,24 @@ public class CardGameModule : ManagerBase<CardGameModule>
         LittleShopManager.Instance.ExportTo(data);
 
         SaveManager.Instance.Save(E_SaveCustomEnum.RunData, data);
+    }
+
+    public bool TryDiscardRun()
+    {
+        if (_runDiscarded) return false;
+
+        try
+        {
+            SaveManager.Instance.DeleteKey(E_SaveCustomEnum.RunData);
+        }
+        catch (System.Exception exception) when (exception is IOException or System.UnauthorizedAccessException)
+        {
+            UnityEngine.Debug.LogError($"[Run] 无法删除本局存档：{exception.Message}");
+            return false;
+        }
+
+        _runDiscarded = true;
+        return true;
     }
 
     /// <summary>

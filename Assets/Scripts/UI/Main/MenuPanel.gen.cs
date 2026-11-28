@@ -15,6 +15,7 @@ public partial class MenuPanel
     {
         public Button btnSettings;
         public Button btnSaveReturn;
+        public Button btnGiveUpReturn;
         public Button btnSaveQuit;
         public Button btnClose;
     }

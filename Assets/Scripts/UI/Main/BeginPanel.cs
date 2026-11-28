@@ -1,3 +1,4 @@
+using System.IO;
 using Framework;
 using Framework.Save;
 using Framework.UI;
@@ -57,13 +58,32 @@ public partial class BeginPanel : NormalPanel
         comps.btnContinue.gameObject.SetActive(hasSave);
     }
 
-    /// <summary>开始新游戏：立即删除旧存档，再进场景选择牌组</summary>
     private void OnClickStart()
     {
-        if (SceneController.Instance.IsLoading) return;
-        SaveManager.Instance.DeleteKey(E_SaveCustomEnum.RunData);
+        if (!IsOpen || IsTransitioning || SceneController.Instance.IsLoading) return;
+        if (SaveManager.Instance.HasKey(E_SaveCustomEnum.RunData))
+            SecondConfirmHelper.OpenFrom(this, "ui_confirm_new_game_tip", StartNewGame);
+        else StartNewGame();
+    }
+
+    private bool StartNewGame()
+    {
+        var scene = SceneController.Instance;
+        if (scene.IsLoading) return false;
+
+        try
+        {
+            SaveManager.Instance.DeleteKey(E_SaveCustomEnum.RunData);
+        }
+        catch (System.Exception exception) when (exception is IOException or System.UnauthorizedAccessException)
+        {
+            Debug.LogError($"[Run] 无法删除本局存档：{exception.Message}");
+            return false;
+        }
+
         CardGameEntry.RequestNewRun = true;
-        SceneController.Instance.LoadScene(GameSceneName, CloseSelf);
+        scene.LoadScene(GameSceneName, CloseSelf);
+        return true;
     }
 
     /// <summary>继续游戏：读档接着玩</summary>
@@ -76,12 +96,5 @@ public partial class BeginPanel : NormalPanel
 
     private void OnClickSettings() => SettingsPanel.OpenFrom(this);
 
-    private void OnClickQuit()
-    {
-#if UNITY_EDITOR
-        UnityEditor.EditorApplication.isPlaying = false;
-#else
-        Application.Quit();
-#endif
-    }
+    private void OnClickQuit() => SecondConfirmHelper.ConfirmQuit(this);
 }

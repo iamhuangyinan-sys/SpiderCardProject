@@ -85,11 +85,16 @@ public partial class LevelPanel : NormalPanel, ISceneInputBlockPanel
 
     /// <summary>当前是否处于查看模式（地图）</summary>
     public bool IsViewOnly => _viewOnly;
+    public System.Action OnWinContinue;
+
+    private bool CanContinueToWin => !_viewOnly && !CardsManager.Instance.IsPlaying
+        && LevelManager.Instance.HasWonRun;
 
     protected override void OnOpen()
     {
         LevelStore.Instance.OnDataChanged += RefreshLevels;
         comps.btnCopySeed.onClick.AddListener(OnClickCopySeed);
+        comps.btnContinue.onClick.AddListener(OnClickWinContinue);
 
         if (comps.btnClose != null)
         {
@@ -116,6 +121,8 @@ public partial class LevelPanel : NormalPanel, ISceneInputBlockPanel
     {
         LevelStore.Instance.OnDataChanged -= RefreshLevels;
         comps.btnCopySeed.onClick.RemoveListener(OnClickCopySeed);
+        comps.btnContinue.onClick.RemoveListener(OnClickWinContinue);
+        OnWinContinue = null;
 
         if (comps.btnClose != null) comps.btnClose.onClick.RemoveListener(OnClickClose);
 
@@ -261,9 +268,15 @@ public partial class LevelPanel : NormalPanel, ISceneInputBlockPanel
 
         RefreshPlayerArrow();
         RefreshLineColors();
+        comps.btnContinue.gameObject.SetActive(CanContinueToWin);
 
         // 点击状态统一在这里落定：进关停留只挡点击，地图查看还要把其它可选关卡置灰
         ApplyModuleClickState();
+    }
+
+    private void OnClickWinContinue()
+    {
+        if (IsOpen && CanContinueToWin) OnWinContinue?.Invoke();
     }
 
     /// <summary>
