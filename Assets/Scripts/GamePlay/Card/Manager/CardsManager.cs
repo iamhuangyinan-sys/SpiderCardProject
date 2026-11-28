@@ -979,26 +979,23 @@ public class CardsManager : ManagerBase<CardsManager>
 
     // ==================== 牌堆展示 ====================
 
-    /// <summary>取发牌堆全部牌（按点数、花色排序，供展示用；带沉底标记）</summary>
-    public List<CardData> GetDrawPileCards() => SortForDisplay(CardsStore.Instance.drawPile);
-
-    /// <summary>取弃牌堆全部牌（按点数、花色排序，供展示用；带沉底标记）</summary>
-    public List<CardData> GetDiscardPileCards() => SortForDisplay(CardsStore.Instance.discardPile);
-
-    /// <summary>按点数（A→K）→ 花色 排序后返回（展示用，不改变原数据顺序）</summary>
-    private static List<CardData> SortForDisplay(IEnumerable<CardData> cards)
+    /// <summary>取发牌堆展示副本，按花色分组，组内按点数（A→K）排列</summary>
+    public List<CardData> GetDrawPileCards()
     {
-        var list = new List<CardData>(cards);
+        var list = new List<CardData>(CardsStore.Instance.drawPile);
         list.Sort((a, b) =>
         {
-            int byRank = MinRank(a).CompareTo(MinRank(b));
-            return byRank != 0 ? byRank : MinSuit(a).CompareTo(MinSuit(b));
+            int bySuit = MinSuit(a).CompareTo(MinSuit(b));
+            return bySuit != 0 ? bySuit : MinRank(a).CompareTo(MinRank(b));
         });
 
         return list;
     }
 
-    /// <summary>展示排序用的点数摘要：最小的普通点数（1-13）；没有普通点数的牌（黑色 / 万能）排最后</summary>
+    /// <summary>按入堆顺序取弃牌堆展示副本</summary>
+    public List<CardData> GetDiscardPileCards() => new List<CardData>(CardsStore.Instance.discardPile);
+
+    /// <summary>展示排序用的点数摘要：最小的普通点数（1-13）；没有普通点数的牌排在同花色组末尾</summary>
     private static int MinRank(CardData card)
     {
         int min = int.MaxValue;

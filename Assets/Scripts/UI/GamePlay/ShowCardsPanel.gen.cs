@@ -13,6 +13,8 @@ public partial class ShowCardsPanel
     [System.Serializable]
     public class CompsData : CompsDataBase
     {
+        public Image imgSort;
+        public TMP_Dropdown drpSortMethod;
         public ScrollList listCard;
         public Button btnClose;
         public TMP_Text txtInfo;

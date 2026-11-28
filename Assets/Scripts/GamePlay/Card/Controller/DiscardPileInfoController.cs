@@ -2,7 +2,7 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 
 /// <summary>
-/// 弃牌堆信息 —— 点击展示弃牌堆中的全部牌（重新按点数、花色排序）
+/// 弃牌堆信息 —— 点击按入堆顺序展示弃牌堆中的全部牌
 /// 挂在场景中的物体上（需要 Collider 接收点击），一般放在弃牌堆附近
 /// </summary>
 public class DiscardPileInfoController : MonoBehaviour

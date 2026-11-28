@@ -4,7 +4,7 @@
     {"Id": "tip_discard_empty", "Chinese": "弃牌堆没有牌", "English": "The discard pile is empty"},
     {"Id": "title_discard_list", "Chinese": "弃牌堆中的牌", "English": "Cards in the discard pile"},
     {"Id": "tip_draw_empty", "Chinese": "发牌堆没有牌", "English": "The draw pile is empty"},
-    {"Id": "title_draw_list", "Chinese": "发牌堆中的牌（不按照发牌顺序排列）", "English": "Cards in the draw pile (unsorted)"},
+    {"Id": "title_draw_list", "Chinese": "发牌堆中的牌（非发牌顺序，按花色顺序排列）", "English": "Cards in the draw pile (sorted by suit, deal order hidden)"},
     {"Id": "tip_deal_empty_column", "Chinese": "有空列时不能发牌", "English": "You can't deal while a column is empty"},
     {"Id": "tip_level_generate_failed", "Chinese": "关卡生成失败，请检查关卡模板和生成参数", "English": "Unable to generate the level, please check the level template and generation settings"},
     {"Id": "ui_beginbuild_no_deck", "Chinese": "暂无可用牌组", "English": "No deck available"},
@@ -95,6 +95,11 @@
     {"Id": "ui_common_cancel", "Chinese": "取消", "English": "Cancel"},
     {"Id": "ui_confirm_new_game_tip", "Chinese": "还有未完成的游戏，确定开始新游戏吗，未完成的游戏进度将被删除", "English": "Start a new game and delete your unfinished game progress?"},
     {"Id": "ui_confirm_give_up_tip", "Chinese": "确定放弃这局游戏吗，这局游戏进度将被删除", "English": "Give up this game and delete its progress?"},
-    {"Id": "ui_confirm_quit_tip", "Chinese": "确定退出游戏吗", "English": "Are you sure you want to quit the game?"}
+    {"Id": "ui_confirm_quit_tip", "Chinese": "确定退出游戏吗", "English": "Are you sure you want to quit the game?"},
+    {"Id": "ui_deck_sort_acquisition", "Chinese": "获得时间", "English": "Acquisition order"},
+    {"Id": "ui_deck_sort_suit", "Chinese": "花色", "English": "Suit"},
+    {"Id": "ui_deck_sort_rank", "Chinese": "点数", "English": "Rank"},
+    {"Id": "ui_deck_sort_special", "Chinese": "特殊性", "English": "Special first"},
+    {"Id": "ui_deck_sort_order", "Chinese": "排列顺序", "English": "Sort order"}
   ]
 }

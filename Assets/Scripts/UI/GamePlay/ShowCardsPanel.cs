@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Framework.Event;
 using Framework.UI;
 
 /// <summary>
@@ -19,11 +20,17 @@ public partial class ShowCardsPanel : NormalPanel, ISceneInputBlockPanel
 
     private PanelBackdrop Backdrop => GetComponent<PanelBackdrop>();
 
+    // 排序栏顶部 20 + 高度 60 + 下方间距 40，扣除列表原有的 50 留白。
+    private const float SortHeaderSpace = 70f;
+
+    private enum SortMethod { Acquisition, Suit, Rank, Special }
+
     /// <summary>列表里一格的内容（牌定义 + 要显示的属性）</summary>
     private struct CardShow
     {
         public CardDef def;
         public IReadOnlyList<E_CardAttributeEnum> attributes;
+        public int originalIndex;
     }
 
     private readonly List<CardShow> _cards = new();
@@ -32,18 +39,34 @@ public partial class ShowCardsPanel : NormalPanel, ISceneInputBlockPanel
     /// <summary>选牌模式下的回调（null = 纯展示）</summary>
     private Func<CardDef, bool> _onPick;
 
+    /// <summary>展示本局牌组并启用排序</summary>
+    public static void ShowDeck(IReadOnlyList<CardDef> defs, string info)
+    {
+        var panel = UIManager.Instance.Show<ShowCardsPanel>();
+        if (panel == null) return;
+        panel._onPick = null;
+        panel.SetInfo(info);
+        panel.SetDefs(defs, showSort: true);
+    }
+
     /// <summary>打开面板并展示指定牌定义及其属性</summary>
     public static void ShowCards(IReadOnlyList<CardDef> defs, string info)
     {
         var panel = UIManager.Instance.Show<ShowCardsPanel>();
-        if (panel != null) { panel.SetInfo(info); panel.SetDefs(defs); }
+        if (panel == null) return;
+        panel._onPick = null;
+        panel.SetInfo(info);
+        panel.SetDefs(defs);
     }
 
     /// <summary>打开面板并展示指定牌（发牌堆 / 弃牌堆等带属性的场合）</summary>
     public static void ShowCards(IReadOnlyList<CardData> cards, string info)
     {
         var panel = UIManager.Instance.Show<ShowCardsPanel>();
-        if (panel != null) { panel.SetInfo(info); panel.SetCards(cards); }
+        if (panel == null) return;
+        panel._onPick = null;
+        panel.SetInfo(info);
+        panel.SetCards(cards);
     }
 
     /// <summary>
@@ -69,6 +92,9 @@ public partial class ShowCardsPanel : NormalPanel, ISceneInputBlockPanel
     protected override void OnOpen()
     {
         comps.btnClose.onClick.AddListener(OnClickClose);
+        RefreshSortOptions();
+        comps.drpSortMethod.onValueChanged.AddListener(OnSortChanged);
+        EventManager.Instance.AddListener(E_EventEnum.OnLanguageChanged, RefreshSortOptions);
         _keepBackground = false;
         Backdrop.Show(true);      // 黑底独立淡入（内容走面板淡入）
         RefreshList();
@@ -85,6 +111,7 @@ public partial class ShowCardsPanel : NormalPanel, ISceneInputBlockPanel
 
     protected override bool OnPanelClosing()
     {
+        if (comps.drpSortMethod.IsExpanded) comps.drpSortMethod.Hide();
         // 交给详情复用时保留黑底，否则和内容一起淡出
         if (!_keepBackground) Backdrop.Hide(true);
         return base.OnPanelClosing();
@@ -93,6 +120,8 @@ public partial class ShowCardsPanel : NormalPanel, ISceneInputBlockPanel
     protected override void OnClose()
     {
         comps.btnClose.onClick.RemoveListener(OnClickClose);
+        comps.drpSortMethod.onValueChanged.RemoveListener(OnSortChanged);
+        EventManager.Instance.RemoveListener(E_EventEnum.OnLanguageChanged, RefreshSortOptions);
         _cards.Clear();
         _onPick = null;
         _keepBackground = false;
@@ -104,6 +133,7 @@ public partial class ShowCardsPanel : NormalPanel, ISceneInputBlockPanel
     /// <summary>设置要展示的场上牌（带属性）</summary>
     public void SetCards(IReadOnlyList<CardData> cards)
     {
+        SetSortVisible(false);
         _useInGameAttributes = true;
         _cards.Clear();
 
@@ -119,8 +149,11 @@ public partial class ShowCardsPanel : NormalPanel, ISceneInputBlockPanel
     }
 
     /// <summary>设置要展示的牌定义及其属性</summary>
-    public void SetDefs(IReadOnlyList<CardDef> defs)
+    public void SetDefs(IReadOnlyList<CardDef> defs) => SetDefs(defs, showSort: false);
+
+    private void SetDefs(IReadOnlyList<CardDef> defs, bool showSort)
     {
+        SetSortVisible(showSort);
         _useInGameAttributes = false;
         _cards.Clear();
 
@@ -128,12 +161,83 @@ public partial class ShowCardsPanel : NormalPanel, ISceneInputBlockPanel
         {
             for (int i = 0; i < defs.Count; i++)
             {
-                _cards.Add(new CardShow { def = defs[i], attributes = defs[i].attributes });
+                _cards.Add(new CardShow { def = defs[i], attributes = defs[i].attributes, originalIndex = i });
             }
         }
 
         RefreshList();
     }
+
+    private void SetSortVisible(bool visible)
+    {
+        var header = comps.imgSort.gameObject;
+        bool wasVisible = header.activeSelf;
+        header.SetActive(visible);
+        comps.listCard.SetHeaderSpace(visible ? SortHeaderSpace : 0f);
+        if (visible) comps.drpSortMethod.SetValueWithoutNotify((int)SortMethod.Acquisition);
+        if (visible || wasVisible) comps.listCard.ScrollToTop();
+    }
+
+    private void RefreshSortOptions()
+    {
+        var dropdown = comps.drpSortMethod;
+        int selection = dropdown.value;
+        if (dropdown.IsExpanded) dropdown.Hide();
+        dropdown.ClearOptions();
+        dropdown.AddOptions(new List<string>
+        {
+            LanguageHelper.Get("ui_deck_sort_acquisition"),
+            LanguageHelper.Get("ui_deck_sort_suit"),
+            LanguageHelper.Get("ui_deck_sort_rank"),
+            LanguageHelper.Get("ui_deck_sort_special")
+        });
+        dropdown.SetValueWithoutNotify(selection);
+    }
+
+    private void OnSortChanged(int index)
+    {
+        if (!IsOpen || !comps.imgSort.gameObject.activeSelf) return;
+        var method = (SortMethod)index;
+        _cards.Sort((a, b) => CompareCards(a, b, method));
+        comps.listCard.ScrollToTop();
+        RefreshList();
+    }
+
+    private static int CompareCards(CardShow a, CardShow b, SortMethod method)
+    {
+        int order = 0;
+        switch (method)
+        {
+            case SortMethod.Suit:
+                order = GetSortSuit(a.def).CompareTo(GetSortSuit(b.def));
+                if (order == 0) order = GetSortRank(a.def).CompareTo(GetSortRank(b.def));
+                break;
+            case SortMethod.Rank:
+                order = GetSortRank(a.def).CompareTo(GetSortRank(b.def));
+                if (order == 0) order = GetSortSuit(a.def).CompareTo(GetSortSuit(b.def));
+                break;
+            case SortMethod.Special:
+                order = IsSpecial(b.def).CompareTo(IsSpecial(a.def));
+                break;
+        }
+
+        return order != 0 ? order : a.originalIndex.CompareTo(b.originalIndex);
+    }
+
+    private static int GetSortSuit(CardDef def) => def.suits?.Count > 0 ? def.suits[0] : int.MaxValue;
+
+    private static int GetSortRank(CardDef def)
+    {
+        int? rank = CardResManager.GetMainRank(def.ranks);
+        // 普通点数 1–13，其后依次是蜘蛛、仅万能、无点数。
+        if (rank == CardRankConst.Ignore) return 14;
+        if (rank.HasValue) return rank.Value;
+        return def.ranks?.Contains(CardRankConst.Wild) == true ? 15 : 16;
+    }
+
+    private static bool IsSpecial(CardDef def) =>
+        def.attributes?.Count > 0 || def.HasSkill || def.flipSkill != E_FlipSkillEnum.None
+        || def.ranks?.Contains(CardRankConst.Ignore) == true || def.ranks?.Contains(CardRankConst.Wild) == true;
 
     /// <summary>详情面板翻页用：当前可展示的牌数量</summary>
     public int CardCount => _cards.Count;

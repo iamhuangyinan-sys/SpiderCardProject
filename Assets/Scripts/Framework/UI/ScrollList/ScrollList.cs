@@ -63,6 +63,16 @@ namespace Framework.UI
         /// <summary> 渲染回调（int: 数据索引, BaseListItem: Cell 实例） </summary>
         public Action<int, BaseListItem> OnItemRender;
 
+        /// <summary> 给 Content 内随列表滚动的表头额外留出空间 </summary>
+        public void SetHeaderSpace(float height)
+        {
+            height = Mathf.Max(0f, height);
+            if (_headerSpace == height) return;
+            _headerSpace = height;
+            UpdateContentSize();
+            Refresh();
+        }
+
         // ==================== 内部 ====================
 
         private ListItemPool _pool;
@@ -70,6 +80,8 @@ namespace Framework.UI
         private int _totalCount;
         private int _firstVisibleIndex;
         private int _scrollVer;
+        private float _headerSpace;
+        private float TopPadding => _paddingTop + _headerSpace;
 
         private struct Slot
         {
@@ -119,13 +131,23 @@ namespace Framework.UI
             HandleScroll(true);
         }
 
+        /// <summary> 回到内容顶部，包含表头 </summary>
+        public void ScrollToTop()
+        {
+            _scrollRect.StopMovement();
+            var position = _content.anchoredPosition;
+            if (position.y == 0f) return;
+            _content.anchoredPosition = new Vector2(position.x, 0f);
+            HandleScroll(false);
+        }
+
         /// <summary> 滚动到指定索引 </summary>
         public void ScrollTo(int index)
         {
             if (_totalCount == 0) return;
             index = Mathf.Clamp(index, 0, _totalCount - 1);
             int row = index / _columns;
-            float targetY = _paddingTop + row * (_itemHeight + _rowGap);
+            float targetY = TopPadding + row * (_itemHeight + _rowGap);
             float maxY = Mathf.Max(0, _content.sizeDelta.y - _scrollRect.viewport.rect.height);
             _content.anchoredPosition = new Vector2(0, Mathf.Min(targetY, maxY));
             Refresh();
@@ -193,7 +215,7 @@ namespace Framework.UI
         private int GetFirstVisibleIndex()
         {
             float rowH = _itemHeight + _rowGap;
-            int row = Mathf.Max(0, Mathf.FloorToInt((_content.anchoredPosition.y - _paddingTop) / rowH));
+            int row = Mathf.Max(0, Mathf.FloorToInt((_content.anchoredPosition.y - TopPadding) / rowH));
             return row * _columns;
         }
 
@@ -205,7 +227,7 @@ namespace Framework.UI
 
             int idx = _firstVisibleIndex;
             float rowH = _itemHeight + _rowGap;
-            float y = _paddingTop + (idx / _columns) * rowH;
+            float y = TopPadding + (idx / _columns) * rowH;
 
             // 网格在左右留白之间水平居中（留白为 0 时就是原来的最左对齐，只要列数没填满宽度）
             float startX = CalcStartX();
@@ -272,8 +294,8 @@ namespace Framework.UI
             int rows = Mathf.CeilToInt((float)_totalCount / _columns);
 
             float height = _totalCount == 0
-                ? 0f
-                : _paddingTop + rows * (_itemHeight + _rowGap) - _rowGap + _paddingBottom;
+                ? (_headerSpace > 0f ? TopPadding : 0f)
+                : TopPadding + rows * (_itemHeight + _rowGap) - _rowGap + _paddingBottom;
 
             _content.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, Mathf.Max(height, 0));
         }

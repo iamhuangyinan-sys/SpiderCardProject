@@ -2,7 +2,7 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 
 /// <summary>
-/// 发牌堆信息 —— 点击展示发牌堆中的全部牌（重新按点数、花色排序，不按栈顺序）
+/// 发牌堆信息 —— 点击展示发牌堆中的全部牌（按花色分组，组内按点数排列）
 /// 挂在场景中的物体上（需要 Collider 接收点击），一般放在发牌堆附近
 /// </summary>
 public class DrawPileInfoController : MonoBehaviour
