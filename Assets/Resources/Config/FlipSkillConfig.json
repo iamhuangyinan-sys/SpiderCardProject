@@ -1,6 +1,6 @@
 ﻿{
   "items": [
-    {"Id": "30001", "Type": 0, "Name": "flip_skill_name_30001", "Description": "flip_skill_desc_30001", "Icon": "forceDeal", "Image": "", "RelatedBuff": []},
-    {"Id": "30002", "Type": 1, "Name": "flip_skill_name_30002", "Description": "flip_skill_desc_30002", "Icon": "addDrag", "RelatedBuff": ["10001"], "Image": ""}
+    {"Id": "30001", "Type": 0, "Name": "flip_skill_name_30001", "Description": "flip_skill_desc_30001", "Icon": "forceDeal", "Image": "", "RelatedBuff": [], "RelatedCard": []},
+    {"Id": "30002", "Type": 1, "Name": "flip_skill_name_30002", "Description": "flip_skill_desc_30002", "Icon": "addDrag", "RelatedBuff": ["10001"], "Image": "", "RelatedCard": []}
   ]
 }

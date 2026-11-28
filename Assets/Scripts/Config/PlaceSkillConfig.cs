@@ -11,4 +11,5 @@ public class PlaceSkillConfig
     public string Image;
     public string Icon;
     public List<string> RelatedBuff;
+    public List<string> RelatedCard;
 }

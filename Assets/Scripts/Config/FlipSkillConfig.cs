@@ -11,4 +11,5 @@ public class FlipSkillConfig
     public string Image;
     public string Icon;
     public List<string> RelatedBuff;
+    public List<string> RelatedCard;
 }

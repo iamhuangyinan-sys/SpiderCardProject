@@ -159,14 +159,14 @@ public partial class CardModule : BaseModule, IPointerEnterHandler, IPointerExit
     private void ShowTip()
     {
         // 描述由牌的属性推导（可能多条；没有可说的属性时 helper 会直接收起）
-        var tips = CardTipHelper.Build(Def, _attributes);
+        var tips = CardTipHelper.Build(Def, _attributes, out var relatedCardIds);
 
         // 对齐目标用「可见牌面」：模组根节点的 rect 不一定等于牌的实际大小
         var target = comps.btnCard != null && comps.btnCard.image != null
             ? comps.btnCard.image.rectTransform
             : (RectTransform)transform;
 
-        HoverTipHelper.Show(this, tips, target, tipDirection, tipExtraGap);
+        HoverTipHelper.Show(this, tips, target, tipDirection, tipExtraGap, relatedCardIds);
     }
 
     // ==================== 内部 ====================

@@ -20,8 +20,11 @@ public static class CardTipHelper
     /// <summary>推导一张牌的所有 tip；没有可显示的属性时返回空列表</summary>
     /// <param name="def">牌定义（花色 / 点数 / 落牌技能）</param>
     /// <param name="attributes">牌的属性（null / 空 = 没有属性）</param>
-    public static List<HoverTipData> Build(CardDef def, IReadOnlyList<E_CardAttributeEnum> attributes)
+    /// <param name="relatedCardIds">按技能和配表顺序收集的关联牌预设 ID</param>
+    public static List<HoverTipData> Build(CardDef def, IReadOnlyList<E_CardAttributeEnum> attributes,
+        out List<string> relatedCardIds)
     {
+        relatedCardIds = null;
         var tips = new List<HoverTipData>();
         if (!def.IsValid) return tips;
 
@@ -68,7 +71,10 @@ public static class CardTipHelper
         // ===== 3. 落牌技能（带技能的牌 = 以前的特殊牌，文案读 PlaceSkillConfig）=====
         // 技能表里的 RelatedBuff：把关联 Buff 的描述紧跟在技能 tip 之后（repeatBuffIds 用来跨技能去重）
         var repeatedBuffIds = new HashSet<string>();
-        if (def.HasSkill) AddSkillTip(tips, def.placeSkill, repeatedBuffIds);
+        if (def.HasSkill)
+        {
+            relatedCardIds = AddSkillTip(tips, def.placeSkill, repeatedBuffIds);
+        }
         if (def.flipSkill != E_FlipSkillEnum.None)
         {
             var cfg = ConfigHelper.Get<FlipSkillConfig>(((int)def.flipSkill).ToString());
@@ -77,6 +83,11 @@ public static class CardTipHelper
                 tips.Add(new HoverTipData(LanguageHelper.Get(cfg.Name), LanguageHelper.Get(cfg.Description),
                     res.GetFlipSkillIcon(def.flipSkill)));
                 AddRelatedBuffTips(tips, cfg.RelatedBuff, repeatedBuffIds);
+                if (cfg.RelatedCard != null && cfg.RelatedCard.Count > 0)
+                {
+                    relatedCardIds ??= new List<string>();
+                    relatedCardIds.AddRange(cfg.RelatedCard);
+                }
             }
         }
 
@@ -115,14 +126,16 @@ public static class CardTipHelper
     }
 
     /// <summary>按落牌技能查技能描述表（Id = 枚举值）；查不到就跳过。技能 tip 后面紧跟它的关联 Buff 描述</summary>
-    private static void AddSkillTip(List<HoverTipData> tips, E_PlaceSkillEnum placeSkill, HashSet<string> repeatedBuffIds)
+    private static List<string> AddSkillTip(List<HoverTipData> tips, E_PlaceSkillEnum placeSkill,
+        HashSet<string> repeatedBuffIds)
     {
         var cfg = ConfigHelper.Get<PlaceSkillConfig>(((int)placeSkill).ToString());
-        if (cfg == null) return;
+        if (cfg == null) return null;
 
         var icon = CardResManager.Instance.GetPlaceSkillIcon(placeSkill);
         tips.Add(new HoverTipData(LanguageHelper.Get(cfg.Name), LanguageHelper.Get(cfg.Description), icon));
         AddRelatedBuffTips(tips, cfg.RelatedBuff, repeatedBuffIds);
+        return cfg.RelatedCard != null && cfg.RelatedCard.Count > 0 ? new List<string>(cfg.RelatedCard) : null;
     }
 
     /// <summary>

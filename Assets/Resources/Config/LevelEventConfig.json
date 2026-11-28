@@ -1,6 +1,6 @@
 ﻿{
   "items": [
-    {"Id": "11001", "Description": "level_event_desc_11001"},
-    {"Id": "11002", "Description": "level_event_desc_11002"}
+    {"Id": "11001", "Description": "level_event_desc_11001", "RelatedCard": ["210007"]},
+    {"Id": "11002", "Description": "level_event_desc_11002", "RelatedCard": ["710001"]}
   ]
 }

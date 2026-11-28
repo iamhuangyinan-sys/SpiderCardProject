@@ -1,7 +1,7 @@
 ﻿{
   "items": [
-    {"Id": "20001", "Type": 1, "Name": "place_skill_name_20001", "Description": "place_skill_desc_20001", "Image": "cardRecycle", "Icon": "recycle", "RelatedBuff": []},
-    {"Id": "20002", "Type": 1, "Name": "place_skill_name_20002", "Description": "place_skill_desc_20002", "Image": "cardCopy", "Icon": "copy", "RelatedBuff": []},
-    {"Id": "20003", "Type": 1, "Name": "place_skill_name_20003", "Description": "place_skill_desc_20003", "Image": "cardSuperRecycle", "Icon": "superRecycle", "RelatedBuff": []}
+    {"Id": "20001", "Type": 1, "Name": "place_skill_name_20001", "Description": "place_skill_desc_20001", "Image": "cardRecycle", "Icon": "recycle", "RelatedBuff": [], "RelatedCard": []},
+    {"Id": "20002", "Type": 1, "Name": "place_skill_name_20002", "Description": "place_skill_desc_20002", "Image": "cardCopy", "Icon": "copy", "RelatedBuff": [], "RelatedCard": []},
+    {"Id": "20003", "Type": 1, "Name": "place_skill_name_20003", "Description": "place_skill_desc_20003", "Image": "cardSuperRecycle", "Icon": "superRecycle", "RelatedCard": ["710001"], "RelatedBuff": []}
   ]
 }

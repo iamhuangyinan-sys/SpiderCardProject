@@ -62,6 +62,15 @@ public partial class HoverTipItemModule : BaseModule
 
     protected override void OnUnBind() { }
 
+    /// <summary>将阴影伸出框体的部分计入屏幕边缘检测。</summary>
+    internal Rect IncludeShadow(Rect bounds, float scale)
+    {
+        Vector2 min = Vector2.Min(Vector2.zero, shadowOffset - shadowPadding) * scale;
+        Vector2 max = Vector2.Max(Vector2.zero, shadowOffset + shadowPadding) * scale;
+        return Rect.MinMaxRect(bounds.xMin + min.x, bounds.yMin + min.y,
+            bounds.xMax + max.x, bounds.yMax + max.y);
+    }
+
     /// <summary>
     /// 设置一条描述。返回正文实际占用的宽度（面板用它把所有框统一成同一宽度）。
     /// 标题为空时隐藏标题节点（只清文字的话 TMP 空文本仍占一行高度）

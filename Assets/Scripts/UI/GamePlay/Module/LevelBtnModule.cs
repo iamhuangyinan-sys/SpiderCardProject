@@ -194,13 +194,17 @@ public partial class LevelBtnModule : BaseModule, IPointerEnterHandler, IPointer
             : (RectTransform)transform;
 
         // 关卡提示不写标题（普通关 / 商店关 / BOSS 关都不标注自己），信息全写在正文里
-        HoverTipHelper.Show(this, null, BuildTipContent(_cfg), target, tipDirection, tipExtraGap);
+        var levelEvent = _cfg.LevelType != (int)E_LevelTypeEnum.Shop && _cfg.LevelEvent != 0
+            ? ConfigHelper.Get<LevelEventConfig>(_cfg.LevelEvent.ToString())
+            : null;
+        HoverTipHelper.Show(this, null, BuildTipContent(_cfg, levelEvent), target, tipDirection, tipExtraGap,
+            levelEvent?.RelatedCard);
     }
 
     /// <summary>
     /// 提示正文 —— 文案全部走 LanguageConfig 表（Id 见 Config/Excel/LanguageConfig.xlsx）
     /// </summary>
-    private static string BuildTipContent(RunLevelData cfg)
+    private static string BuildTipContent(RunLevelData cfg, LevelEventConfig levelEvent)
     {
         // 商店关没有牌局，只说它是商店
         if ((E_LevelTypeEnum)cfg.LevelType == E_LevelTypeEnum.Shop)
@@ -218,22 +222,13 @@ public partial class LevelBtnModule : BaseModule, IPointerEnterHandler, IPointer
         }
         sb.Append('\n').Append(LanguageHelper.Get("ui_level_tip_reward", cfg.FinishReward));
 
-        string evt = GetEventDesc(cfg.LevelEvent);
+        string evt = levelEvent != null ? LanguageHelper.Get(levelEvent.Description) : string.Empty;
         if (!string.IsNullOrEmpty(evt))
         {
             sb.Append('\n').Append(evt);
         }
 
         return sb.ToString();
-    }
-
-    /// <summary>开局事件描述（读配表 LevelEventConfig.Description；0 = 没有开局事件）</summary>
-    private static string GetEventDesc(int levelEvent)
-    {
-        if (levelEvent == 0) return string.Empty;
-
-        var cfg = ConfigHelper.Get<LevelEventConfig>(levelEvent.ToString());
-        return cfg != null ? LanguageHelper.Get(cfg.Description) : string.Empty;
     }
 
     private void OnClick()

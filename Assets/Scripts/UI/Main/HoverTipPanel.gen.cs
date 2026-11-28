@@ -14,5 +14,6 @@ public partial class HoverTipPanel
     public class CompsData : CompsDataBase
     {
         public Image imgRoot;
+        public Image imgCardRoot;
     }
 }

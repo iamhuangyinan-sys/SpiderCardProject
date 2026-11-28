@@ -24,8 +24,9 @@ public static class HoverTipHelper
     /// <param name="target">要对齐的目标</param>
     /// <param name="preferred">首选方向</param>
     /// <param name="extraGap">额外让出的距离（Canvas 单位）</param>
+    /// <param name="relatedCardIds">关联的纸牌预设 ID</param>
     public static void Show(object owner, string title, string content, RectTransform target,
-        E_TipDirection preferred, float extraGap = 0f)
+        E_TipDirection preferred, float extraGap = 0f, IReadOnlyList<string> relatedCardIds = null)
     {
         if (string.IsNullOrEmpty(title) && string.IsNullOrEmpty(content))
         {
@@ -37,14 +38,14 @@ public static class HoverTipHelper
         if (panel == null) return;
 
         _owner = owner;
-        panel.ShowTip(title, content, target, preferred, extraGap);
+        panel.ShowTip(title, content, target, preferred, extraGap, relatedCardIds);
     }
 
     /// <summary>显示一组描述（每条一个框）；没有可显示的内容时直接收起</summary>
     /// <param name="owner">调用者（谁显示谁才能关）</param>
     /// <param name="tips">每条描述（空条目会被跳过）</param>
     public static void Show(object owner, IReadOnlyList<HoverTipData> tips, RectTransform target,
-        E_TipDirection preferred, float extraGap = 0f)
+        E_TipDirection preferred, float extraGap = 0f, IReadOnlyList<string> relatedCardIds = null)
     {
         if (!HasAny(tips))
         {
@@ -56,7 +57,7 @@ public static class HoverTipHelper
         if (panel == null) return;
 
         _owner = owner;
-        panel.ShowTips(tips, target, preferred, extraGap);
+        panel.ShowTips(tips, target, preferred, extraGap, relatedCardIds);
     }
 
     /// <summary>列表里是否至少有一条有内容</summary>
